@@ -1,0 +1,170 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  publishDate?: string;
+  category?: string;
+  coverImage?: string;
+}
+
+const { title, description, publishDate, category, coverImage } = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <article class="max-w-[--content-width] mx-auto px-6 py-12">
+    <!-- Post Header -->
+    <header class="mb-12">
+      {coverImage && (
+        <img
+          src={coverImage}
+          alt={title}
+          class="w-full h-96 object-cover rounded-lg mb-8"
+        />
+      )}
+
+      <div class="flex items-center gap-4 mb-4">
+        {category && (
+          <span class="inline-block bg-forest text-sand px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
+            {category}
+          </span>
+        )}
+      </div>
+
+      <h1 class="font-display font-black text-5xl mb-4">
+        {title}
+      </h1>
+
+      {description && (
+        <p class="text-stone text-lg font-light mb-4">
+          {description}
+        </p>
+      )}
+
+      {publishDate && (
+        <time class="text-stone/70 text-sm">
+          {new Date(publishDate).toLocaleDateString('id-ID', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })}
+        </time>
+      )}
+    </header>
+
+    <!-- Content -->
+    <div class="prose prose-arkara max-w-none">
+      <slot />
+    </div>
+  </article>
+</BaseLayout>
+
+<style is:global>
+  .prose-arkara {
+    color: var(--stone);
+  }
+
+  .prose-arkara h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--brown);
+    font-size: 1.875rem;
+    font-weight: bold;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .prose-arkara h3 {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--brown);
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .prose-arkara p {
+    margin-bottom: 1rem;
+    line-height: 1.75;
+  }
+
+  .prose-arkara a {
+    color: var(--amber);
+    font-weight: 600;
+  }
+
+  .prose-arkara a:hover {
+    color: var(--brown);
+  }
+
+  .prose-arkara ul,
+  .prose-arkara ol {
+    margin-bottom: 1rem;
+    margin-left: 1.5rem;
+  }
+
+  .prose-arkara li {
+    margin-bottom: 0.5rem;
+  }
+
+  .info-box {
+    border-left: 4px solid;
+    background: var(--parchment);
+    padding: 1rem;
+    border-radius: 0 0.5rem 0.5rem 0;
+    margin-bottom: 1rem;
+  }
+
+  .info-box.warning {
+    border-left-color: var(--danger);
+  }
+
+  .info-box.success {
+    border-left-color: var(--moss);
+  }
+
+  .info-box.info {
+    border-left-color: var(--info);
+  }
+
+  .info-box h4 {
+    font-weight: 600;
+    color: var(--forest);
+    margin-bottom: 0.5rem;
+  }
+
+  .info-box p {
+    margin-bottom: 0;
+  }
+
+  .prose-arkara blockquote {
+    border-left: 4px solid var(--amber);
+    padding-left: 1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    font-style: italic;
+    color: rgba(92, 95, 97, 0.8);
+    margin: 1rem 0;
+  }
+
+  .prose-arkara code {
+    background: var(--sand);
+    color: var(--forest);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875rem;
+  }
+
+  .prose-arkara pre {
+    background: var(--ink);
+    color: var(--sand);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+  }
+
+  .prose-arkara pre code {
+    background: transparent;
+    color: inherit;
+  }
+</style>

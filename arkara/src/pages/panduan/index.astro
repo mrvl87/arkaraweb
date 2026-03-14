@@ -1,0 +1,46 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Card from '../../components/ui/Card.astro';
+
+const allGuides = await getCollection('panduan');
+---
+
+<BaseLayout title="Panduan Teknis">
+  <div class="max-w-3xl mx-auto px-6 py-16">
+    <h1 class="font-display text-5xl font-black text-forest mb-2">Panduan Teknis</h1>
+    <p class="text-stone/70 mb-12">Instruksi teknis praktis yang terhubung dengan Buku Pegangan Krisis</p>
+
+    {allGuides.length > 0 ? (
+      <div class="grid grid-cols-1 gap-6">
+        {allGuides.map((guide) => (
+          <a href={`/panduan/${guide.slug}`} class="block no-underline group">
+            <Card class="hover:shadow-md transition group-hover:border-amber">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h2 class="font-display text-2xl font-bold text-forest mb-1 group-hover:text-amber transition">
+                    {guide.data.title}
+                  </h2>
+                  <p class="text-stone/60 text-sm">
+                    Referensi: <span class="font-semibold text-moss">{guide.data.babRef || 'Umum'}</span>
+                  </p>
+                </div>
+                <div class="text-amber font-semibold uppercase tracking-wider text-sm">
+                  Lihat Panduan →
+                </div>
+              </div>
+            </Card>
+          </a>
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-20">
+        <div class="text-6xl mb-4">⚒️</div>
+        <h2 class="font-display text-2xl text-forest mb-2">Belum Ada Panduan</h2>
+        <p class="text-stone/70">
+          Silakan tambahkan panduan pertama Anda di direktori content.
+        </p>
+      </div>
+    )}
+  </div>
+</BaseLayout>

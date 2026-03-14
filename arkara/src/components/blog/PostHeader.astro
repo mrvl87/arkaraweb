@@ -1,0 +1,57 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  category?: string;
+  date?: string;
+  image?: string;
+}
+
+const { title, description, category, date, image } = Astro.props;
+
+const formattedDate = date
+  ? new Date(date).toLocaleDateString('id-ID', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+  : null;
+---
+
+<header class="bg-forest text-sand py-12 px-6">
+  <div class="max-w-[--content-width] mx-auto">
+    {category && (
+      <div class="mb-4">
+        <span class="inline-block bg-amber text-forest px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider">
+          {category}
+        </span>
+      </div>
+    )}
+
+    <h1 class="font-display text-5xl font-black mb-6">
+      {title}
+    </h1>
+
+    {description && (
+      <p class="text-lg font-light mb-6 text-sand/90">
+        {description}
+      </p>
+    )}
+
+    {formattedDate && (
+      <time class="text-sand/70 text-sm font-mono">
+        {formattedDate}
+      </time>
+    )}
+  </div>
+</header>
+
+{image && (
+  <div class="w-full">
+    <img
+      src={image}
+      alt={title}
+      class="w-full h-96 object-cover"
+    />
+  </div>
+)}

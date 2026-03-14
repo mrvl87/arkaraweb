@@ -1,0 +1,29 @@
+---
+interface Props {
+  variant?: 'primary' | 'secondary' | 'outline';
+  size?: 'sm' | 'md' | 'lg';
+  class?: string;
+}
+
+const { variant = 'primary', size = 'md', class: className } = Astro.props;
+
+const baseClass = 'font-semibold uppercase tracking-wider rounded-md transition duration-200 inline-block';
+
+const variantClass = {
+  primary: 'bg-amber text-forest hover:bg-brown',
+  secondary: 'bg-forest text-sand hover:bg-brown',
+  outline: 'border-2 border-amber text-amber hover:bg-amber hover:text-forest',
+};
+
+const sizeClass = {
+  sm: 'px-3 py-1.5 text-xs',
+  md: 'px-6 py-2.5 text-sm',
+  lg: 'px-8 py-3.5 text-base',
+};
+---
+
+<button
+  class={`${baseClass} ${variantClass[variant]} ${sizeClass[size]} ${className}`}
+>
+  <slot />
+</button>

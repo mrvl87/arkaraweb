@@ -1,0 +1,58 @@
+---
+interface Props {
+  title: string;
+  excerpt: string;
+  category: string;
+  date: string;
+  slug: string;
+  image?: string;
+}
+
+const { title, excerpt, category, date, slug, image } = Astro.props;
+
+const formattedDate = new Date(date).toLocaleDateString('id-ID', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+});
+---
+
+<article class="bg-parchment border border-sand rounded-lg overflow-hidden hover:shadow-lg transition duration-300 h-full flex flex-col">
+  {image && (
+    <img
+      src={image}
+      alt={title}
+      class="w-full h-48 object-cover"
+    />
+  )}
+
+  <div class="p-6 flex flex-col flex-grow">
+    <div class="mb-3">
+      <span class="inline-block bg-forest text-sand px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
+        {category}
+      </span>
+    </div>
+
+    <a href={`/blog/${slug}`} class="no-underline hover:text-amber transition">
+      <h3 class="font-display text-2xl font-bold text-forest mb-3 hover:text-amber">
+        {title}
+      </h3>
+    </a>
+
+    <p class="text-stone text-sm flex-grow mb-4">
+      {excerpt}
+    </p>
+
+    <div class="flex items-center justify-between pt-4 border-t border-sand">
+      <time class="text-stone/70 text-xs font-mono">
+        {formattedDate}
+      </time>
+      <a
+        href={`/blog/${slug}`}
+        class="text-amber hover:text-brown text-sm font-semibold uppercase tracking-wider transition"
+      >
+        Baca →
+      </a>
+    </div>
+  </div>
+</article>

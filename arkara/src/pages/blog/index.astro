@@ -1,0 +1,99 @@
+---
+/**
+ * Blog Listing Page
+ *
+ * TODO: Migrate to StudioCMS SDK
+ * When StudioCMS is enabled:
+ * - Replace getCollection with: sdk.GET.databaseEntry.all('blog')
+ * - Handle data transformation for StudioCMS entry format
+ * - Remove astro:content dependency
+ */
+
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/blog/PostCard.astro';
+
+// Get all blog posts from content collections
+// TODO: Switch to: const allPosts = await sdk.GET.databaseEntry.all('blog');
+const allPosts = await getCollection('blog');
+
+// Get selected category from query params
+const selectedCategory = Astro.url.searchParams.get('category');
+
+// Filter posts by category if selected
+const filteredPosts = selectedCategory
+  ? allPosts.filter((post) => post.data.category === selectedCategory)
+  : allPosts;
+
+// Sort by date descending
+const sortedPosts = filteredPosts.sort(
+  (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf()
+);
+
+const categories = ['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas'];
+const categoryLabels: Record<string, string> = {
+  air: 'Air',
+  energi: 'Energi',
+  pangan: 'Pangan',
+  medis: 'Medis',
+  keamanan: 'Keamanan',
+  komunitas: 'Komunitas',
+};
+---
+
+<BaseLayout title="Blog">
+  <div class="max-w-3xl mx-auto px-6 py-16">
+    <h1 class="font-display text-5xl font-black text-forest mb-2">Blog</h1>
+    <p class="text-stone/70 mb-8">Artikel tentang survival, prepping, dan kemandirian</p>
+
+    <!-- Category Filter -->
+    <div class="flex gap-3 mb-12 flex-wrap">
+      <a
+        href="/blog"
+        class={`px-4 py-2 rounded-full text-sm font-semibold uppercase tracking-wider transition ${
+          !selectedCategory
+            ? 'bg-forest text-sand'
+            : 'bg-sand text-forest border border-forest hover:bg-forest hover:text-sand'
+        }`}
+      >
+        Semua
+      </a>
+      {categories.map((cat) => (
+        <a
+          href={`/blog?category=${cat}`}
+          class={`px-4 py-2 rounded-full text-sm font-semibold uppercase tracking-wider transition ${
+            selectedCategory === cat
+              ? 'bg-forest text-sand'
+              : 'bg-sand text-forest border border-forest hover:bg-forest hover:text-sand'
+          }`}
+        >
+          {categoryLabels[cat]}
+        </a>
+      ))}
+    </div>
+
+    {sortedPosts.length > 0 ? (
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {sortedPosts.map((post) => (
+          <PostCard
+            title={post.data.title}
+            excerpt={post.data.description || ''}
+            category={categoryLabels[post.data.category]}
+            date={post.data.publishDate.toISOString()}
+            slug={post.slug}
+            image={post.data.coverImage}
+          />
+        ))}
+      </div>
+    ) : (
+      <!-- Empty State -->
+      <div class="text-center py-20">
+        <div class="text-6xl mb-4">📝</div>
+        <h2 class="font-display text-2xl text-forest mb-2">Belum Ada Artikel</h2>
+        <p class="text-stone/70 mb-6">
+          Belum ada artikel dalam kategori ini. Silakan tambahkan artikel baru atau pilih kategori lain.
+        </p>
+      </div>
+    )}
+  </div>
+</BaseLayout>

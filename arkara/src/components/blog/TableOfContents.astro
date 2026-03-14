@@ -1,0 +1,32 @@
+---
+interface Props {
+  headings?: any[];
+  class?: string;
+}
+
+const { headings = [], class: className = '' } = Astro.props;
+
+// Extract headings from the slot (h2, h3 elements)
+// In practice, this would be passed from the parent component
+// or extracted from the MDX content
+---
+
+{headings && headings.length > 0 && (
+  <aside class={`bg-sand p-6 rounded-lg mb-8 ${className}`}>
+    <h3 class="font-display text-lg font-bold text-forest mb-4">
+      Daftar Isi
+    </h3>
+    <ul class="space-y-2 text-sm">
+      {headings.map((heading) => (
+        <li class={heading.depth === 3 ? 'ml-4' : ''}>
+          <a
+            href={`#${heading.slug}`}
+            class="text-forest hover:text-amber transition font-medium"
+          >
+            {heading.text}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </aside>
+)}

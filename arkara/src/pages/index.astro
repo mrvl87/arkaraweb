@@ -1,0 +1,164 @@
+---
+/**
+ * Homepage
+ * Displays hero, recent articles, categories, and CTA
+ *
+ * TODO: Migrate to StudioCMS SDK for dynamic content
+ * When StudioCMS is enabled:
+ * - Replace getCollection with: sdk.GET.databaseEntry.all('blog')
+ * - Filter and sort results from database
+ * - Remove astro:content dependency
+ */
+
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Card from '../components/ui/Card.astro';
+import Button from '../components/ui/Button.astro';
+import PostCard from '../components/blog/PostCard.astro';
+
+// Get recent blog posts from content collections
+// TODO: Switch to: const allPosts = await sdk.GET.databaseEntry.all('blog');
+const allPosts = await getCollection('blog');
+const recentPosts = allPosts
+  .sort((a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf())
+  .slice(0, 3);
+
+const categoryLabels: Record<string, string> = {
+  air: 'Air',
+  energi: 'Energi',
+  pangan: 'Pangan',
+  medis: 'Medis',
+  keamanan: 'Keamanan',
+  komunitas: 'Komunitas',
+};
+
+const categories = [
+  { name: 'Air', slug: 'air', icon: '💧' },
+  { name: 'Energi', slug: 'energi', icon: '⚡' },
+  { name: 'Pangan', slug: 'pangan', icon: '🌾' },
+  { name: 'Medis', slug: 'medis', icon: '⚕️' },
+  { name: 'Keamanan', slug: 'keamanan', icon: '🛡️' },
+  { name: 'Komunitas', slug: 'komunitas', icon: '👥' },
+];
+---
+
+<BaseLayout title="Beranda">
+  <!-- Hero Section -->
+  <section class="bg-forest text-sand py-24 px-6 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10 pointer-events-none">
+      <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-amber blur-[100px]"></div>
+      <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-moss blur-[100px]"></div>
+    </div>
+    
+    <div class="max-w-4xl mx-auto text-center relative z-10">
+      <h1 class="font-display text-7xl md:text-8xl font-black mb-6 tracking-tight">
+        Arkara
+      </h1>
+      <p class="text-2xl md:text-3xl font-light mb-4 text-amber font-display italic">
+        Survive with Knowledge
+      </p>
+      <p class="text-sand/80 mb-10 text-xl max-w-2xl mx-auto leading-relaxed">
+        Platform pengetahuan survival Indonesia. Pelajari teknik praktis untuk menghadapi krisis dengan kemandirian yang tepat.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/blog">
+          <Button variant="primary" size="lg" class="w-full sm:w-auto">
+            Mulai Belajar
+          </Button>
+        </a>
+        <a href="/panduan">
+          <Button variant="outline" size="lg" class="w-full sm:w-auto">
+            Lihat Panduan
+          </Button>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Articles -->
+  <section class="max-w-6xl mx-auto px-6 py-20">
+    <div class="flex justify-between items-end mb-12">
+      <div>
+        <h2 class="font-display text-4xl font-bold text-forest mb-2">
+          Artikel Terbaru
+        </h2>
+        <p class="text-stone/60">Wawasan terbaru untuk kesiapan Anda</p>
+      </div>
+      <a href="/blog" class="text-amber hover:text-brown font-semibold uppercase tracking-wider text-sm hidden md:block">
+        Lihat Semua Artikel →
+      </a>
+    </div>
+
+    {recentPosts.length > 0 ? (
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {recentPosts.map((post) => (
+          <PostCard
+            title={post.data.title}
+            excerpt={post.data.description || ''}
+            category={categoryLabels[post.data.category]}
+            date={post.data.publishDate.toISOString()}
+            slug={post.slug}
+            image={post.data.coverImage}
+          />
+        ))}
+      </div>
+    ) : (
+      <div class="bg-sand/30 border border-sand rounded-xl text-stone/60 text-center py-20">
+        <p class="text-lg">Belum ada artikel. Konten sedang dalam perjalanan.</p>
+      </div>
+    )}
+    
+    <div class="mt-8 text-center md:hidden">
+      <a href="/blog" class="inline-block text-amber hover:text-brown font-semibold uppercase tracking-wider text-sm">
+        Lihat Semua Artikel →
+      </a>
+    </div>
+  </section>
+
+  <!-- Categories -->
+  <section class="bg-parchment py-20 px-6">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="font-display text-4xl font-bold text-forest mb-4">
+          Kategori Pengetahuan
+        </h2>
+        <p class="text-stone/60 max-w-xl mx-auto">
+          Pengetahuan mendalam yang dikelompokkan berdasarkan pilar utama kelangsungan hidup.
+        </p>
+      </div>
+      
+      <div class="grid grid-cols-2 lg:grid-cols-6 gap-6">
+        {categories.map((cat) => (
+          <a href={`/blog?category=${cat.slug}`} class="block no-underline group">
+            <Card class="text-center hover:shadow-xl transition-all duration-300 group-hover:bg-sand group-hover:-translate-y-1 h-full flex flex-col items-center justify-center p-8">
+              <div class="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">{cat.icon}</div>
+              <h3 class="font-display text-lg font-bold text-forest group-hover:text-amber">{cat.name}</h3>
+            </Card>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="bg-amber text-forest py-20 px-6 mt-16 relative overflow-hidden">
+    <div class="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4">
+      <span class="text-[300px] leading-none">⚔️</span>
+    </div>
+    
+    <div class="max-w-3xl mx-auto text-center relative z-10">
+      <h2 class="font-display text-4xl font-bold mb-6">
+        Siap Hadapi Krisis?
+      </h2>
+      <p class="mb-10 text-xl leading-relaxed opacity-90">
+        Jangan biarkan ketidaktahuan menjadi penghalang keselamatan Anda. Jelajahi semua panduan teknis yang telah kami siapkan.
+      </p>
+      <a
+        href="/panduan"
+        class="inline-block bg-forest text-sand px-10 py-4 rounded-md font-bold uppercase tracking-widest hover:bg-brown hover:shadow-lg transform transition active:scale-95"
+      >
+        Pelajari Panduan Teknis
+      </a>
+    </div>
+  </section>
+</BaseLayout>

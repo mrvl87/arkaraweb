@@ -1,0 +1,75 @@
+---
+/**
+ * Panduan Detail Page
+ * Renders technical guide pages based on slug
+ *
+ * TODO: Integrate with StudioCMS SDK for database-backed content
+ * Currently placeholder for file-based fallback
+ */
+
+import type { GetStaticPaths } from 'astro';
+
+interface PanduanEntry {
+  slug: string;
+  title: string;
+  babRef?: string;
+  qrSlug?: string;
+  content: string;
+}
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  // TODO: Use StudioCMS SDK when enabled
+  // const entries = await sdk.GET.databaseEntry.all('panduan');
+  // return entries.map(entry => ({
+  //   params: { slug: entry.slug },
+  //   props: { entry }
+  // }));
+  
+  return [];
+};
+
+interface Props {
+  entry?: PanduanEntry;
+}
+
+const { entry } = Astro.props;
+---
+
+<article>
+  {entry ? (
+    <>
+      <h1>{entry.title}</h1>
+      {entry.babRef && <p class="metadata">Bab: {entry.babRef}</p>}
+      {entry.qrSlug && <p class="metadata">QR: {entry.qrSlug}</p>}
+      <div set:html={entry.content} />
+    </>
+  ) : (
+    <div class="not-found">
+      <h1>Panduan tidak ditemukan</h1>
+      <p>Silakan kembali ke halaman utama.</p>
+    </div>
+  )}
+</article>
+
+<style>
+  article {
+    max-width: 65ch;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  h1 {
+    color: var(--forest);
+    font-family: 'Playfair Display', serif;
+  }
+
+  .metadata {
+    color: var(--stone);
+    font-size: 0.9rem;
+  }
+
+  .not-found {
+    text-align: center;
+    padding: 4rem 2rem;
+  }
+</style>
