@@ -14,6 +14,7 @@ const tursoToken = process.env.TURSO_AUTH_TOKEN;
 
 export default defineStudioCMSConfig({
   dbType: 'libsql',
+  setupPage: false,
   dbConnection: {
     connection: {
       url: tursoUrl,
