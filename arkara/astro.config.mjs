@@ -6,7 +6,7 @@ import mdx from '@astrojs/mdx';
 import node from '@astrojs/node';
 // NOTE: StudioCMS integration commented out temporarily due to Windows ESM loader issue
 // TODO: Re-enable once studiocms fixes Windows path handling
-// import studiocms from 'studiocms';
+import studiocms from 'studiocms';
 
 // https://astro.build/config
 export default defineConfig({
@@ -16,7 +16,7 @@ export default defineConfig({
     plugins: [tailwindcss()]
   },
 
-  integrations: [mdx()],
+  integrations: [mdx(), studiocms()],
 
   adapter: node({
     mode: 'standalone'
