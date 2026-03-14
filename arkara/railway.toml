@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 buildCommand = "npm run build"
 
 [deploy]
-startCommand = "npx studiocms migrate --latest && node ./dist/server/entry.mjs"
+startCommand = "node ./dist/server/entry.mjs"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
