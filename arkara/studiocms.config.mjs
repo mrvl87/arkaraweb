@@ -12,16 +12,9 @@ config({ path: resolve(__dirname, '.env') });
 const tursoUrl = process.env.TURSO_CONNECTION_URL || 'file:./data/studio.db';
 const tursoToken = process.env.TURSO_AUTH_TOKEN;
 
-console.log('--- STUDIO CMS INIT ---');
-console.log('TURSO URL:', tursoUrl ? tursoUrl.substring(0, 15) + '...' : 'MISSING');
-console.log('TURSO TOKEN HADA:', !!tursoToken);
-console.log('-----------------------');
-
-
 export default defineStudioCMSConfig({
   dbType: 'libsql',
-  setupPage: false,
-  dbMagic: true,
+  dbStartPage: false,
   dbConnection: {
     connection: {
       url: tursoUrl,
