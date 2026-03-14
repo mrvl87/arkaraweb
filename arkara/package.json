@@ -19,6 +19,7 @@
     "@keystatic/astro": "^5.0.6",
     "@keystatic/core": "^0.5.48",
     "@libsql/client": "^0.15.15",
+    "@studiocms/md": "^0.3.0",
     "@tailwindcss/vite": "^4.0.0",
     "astro": "^5.18.1",
     "clsx": "^2.1.1",

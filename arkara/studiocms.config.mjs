@@ -1,4 +1,5 @@
 import { defineStudioCMSConfig } from 'studiocms/config';
+import markdownRenderer from '@studiocms/md';
 import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
@@ -18,6 +19,7 @@ export default defineStudioCMSConfig({
   dashboardConfig: {
     dashboardEnabled: true,
   },
+  plugins: [markdownRenderer()],
   dbConnection: {
     connection: {
       url: tursoUrl,
