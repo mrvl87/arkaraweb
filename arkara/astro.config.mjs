@@ -11,6 +11,7 @@ import studiocms from 'studiocms';
 // https://astro.build/config
 export default defineConfig({
   output: 'server',
+  site: 'https://arkaraweb-production.up.railway.app', // Ganti dengan domain asli Anda nanti
 
   vite: {
     plugins: [tailwindcss()]
