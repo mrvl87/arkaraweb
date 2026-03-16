@@ -1,21 +1,32 @@
 "use server"
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 
+// Gunakan Service Role Key untuk bypass RLS karena kita menggunakan Mock User saat ini
+const getAdminClient = () => {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+
 export async function getMedia() {
-  const supabase = await createClient()
+  const supabase = getAdminClient()
   const { data, error } = await supabase
     .from('media')
     .select('*')
     .order('created_at', { ascending: false })
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    console.error("Supabase Error Get Media:", error.message)
+    return []
+  }
   return data
 }
 
 export async function uploadFile(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = getAdminClient()
   
   // MOCK USER for testing (consistent with Part 2 & 3)
   const authorId = '0a4ff12f-4e6f-46c9-817d-06f3d9e7f1ba'
@@ -54,7 +65,7 @@ export async function uploadFile(formData: FormData) {
 }
 
 export async function deleteFile(id: string, filePath: string) {
-  const supabase = await createClient()
+  const supabase = getAdminClient()
 
   // 1. Delete from Storage
   const { error: storageError } = await supabase.storage
@@ -75,7 +86,7 @@ export async function deleteFile(id: string, filePath: string) {
 }
 
 export async function updateAltText(id: string, altText: string) {
-  const supabase = await createClient()
+  const supabase = getAdminClient()
   const { error } = await supabase
     .from('media')
     .update({ alt_text: altText })

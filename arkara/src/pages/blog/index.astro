@@ -1,12 +1,6 @@
 ---
 /**
  * Blog Listing Page
- *
- * TODO: Migrate to StudioCMS SDK
- * When StudioCMS is enabled:
- * - Replace getCollection with: sdk.GET.databaseEntry.all('blog')
- * - Handle data transformation for StudioCMS entry format
- * - Remove astro:content dependency
  */
 
 import { getCollection } from 'astro:content';
@@ -14,7 +8,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/blog/PostCard.astro';
 
 // Get all blog posts from content collections
-// TODO: Switch to: const allPosts = await sdk.GET.databaseEntry.all('blog');
 const allPosts = await getCollection('blog');
 
 // Get selected category from query params

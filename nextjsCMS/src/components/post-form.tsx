@@ -8,17 +8,18 @@ import { z } from 'zod'
 import { Save, ChevronLeft, Loader2, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import { SlugInput } from './slug-input'
+import { MediaPicker } from './media/media-picker'
 
 const postSchema = z.object({
   title: z.string().min(1, 'Judul wajib diisi'),
   slug: z.string().min(1, 'Slug wajib diisi'),
-  content: z.string().optional().default(''),
-  description: z.string().optional(),
+  content: z.string().catch(''),
+  description: z.string().catch(''),
   category: z.enum(['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas']),
   status: z.enum(['draft', 'published']),
-  cover_image: z.string().optional(),
-  meta_title: z.string().optional(),
-  meta_desc: z.string().optional(),
+  cover_image: z.string().catch(''),
+  meta_title: z.string().catch(''),
+  meta_desc: z.string().catch(''),
 })
 
 type PostFormValues = z.infer<typeof postSchema>
@@ -42,16 +43,16 @@ export function PostForm({ initialData, onSubmit, title }: PostFormProps) {
     formState: { errors }
   } = useForm<PostFormValues>({
     resolver: zodResolver(postSchema),
-    defaultValues: initialData || {
-      title: '',
-      slug: '',
-      content: '',
-      description: '',
-      category: 'pangan',
-      status: 'draft',
-      cover_image: '',
-      meta_title: '',
-      meta_desc: '',
+    defaultValues: {
+      title: initialData?.title || '',
+      slug: initialData?.slug || '',
+      content: initialData?.content || '',
+      description: initialData?.description || '',
+      category: initialData?.category || 'pangan',
+      status: initialData?.status || 'draft',
+      cover_image: initialData?.cover_image || '',
+      meta_title: initialData?.meta_title || '',
+      meta_desc: initialData?.meta_desc || '',
     },
   })
 
@@ -189,14 +190,10 @@ export function PostForm({ initialData, onSubmit, title }: PostFormProps) {
                   className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-amber-100 focus:border-amber-500 transition-all"
                   placeholder="https://..."
                 />
-                <button
-                  type="button"
-                  className="p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-400 hover:text-amber-600 hover:border-amber-200 transition-all"
-                >
-                  <ImageIcon className="w-5 h-5" />
-                </button>
+                <MediaPicker 
+                  onSelect={(url) => setValue('cover_image', url, { shouldValidate: true })} 
+                />
               </div>
-              <p className="text-xs text-gray-400 italic">Media Library diintegrasikan di Part 4.</p>
             </div>
           </div>
 

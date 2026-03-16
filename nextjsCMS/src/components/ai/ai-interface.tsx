@@ -23,12 +23,15 @@ export function AIInterface() {
     const finalPrompt = customPrompt || prompt
     if (!finalPrompt.trim()) return
 
+    console.log("🚀 Client: Clicked Generate with prompt:", finalPrompt.substring(0, 30));
     setIsLoading(true)
     setError(null)
     try {
       const data = await generateAIContent(finalPrompt)
+      console.log("✨ Client: Received AI data");
       setResult(data.content)
     } catch (err) {
+      console.error("🔥 Client Error:", err);
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat menghubungi AI.')
     } finally {
       setIsLoading(false)
@@ -42,6 +45,7 @@ export function AIInterface() {
   }
 
   const applyTemplate = (templatePrompt: string) => {
+    console.log("📝 Client: Applying template");
     setPrompt(templatePrompt)
   }
 

@@ -11,16 +11,18 @@ export async function generateAIContent(userPrompt: string) {
   }
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
+    const headers = {
         "Authorization": `Bearer ${apiKey}`,
         "HTTP-Referer": siteUrl,
         "X-Title": "Arkara CMS",
         "Content-Type": "application/json",
-      },
+    };
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: headers,
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-001", // Fast and reliable for text
+        model: "google/gemini-2.0-flash-001",
         messages: [
           { role: "system", content: SURVIVAL_SYSTEM_PROMPT },
           { role: "user", content: userPrompt },

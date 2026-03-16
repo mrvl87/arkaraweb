@@ -1,3 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --arkara-green: #1a2e1a;
+  --arkara-amber: #D4AF37;
+  --arkara-cream: #fcfbf7;
+  --arkara-white: #ffffff;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -9,9 +20,21 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--arkara-cream);
+  color: var(--arkara-green);
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-2.5 bg-[#1a2e1a] text-white rounded-xl font-bold hover:bg-[#2a4e2a] transition-all active:scale-95 flex items-center gap-2;
+  }
+  
+  .card-premium {
+    @apply bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 p-8 transition-all hover:shadow-2xl hover:shadow-gray-200/40;
+  }
+
+  .input-premium {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37] transition-all outline-none bg-white/50 backdrop-blur-sm;
+  }
 }

@@ -45,41 +45,34 @@ export function CMSLayoutClient({ user, children }: CMSLayoutClientProps) {
   return (
     <>
       {/* Mobile Header */}
-      <div
-        className="lg:hidden fixed top-0 left-0 right-0 h-16 border-b flex items-center px-4 z-50"
-        style={{ backgroundColor: '#f5f0e8', borderColor: '#d4a017' }}
-      >
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 border-b border-arkara-amber/30 bg-arkara-cream/80 backdrop-blur-md flex items-center px-4 z-50">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2"
-          style={{ color: '#1a2e1a' }}
+          className="p-2 text-arkara-green"
         >
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
-        <h1 className="ml-4 text-xl font-bold" style={{ color: '#1a2e1a' }}>
-          Arkara CMS
+        <h1 className="ml-4 text-xl font-bold text-arkara-green tracking-tight">
+          Arkara <span className="text-arkara-amber text-sm uppercase">CMS</span>
         </h1>
       </div>
 
       {/* Sidebar */}
       <div
-        className={`fixed lg:relative top-0 left-0 w-60 h-screen flex flex-col border-r transition-transform duration-200 lg:translate-x-0 z-40 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed lg:relative top-0 left-0 w-64 h-screen flex flex-col border-r border-arkara-amber/20 bg-arkara-green transition-transform duration-300 ease-in-out lg:translate-x-0 z-40 ${
+          sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
         } lg:mt-0 mt-16`}
-        style={{ backgroundColor: '#1a2e1a', borderColor: '#d4a017' }}
       >
         {/* Logo */}
-        <div className="p-6 border-b" style={{ borderColor: '#d4a017' }}>
-          <h1 className="text-2xl font-bold" style={{ color: '#d4a017' }}>
-            Arkara
+        <div className="p-8 border-b border-arkara-amber/10">
+          <h1 className="text-3xl font-black text-arkara-amber tracking-tighter">
+            ARKARA
           </h1>
-          <p className="text-xs mt-1" style={{ color: '#a0a0a0' }}>
-            CMS
-          </p>
+          <div className="h-1 w-12 bg-arkara-amber mt-2 rounded-full"></div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 mt-4 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
@@ -88,39 +81,33 @@ export function CMSLayoutClient({ user, children }: CMSLayoutClientProps) {
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive ? 'bg-opacity-100' : 'hover:bg-opacity-50'
+                className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all group ${
+                  isActive 
+                    ? 'bg-arkara-amber text-arkara-green shadow-lg shadow-arkara-amber/20' 
+                    : 'text-gray-400 hover:bg-white/5 hover:text-arkara-amber'
                 }`}
-                style={{
-                  backgroundColor: isActive ? '#d4a017' : 'transparent',
-                  color: isActive ? '#1a2e1a' : '#d4a017',
-                }}
               >
-                <Icon size={20} />
-                <span className="font-medium">{item.label}</span>
+                <Icon size={20} className={isActive ? 'text-arkara-green' : 'group-hover:scale-110 transition-transform'} />
+                <span className="font-bold tracking-wide">{item.label}</span>
               </Link>
             )
           })}
         </nav>
 
         {/* User Profile & Logout */}
-        <div className="p-4 border-t" style={{ borderColor: '#d4a017' }}>
-          <div className="mb-4">
-            <p className="text-xs text-gray-400">Logged in as</p>
-            <p className="text-sm font-medium truncate" style={{ color: '#d4a017' }}>
+        <div className="p-4 border-t border-arkara-amber/10 bg-black/10">
+          <div className="mb-4 px-2">
+            <p className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">Administrator</p>
+            <p className="text-sm font-medium truncate text-arkara-amber">
               {user.email}
             </p>
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors"
-            style={{
-              backgroundColor: '#d4a017',
-              color: '#1a2e1a',
-            }}
+            className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl font-bold bg-arkara-amber text-arkara-green hover:bg-white hover:text-arkara-green transition-all shadow-md group"
           >
-            <LogOut size={18} />
-            <span>Logout</span>
+            <LogOut size={18} className="group-hover:rotate-12 transition-transform" />
+            <span>Sign Out</span>
           </button>
         </div>
       </div>
@@ -134,29 +121,23 @@ export function CMSLayoutClient({ user, children }: CMSLayoutClientProps) {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:mt-0 mt-16 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:mt-0 mt-16 overflow-hidden bg-arkara-cream">
         {/* Top Header */}
-        <div
-          className="hidden lg:flex items-center justify-between h-16 px-6 border-b"
-          style={{ backgroundColor: '#f5f0e8', borderColor: '#d4a017' }}
-        >
-          <h1 className="text-xl font-bold" style={{ color: '#1a2e1a' }}>
-            Arkara CMS
-          </h1>
-          <div className="flex items-center space-x-4">
-            <p className="text-sm" style={{ color: '#1a2e1a' }}>
-              {user.email}
-            </p>
-            <button
-              onClick={handleLogout}
-              className="p-2 rounded-lg transition-colors"
-              style={{
-                backgroundColor: '#d4a017',
-                color: '#1a2e1a',
-              }}
-            >
-              <LogOut size={18} />
-            </button>
+        <div className="hidden lg:flex items-center justify-between h-20 px-10 bg-white border-b border-gray-100 shadow-sm z-10">
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Portal CMS</p>
+            <h1 className="text-xl font-black text-arkara-green">
+              ARKARA <span className="text-arkara-amber">SISTEM</span>
+            </h1>
+          </div>
+          <div className="flex items-center gap-6">
+            <div className="text-right">
+                <p className="text-sm font-bold text-arkara-green uppercase leading-none">{user.email?.split('@')[0]}</p>
+                <p className="text-[10px] text-gray-400 mt-1">Status: Online</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-arkara-amber flex items-center justify-center text-arkara-green font-bold shadow-inner">
+               {user.email?.[0].toUpperCase()}
+            </div>
           </div>
         </div>
 
