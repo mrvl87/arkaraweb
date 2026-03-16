@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sleep:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 20520 -Force\" 2>&1 && echo \"Done\")",
+      "Bash(BASE=\"/g/My Own Project/Buku 1/Web/nextjsCMS/src/app\"\ncp \"$BASE/\\(cms\\)/layout.tsx\" \"$BASE/cms/layout.tsx\"\ncp \"$BASE/\\(cms\\)/dashboard/page.tsx\" \"$BASE/cms/dashboard/page.tsx\"\ncp \"$BASE/\\(cms\\)/posts/page.tsx\" \"$BASE/cms/posts/page.tsx\"\ncp \"$BASE/\\(cms\\)/panduan/page.tsx\" \"$BASE/cms/panduan/page.tsx\"\ncp \"$BASE/\\(cms\\)/media/page.tsx\" \"$BASE/cms/media/page.tsx\"\ncp \"$BASE/\\(cms\\)/settings/page.tsx\" \"$BASE/cms/settings/page.tsx\"\ncp \"$BASE/\\(cms\\)/ai/page.tsx\" \"$BASE/cms/ai/page.tsx\"\necho \"Done\")",
+      "Bash(powershell -Command \"Remove-Item -Recurse -Force 'G:\\\\My Own Project\\\\Buku 1\\\\Web\\\\nextjsCMS\\\\src\\\\app\\\\\\(cms\\)'\" && echo \"Deleted \\(cms\\)\")",
+      "Bash(powershell -Command \"Remove-Item -Recurse -Force 'G:\\\\My Own Project\\\\Buku 1\\\\Web\\\\nextjsCMS\\\\src\\\\app\\\\cms_temp'\" && echo \"Cleaned up cms_temp\")"
+    ]
+  }
+}
