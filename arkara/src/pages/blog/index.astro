@@ -3,25 +3,13 @@
  * Blog Listing Page
  */
 
-import { getCollection } from 'astro:content';
+import { getPublishedPosts } from '../../lib/content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/blog/PostCard.astro';
 
-// Get all blog posts from content collections
-const allPosts = await getCollection('blog');
+const selectedCategory = Astro.url.searchParams.get('category') || undefined;
 
-// Get selected category from query params
-const selectedCategory = Astro.url.searchParams.get('category');
-
-// Filter posts by category if selected
-const filteredPosts = selectedCategory
-  ? allPosts.filter((post) => post.data.category === selectedCategory)
-  : allPosts;
-
-// Sort by date descending
-const sortedPosts = filteredPosts.sort(
-  (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf()
-);
+const sortedPosts = await getPublishedPosts({ category: selectedCategory });
 
 const categories = ['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas'];
 const categoryLabels: Record<string, string> = {
@@ -69,12 +57,12 @@ const categoryLabels: Record<string, string> = {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         {sortedPosts.map((post) => (
           <PostCard
-            title={post.data.title}
-            excerpt={post.data.description || ''}
-            category={categoryLabels[post.data.category]}
-            date={post.data.publishDate.toISOString()}
+            title={post.title}
+            excerpt={post.description || ''}
+            category={categoryLabels[post.category] || post.category}
+            date={post.published_at || ''}
             slug={post.slug}
-            image={post.data.coverImage}
+            image={post.cover_image}
           />
         ))}
       </div>

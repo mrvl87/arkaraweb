@@ -1,75 +1,43 @@
 ---
 /**
- * Panduan Detail Page
- * Renders technical guide pages based on slug
- *
- * TODO: Integrate with StudioCMS SDK for database-backed content
- * Currently placeholder for file-based fallback
+ * Panduan Detail Page — SSR, data dari Supabase
  */
 
-import type { GetStaticPaths } from 'astro';
+import { getPanduanBySlug } from '../../lib/content';
+import { renderMarkdown } from '../../lib/markdown';
+import BaseLayout from '../../layouts/BaseLayout.astro';
 
-interface PanduanEntry {
-  slug: string;
-  title: string;
-  babRef?: string;
-  qrSlug?: string;
-  content: string;
-}
+const { slug } = Astro.params;
+const guide = await getPanduanBySlug(slug!);
 
-export const getStaticPaths: GetStaticPaths = async () => {
-  // TODO: Use StudioCMS SDK when enabled
-  // const entries = await sdk.GET.databaseEntry.all('panduan');
-  // return entries.map(entry => ({
-  //   params: { slug: entry.slug },
-  //   props: { entry }
-  // }));
-  
-  return [];
-};
+if (!guide) return Astro.redirect('/404');
 
-interface Props {
-  entry?: PanduanEntry;
-}
-
-const { entry } = Astro.props;
+const htmlContent = renderMarkdown(guide.content || '');
 ---
 
-<article>
-  {entry ? (
-    <>
-      <h1>{entry.title}</h1>
-      {entry.babRef && <p class="metadata">Bab: {entry.babRef}</p>}
-      {entry.qrSlug && <p class="metadata">QR: {entry.qrSlug}</p>}
-      <div set:html={entry.content} />
-    </>
-  ) : (
-    <div class="not-found">
-      <h1>Panduan tidak ditemukan</h1>
-      <p>Silakan kembali ke halaman utama.</p>
-    </div>
-  )}
-</article>
+<BaseLayout title={guide.title}>
+  <article class="max-w-[--content-width] mx-auto px-6 py-12">
+    <header class="mb-12">
+      {guide.cover_image && (
+        <img
+          src={guide.cover_image}
+          alt={guide.title}
+          class="w-full h-96 object-cover rounded-lg mb-8"
+        />
+      )}
 
-<style>
-  article {
-    max-width: 65ch;
-    margin: 0 auto;
-    padding: 2rem;
-  }
+      <h1 class="font-display font-black text-5xl mb-4">{guide.title}</h1>
 
-  h1 {
-    color: var(--forest);
-    font-family: 'Playfair Display', serif;
-  }
+      <div class="flex gap-4 text-sm text-stone/60">
+        {guide.bab_ref && (
+          <span>Referensi: <strong class="text-moss">{guide.bab_ref}</strong></span>
+        )}
+        {guide.qr_slug && (
+          <span>QR: <strong class="text-amber">{guide.qr_slug}</strong></span>
+        )}
+      </div>
+    </header>
 
-  .metadata {
-    color: var(--stone);
-    font-size: 0.9rem;
-  }
-
-  .not-found {
-    text-align: center;
-    padding: 4rem 2rem;
-  }
-</style>
+    <div class="prose prose-arkara max-w-none" set:html={htmlContent} />
+  </article>
+</BaseLayout>

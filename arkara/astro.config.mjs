@@ -20,6 +20,9 @@ export default defineConfig({
   }),
 
   image: {
-    domains: ['arkara-media.fly.storage.tigris.dev'],
+    domains: [
+      'arkara-media.fly.storage.tigris.dev',
+      'zythkkmygravwelxbwtf.supabase.co',
+    ],
   },
 });

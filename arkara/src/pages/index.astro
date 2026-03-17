@@ -4,17 +4,13 @@
  * Displays hero, recent articles, categories, and CTA
  */
 
-import { getCollection } from 'astro:content';
+import { getRecentPosts } from '../lib/content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Card from '../components/ui/Card.astro';
 import Button from '../components/ui/Button.astro';
 import PostCard from '../components/blog/PostCard.astro';
 
-// Get recent blog posts from content collections
-const allPosts = await getCollection('blog');
-const recentPosts = allPosts
-  .sort((a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf())
-  .slice(0, 3);
+const recentPosts = await getRecentPosts(3);
 
 const categoryLabels: Record<string, string> = {
   air: 'Air',
@@ -42,7 +38,7 @@ const categories = [
       <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-amber blur-[100px]"></div>
       <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-moss blur-[100px]"></div>
     </div>
-    
+
     <div class="max-w-4xl mx-auto text-center relative z-10">
       <h1 class="font-display text-7xl md:text-8xl font-black mb-6 tracking-tight">
         Arkara
@@ -86,12 +82,12 @@ const categories = [
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         {recentPosts.map((post) => (
           <PostCard
-            title={post.data.title}
-            excerpt={post.data.description || ''}
-            category={categoryLabels[post.data.category]}
-            date={post.data.publishDate.toISOString()}
+            title={post.title}
+            excerpt={post.description || ''}
+            category={categoryLabels[post.category] || post.category}
+            date={post.published_at || ''}
             slug={post.slug}
-            image={post.data.coverImage}
+            image={post.cover_image}
           />
         ))}
       </div>
@@ -100,7 +96,7 @@ const categories = [
         <p class="text-lg">Belum ada artikel. Konten sedang dalam perjalanan.</p>
       </div>
     )}
-    
+
     <div class="mt-8 text-center md:hidden">
       <a href="/blog" class="inline-block text-amber hover:text-brown font-semibold uppercase tracking-wider text-sm">
         Lihat Semua Artikel →
@@ -119,7 +115,7 @@ const categories = [
           Pengetahuan mendalam yang dikelompokkan berdasarkan pilar utama kelangsungan hidup.
         </p>
       </div>
-      
+
       <div class="grid grid-cols-2 lg:grid-cols-6 gap-6">
         {categories.map((cat) => (
           <a href={`/blog?category=${cat.slug}`} class="block no-underline group">
@@ -138,7 +134,7 @@ const categories = [
     <div class="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4">
       <span class="text-[300px] leading-none">⚔️</span>
     </div>
-    
+
     <div class="max-w-3xl mx-auto text-center relative z-10">
       <h2 class="font-display text-4xl font-bold mb-6">
         Siap Hadapi Krisis?

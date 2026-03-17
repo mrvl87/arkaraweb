@@ -6,7 +6,8 @@
       "Bash(cd '/g/My Own Project/Buku 1/Web/arkara' && NODE_OPTIONS='--experimental-require-module' timeout 10 npm run dev 2>&1 | head -40)",
       "Bash(cd '/g/My Own Project/Buku 1/Web/arkara' && npx studiocms --help 2>&1 | head -30)",
       "Bash(cd '/g/My Own Project/Buku 1/Web/arkara' && npx studiocms --help 2>&1 | grep -A 2 -i \"migrate\\\\|db\\\\|database\")",
-      "Bash(cd '/g/My Own Project/Buku 1/Web/arkara' && npx studiocms migrate --latest 2>&1)"
+      "Bash(cd '/g/My Own Project/Buku 1/Web/arkara' && npx studiocms migrate --latest 2>&1)",
+      "Bash(cd:*)"
     ]
   }
 }
