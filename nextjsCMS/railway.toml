@@ -5,4 +5,4 @@ builder = "nixpacks"
 startCommand = "npx next start -p ${PORT:-3000} -H 0.0.0.0"
 healthcheckPath = "/healthz"
 healthcheckTimeout = 120
-restartPolicyType = "on-failure"
+restartPolicyType = "ON_FAILURE"
