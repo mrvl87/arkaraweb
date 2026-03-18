@@ -1,0 +1,88 @@
+---
+interface Props {
+  image?: any;       // The JSON object from Supabase or string fallback
+  alt?: string;      // Fallback alt text if not in JSON
+  class?: string;    // CSS classes
+  loading?: 'lazy' | 'eager'; // Priority loading
+  aspectRatio?: string; // Optional enforced aspect ratio class e.g., 'aspect-video'
+  sizes?: string; // HTML sizes attribute
+}
+
+const { 
+  image, 
+  alt = '', 
+  class: className = '', 
+  loading = 'lazy',
+  aspectRatio = '',
+  sizes = '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
+} = Astro.props;
+
+// If no image is provided
+if (!image) {
+  return null;
+}
+
+// Ensure we have an object to work with
+const isStringUrl = typeof image === 'string';
+
+// Build the attributes based on whether it's our new JSON format or legacy string URL
+let src = isStringUrl ? image : image.url || '';
+let srcSet = '';
+let altText = isStringUrl ? alt : (image.alt_text || alt);
+let blurhash = !isStringUrl && image.blurhash ? image.blurhash : '';
+let dominantColor = !isStringUrl && image.dominant_color ? image.dominant_color : '';
+let hasFormats = !isStringUrl && image.formats && Object.keys(image.formats).length > 0;
+
+if (hasFormats) {
+  const formatList = [];
+  if (image.formats.sm) formatList.push(`${image.formats.sm} 400w`);
+  if (image.formats.md) formatList.push(`${image.formats.md} 800w`);
+  if (image.formats.lg) formatList.push(`${image.formats.lg} 1200w`);
+  if (image.formats.original) formatList.push(`${image.formats.original} 2000w`); // Fallback original
+  srcSet = formatList.join(', ');
+  
+  // Use md as the default fallback src if available
+  if (image.formats.md) src = image.formats.md;
+}
+
+// Styling for placeholder
+const placeholderStyle = dominantColor ? `background-color: ${dominantColor};` : '';
+---
+
+{src && (
+  <div class={`relative overflow-hidden ${aspectRatio} ${className}`} style={placeholderStyle}>
+    {/* Optional Blurhash Background (very lightweight base64) */}
+    {blurhash && (
+      <img 
+        src={blurhash} 
+        alt="" 
+        class="absolute inset-0 w-full h-full object-cover blur-xl opacity-50 scale-110" 
+        aria-hidden="true" 
+      />
+    )}
+    
+    {/* Actual Output */}
+    {hasFormats ? (
+       <picture>
+         {/* We can explicitly set type image/webp since backend uses webp for these formats */}
+         <source type="image/webp" srcset={srcSet} sizes={sizes} />
+         <img
+           src={src}
+           alt={altText}
+           loading={loading}
+           decoding={loading === 'eager' ? 'sync' : 'async'}
+           class={`relative z-10 w-full h-full object-cover transition-opacity duration-300`}
+           // When JS loads, we could fade it in, but native browser behavior is usually fine
+         />
+       </picture>
+    ) : (
+      <img
+        src={src}
+        alt={altText}
+        loading={loading}
+        decoding={loading === 'eager' ? 'sync' : 'async'}
+        class={`relative z-10 w-full h-full object-cover`}
+      />
+    )}
+  </div>
+)}

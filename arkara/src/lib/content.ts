@@ -9,6 +9,8 @@ export interface Post {
   category: string
   status: string
   cover_image?: string
+  thumbnail_image?: any
+  banner_image?: any
   published_at?: string
   meta_title?: string
   meta_desc?: string
@@ -23,6 +25,8 @@ export interface Panduan {
   qr_slug?: string
   status: string
   cover_image?: string
+  thumbnail_image?: any
+  banner_image?: any
 }
 
 export async function getPublishedPosts(options?: {

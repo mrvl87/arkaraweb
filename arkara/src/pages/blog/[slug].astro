@@ -29,7 +29,7 @@ const htmlContent = renderMarkdown(post.content || '');
   description={post.meta_desc || post.description}
   publishDate={post.published_at}
   category={categoryLabels[post.category] || post.category}
-  coverImage={post.cover_image}
+  coverImage={post.banner_image || post.cover_image}
 >
   <div set:html={htmlContent} />
 </PostLayout>

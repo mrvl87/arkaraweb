@@ -62,7 +62,7 @@ const categoryLabels: Record<string, string> = {
             category={categoryLabels[post.category] || post.category}
             date={post.published_at || ''}
             slug={post.slug}
-            image={post.cover_image}
+            image={post.thumbnail_image || post.cover_image}
           />
         ))}
       </div>

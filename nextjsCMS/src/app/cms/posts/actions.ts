@@ -12,6 +12,8 @@ const postSchema = z.object({
   category: z.enum(['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas']),
   status: z.enum(['draft', 'published']).default('draft'),
   cover_image: z.string().optional(),
+  thumbnail_image: z.any().optional(),
+  banner_image: z.any().optional(),
   meta_title: z.string().optional(),
   meta_desc: z.string().optional(),
 })

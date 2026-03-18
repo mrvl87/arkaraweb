@@ -1,10 +1,12 @@
 ---
+import OptimizedImage from '../ui/OptimizedImage.astro';
+
 interface Props {
   title: string;
   description?: string;
   category?: string;
   date?: string;
-  image?: string;
+  image?: any;
 }
 
 const { title, description, category, date, image } = Astro.props;
@@ -47,11 +49,13 @@ const formattedDate = date
 </header>
 
 {image && (
-  <div class="w-full">
-    <img
-      src={image}
+  <div class="w-full h-96">
+    <OptimizedImage
+      image={image}
       alt={title}
-      class="w-full h-96 object-cover"
+      class="w-full h-full object-cover"
+      aspectRatio="aspect-video"
+      loading="eager"
     />
   </div>
 )}

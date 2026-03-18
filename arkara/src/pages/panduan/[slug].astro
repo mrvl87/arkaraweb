@@ -6,6 +6,7 @@
 import { getPanduanBySlug } from '../../lib/content';
 import { renderMarkdown } from '../../lib/markdown';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import OptimizedImage from '../../components/ui/OptimizedImage.astro';
 
 const { slug } = Astro.params;
 const guide = await getPanduanBySlug(slug!);
@@ -18,12 +19,16 @@ const htmlContent = renderMarkdown(guide.content || '');
 <BaseLayout title={guide.title}>
   <article class="max-w-[--content-width] mx-auto px-6 py-12">
     <header class="mb-12">
-      {guide.cover_image && (
-        <img
-          src={guide.cover_image}
-          alt={guide.title}
-          class="w-full h-96 object-cover rounded-lg mb-8"
-        />
+      {(guide.banner_image || guide.cover_image) && (
+        <div class="w-full h-96 mb-8">
+          <OptimizedImage
+            image={guide.banner_image || guide.cover_image}
+            alt={guide.title}
+            class="w-full h-full object-cover rounded-lg"
+            aspectRatio="aspect-video"
+            loading="eager"
+          />
+        </div>
       )}
 
       <h1 class="font-display font-black text-5xl mb-4">{guide.title}</h1>

@@ -5,11 +5,12 @@ import { Image as ImageIcon, Search, Loader2, X, Check } from 'lucide-react'
 import { getMedia } from '@/app/cms/media/actions'
 
 interface MediaPickerProps {
-  onSelect: (url: string) => void
+  onSelect: (item: any) => void
   disabled?: boolean
+  label?: string
 }
 
-export function MediaPicker({ onSelect, disabled }: MediaPickerProps) {
+export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar" }: MediaPickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [media, setMedia] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -34,14 +35,23 @@ export function MediaPicker({ onSelect, disabled }: MediaPickerProps) {
     }
   }
 
-  const handleSelect = (filePath: string) => {
-    const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${filePath}`
-    onSelect(publicUrl)
+  const handleSelect = (item: any) => {
+    // Generate the full object needed for Astro consumption
+    const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${item.file_path.split('/').pop()}`
+    
+    // We pass the full item including formats, dominant_color, blurhash etc.
+    const enrichedItem = {
+      ...item,
+      url: item.file_path.startsWith('http') ? item.file_path : publicUrl, // Ensure valid url
+    }
+    
+    onSelect(enrichedItem)
     setIsOpen(false)
   }
 
   const filteredMedia = media.filter(item => 
-    item.file_name.toLowerCase().includes(search.toLowerCase())
+    item.file_name.toLowerCase().includes(search.toLowerCase()) || 
+    (item.alt_text && item.alt_text.toLowerCase().includes(search.toLowerCase()))
   )
 
   return (
@@ -50,10 +60,11 @@ export function MediaPicker({ onSelect, disabled }: MediaPickerProps) {
         type="button"
         disabled={disabled}
         onClick={handleOpen}
-        className="p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 hover:text-amber-600 hover:border-amber-200 hover:bg-amber-50 transition-all disabled:opacity-50 flex items-center gap-2"
-        title="Pilih Gambar dari Media Library"
+        className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 hover:text-amber-600 hover:border-amber-200 hover:bg-amber-50 transition-all disabled:opacity-50 flex items-center justify-center gap-2 w-full"
+        title={label}
       >
-        <ImageIcon className="w-5 h-5" />
+        <ImageIcon className="w-4 h-4" />
+        {label}
       </button>
 
       {isOpen && (
@@ -75,12 +86,12 @@ export function MediaPicker({ onSelect, disabled }: MediaPickerProps) {
             </div>
 
             {/* Search & Toolbar */}
-            <div className="p-4 border-b border-gray-100 flex items-center gap-4">
+            <div className="p-4 border-b border-gray-100 flex items-center gap-4 bg-white">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Cari file media..."
+                  placeholder="Cari berdasarkan nama atau konteks..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-100 focus:border-amber-400 transition-all outline-none text-sm"
@@ -88,14 +99,14 @@ export function MediaPicker({ onSelect, disabled }: MediaPickerProps) {
               </div>
               <button 
                 onClick={loadMedia}
-                className="text-xs font-bold text-gray-500 hover:text-gray-900 border px-3 py-2 rounded-lg transition-all"
+                className="text-xs font-bold text-gray-500 hover:text-gray-900 border border-gray-200 hover:border-gray-400 px-4 py-2 rounded-lg transition-all"
               >
                 Refresh
               </button>
             </div>
 
             {/* Grid */}
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-20">
                   <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
@@ -106,34 +117,42 @@ export function MediaPicker({ onSelect, disabled }: MediaPickerProps) {
                   <div className="p-4 bg-white rounded-full shadow-sm mb-4">
                     <ImageIcon className="w-8 h-8 text-gray-300" />
                   </div>
-                  <p className="text-gray-500 font-medium">Buka menu Media untuk mengunggah gambar baru.</p>
+                  <p className="text-gray-500 font-medium text-sm">Tidak ada gambar yang ditemukan.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {filteredMedia.map((item) => {
-                    const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${item.file_path}`
+                    const publicUrl = item.file_path.startsWith('http') 
+                        ? item.file_path 
+                        : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${item.file_path.split('/').pop()}`
                     
                     return (
                       <div 
                         key={item.id}
-                        onClick={() => handleSelect(item.file_path)}
-                        className="group relative bg-white rounded-xl border border-gray-200 overflow-hidden cursor-pointer hover:border-amber-400 hover:shadow-md transition-all active:scale-95"
+                        onClick={() => handleSelect(item)}
+                        className="group relative bg-white rounded-xl border border-gray-200 overflow-hidden cursor-pointer hover:border-amber-400 hover:shadow-md transition-all active:scale-95 flex flex-col"
                       >
-                        <div className="aspect-square bg-gray-50 relative">
+                        <div className="aspect-square bg-gray-50 relative overflow-hidden">
                           <img
                             src={publicUrl}
-                            alt={item.file_name}
+                            alt={item.alt_text || item.file_name}
                             className="w-full h-full object-cover"
+                            style={item.dominant_color ? { backgroundColor: item.dominant_color } : {}}
                           />
                           <div className="absolute inset-0 bg-amber-500/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <div className="bg-white p-2 rounded-full shadow-sm text-amber-600 scale-50 group-hover:scale-100 transition-transform">
-                               <Check className="w-5 h-5" />
+                            <div className="bg-white p-2 text-amber-600 rounded-full shadow-md scale-75 group-hover:scale-100 transition-transform">
+                               <Check className="w-6 h-6" />
                             </div>
                           </div>
+                          {item.aspect_ratio && (
+                             <div className="absolute top-2 right-2 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded font-bold tracking-wider backdrop-blur-sm">
+                                {item.aspect_ratio}
+                             </div>
+                          )}
                         </div>
-                        <div className="p-2 border-t border-gray-100">
-                          <p className="text-[10px] font-medium text-gray-700 truncate" title={item.file_name}>
-                             {item.file_name}
+                        <div className="p-2 border-t border-gray-100 flex-1 flex items-center">
+                          <p className="text-[11px] font-medium text-gray-700 line-clamp-2 leading-tight" title={item.alt_text || item.file_name}>
+                             {item.alt_text || item.file_name}
                           </p>
                         </div>
                       </div>

@@ -1,12 +1,13 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import OptimizedImage from '../components/ui/OptimizedImage.astro';
 
 interface Props {
   title: string;
   description?: string;
   publishDate?: string;
   category?: string;
-  coverImage?: string;
+  coverImage?: any;
 }
 
 const { title, description, publishDate, category, coverImage } = Astro.props;
@@ -17,11 +18,15 @@ const { title, description, publishDate, category, coverImage } = Astro.props;
     <!-- Post Header -->
     <header class="mb-12">
       {coverImage && (
-        <img
-          src={coverImage}
-          alt={title}
-          class="w-full h-96 object-cover rounded-lg mb-8"
-        />
+        <div class="w-full h-96 mb-8">
+          <OptimizedImage
+            image={coverImage}
+            alt={title}
+            class="w-full h-full object-cover rounded-lg"
+            aspectRatio="aspect-video"
+            loading="eager"
+          />
+        </div>
       )}
 
       <div class="flex items-center gap-4 mb-4">
