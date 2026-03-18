@@ -32,38 +32,43 @@ export function MediaGallery({ initialMedia }: MediaGalleryProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Upload Sidebar */}
-        <div className="lg:col-span-1 border-r border-gray-100 pr-0 lg:pr-8 space-y-6">
-           <div className="text-left">
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Unggah Baru</h3>
-              <p className="text-xs text-gray-500 mt-1">Upload gambar untuk digunakan di artikel atau panduan.</p>
+      <div className="space-y-12">
+        {/* Upload Full Width Section */}
+        <div className="bg-white/50 border border-gray-100 rounded-3xl p-6 lg:p-8 shadow-sm">
+           <div className="mb-6 flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+                 <ImageIcon className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 tracking-tight">Pusat Unggahan</h3>
+                <p className="text-sm text-gray-500">Mendukung konversi dan optimasi WebP otomatis.</p>
+              </div>
            </div>
            <UploadZone />
         </div>
 
-        {/* Gallery Grid */}
-        <div className="lg:col-span-3">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-gray-900 flex items-center gap-2" style={{ color: '#1a2e1a' }}>
-              Semua Media
-              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-mono">
-                {filteredMedia.length}
+        {/* Gallery Grid Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <h3 className="font-bold text-gray-900 flex items-center gap-3 text-xl" style={{ color: '#1a2e1a' }}>
+              Koleksi Media Anda
+              <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-bold">
+                {filteredMedia.length} File
               </span>
             </h3>
           </div>
 
           {filteredMedia.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100">
+            <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
                <div className="p-4 bg-white rounded-full shadow-sm mb-4">
                   <ImageIcon className="w-8 h-8 text-gray-300" />
                </div>
-               <p className="text-gray-500 font-medium">
-                {search ? 'Tidak ada media yang cocok dengan pencarian.' : 'Belum ada media yang diunggah.'}
+               <p className="text-gray-500 font-medium px-4 text-center">
+                {search ? 'Tidak ada media yang cocok dengan pencarian Anda saat ini.' : 'Belum ada daftar media yang tersedia di library.'}
                </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
               {filteredMedia.map((item) => (
                 <MediaCard key={item.id} item={item} />
               ))}
