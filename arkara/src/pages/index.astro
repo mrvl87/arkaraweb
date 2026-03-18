@@ -9,8 +9,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Card from '../components/ui/Card.astro';
 import Button from '../components/ui/Button.astro';
 import PostCard from '../components/blog/PostCard.astro';
+import HeroCarousel from '../components/home/HeroCarousel.astro';
 
-const recentPosts = await getRecentPosts(3);
+const recentPosts = await getRecentPosts(5);
+const displayPosts = recentPosts.slice(0, 3); // For grid
 
 const categoryLabels: Record<string, string> = {
   air: 'Air',
@@ -32,34 +34,8 @@ const categories = [
 ---
 
 <BaseLayout title="Beranda">
-  <!-- Hero Section -->
-  <section class="bg-forest text-sand pt-32 pb-48 px-6 relative overflow-hidden">
-    <!-- Decorative elements -->
-    <div class="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#E6D8B5_1.5px,transparent_1.5px)] [background-size:32px_32px]"></div>
-    <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-amber-600/20 blur-[120px]"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-moss/20 blur-[120px]"></div>
-
-    <div class="max-w-5xl mx-auto text-center relative z-10">
-      <div class="inline-block mb-6 px-4 py-1.5 border border-amber-500/30 rounded-full bg-amber-500/5 backdrop-blur-sm">
-         <span class="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500">Platform Pengetahuan Survival Indonesia</span>
-      </div>
-      <h1 class="font-display text-7xl md:text-9xl font-black mb-8 tracking-tight leading-[0.9]">
-        Arkara
-      </h1>
-      <p class="text-2xl md:text-4xl font-light mb-12 text-sand/60 font-display italic max-w-3xl mx-auto leading-relaxed">
-        "<span class="text-sand">Survive with Knowledge</span>. Membangun kemandirian melalui strategi dan taktik praktis."
-      </p>
-      
-      <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
-        <a href="/blog" class="w-full sm:w-auto px-10 py-5 bg-amber-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-white hover:text-forest transition-all transform hover:-translate-y-1 shadow-2xl shadow-amber-600/20 active:scale-95">
-           Eksplor Jurnal
-        </a>
-        <a href="/panduan" class="w-full sm:w-auto px-10 py-5 border-2 border-sand/20 text-sand rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-sand/10 transition-all transform hover:-translate-y-1 active:scale-95">
-           Panduan Teknis
-        </a>
-      </div>
-    </div>
-  </section>
+  <!-- Dynamic Hero Section -->
+  <HeroCarousel posts={recentPosts} />
 
   <!-- Recent Articles Grid -->
   <section class="max-w-7xl mx-auto px-6 -mt-24 pb-32 relative z-20">
@@ -79,7 +55,7 @@ const categories = [
 
     {recentPosts.length > 0 ? (
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
-        {recentPosts.map((post) => (
+        {displayPosts.map((post) => (
           <PostCard
             title={post.title}
             excerpt={post.description || ''}
