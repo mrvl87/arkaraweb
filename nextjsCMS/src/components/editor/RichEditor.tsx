@@ -19,7 +19,9 @@ import {
   HighlightExtension,
   TaskItem,
   TaskList,
-  TiptapImage
+  TiptapImage,
+  Command,
+  renderItems
 } from 'novel'
 import { 
   Bold, 
@@ -86,6 +88,12 @@ const extensions = [
     allowBase64: true,
     HTMLAttributes: {
       class: "rounded-2xl border-2 border-gray-100 shadow-lg my-8 max-w-full",
+    },
+  }),
+  Command.configure({
+    suggestion: {
+      items: () => [], // The EditorCommand component in the JSX handles rendering the actual items
+      render: renderItems,
     },
   }),
 ]
