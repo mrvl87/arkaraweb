@@ -18,16 +18,19 @@ export function PostActions({ post }: PostActionsProps) {
   const [showDropdown, setShowDropdown] = useState(false)
 
   const handleToggleStatus = async () => {
-    try {
-      await togglePostStatus(post.id, post.status)
-      setShowDropdown(false)
-    } catch (error) {
-      alert("Gagal mengubah status: " + (error as Error).message)
+    const res = await togglePostStatus(post.id, post.status)
+    if (res?.error) {
+       alert("Gagal mengubah status: " + res.error)
+    } else {
+       setShowDropdown(false)
     }
   }
 
   const handleDelete = async () => {
-    await deletePost(post.id)
+    const res = await deletePost(post.id)
+    if (res?.error) {
+       alert("Gagal menghapus: " + res.error)
+    }
   }
 
   return (

@@ -2,10 +2,17 @@
 
 import { PostForm } from '@/components/post-form'
 import { createPost } from '@/app/cms/posts/actions'
+import { useRouter } from 'next/navigation'
 
 export default function NewPostPage() {
+  const router = useRouter()
+  
   const handleSubmit = async (data: any) => {
-    await createPost(data)
+    const res = await createPost(data)
+    if (res?.error) {
+       throw new Error(res.error)
+    }
+    router.push('/cms/posts')
   }
 
   return (

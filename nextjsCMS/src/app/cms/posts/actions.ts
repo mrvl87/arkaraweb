@@ -44,10 +44,13 @@ export async function createPost(formData: z.infer<typeof postSchema>) {
 
   const { error } = await supabase.from('posts').insert(postData)
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    return { error: error.message }
+  }
   
   revalidatePath('/cms/posts')
   revalidatePath('/cms/dashboard')
+  return { success: true }
 }
 
 export async function updatePost(id: string, formData: z.infer<typeof postSchema>) {
@@ -70,21 +73,27 @@ export async function updatePost(id: string, formData: z.infer<typeof postSchema
 
   const { error } = await supabase.from('posts').update(postData).eq('id', id)
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    return { error: error.message }
+  }
   
   revalidatePath('/cms/posts')
   revalidatePath(`/cms/posts/${id}/edit`)
   revalidatePath('/cms/dashboard')
+  return { success: true }
 }
 
 export async function deletePost(id: string) {
   const supabase = await createClient()
   const { error } = await supabase.from('posts').delete().eq('id', id)
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    return { error: error.message }
+  }
   
   revalidatePath('/cms/posts')
   revalidatePath('/cms/dashboard')
+  return { success: true }
 }
 
 export async function togglePostStatus(id: string, currentStatus: 'draft' | 'published') {
@@ -100,8 +109,11 @@ export async function togglePostStatus(id: string, currentStatus: 'draft' | 'pub
     })
     .eq('id', id)
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    return { error: error.message }
+  }
   
   revalidatePath('/cms/posts')
   revalidatePath('/cms/dashboard')
+  return { success: true }
 }
