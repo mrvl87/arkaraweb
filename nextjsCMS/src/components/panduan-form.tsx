@@ -9,6 +9,7 @@ import { Save, ChevronLeft, Loader2, Image as ImageIcon, QrCode, Book } from 'lu
 import Link from 'next/link'
 import { SlugInput } from './slug-input'
 import { MediaPicker } from './media/media-picker'
+import { RichEditor } from './editor/RichEditor'
 
 const panduanSchema = z.object({
   title: z.string().min(1, 'Judul wajib diisi'),
@@ -164,13 +165,14 @@ export function PanduanForm({ initialData, onSubmit, title }: PanduanFormProps) 
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">Konten Panduan</label>
-              <textarea
-                {...register('content')}
-                rows={15}
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-amber-100 focus:border-amber-500 transition-all font-mono text-sm"
-                placeholder="Tulis konten panduan teknis di sini..."
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex justify-between items-center mb-1">
+                 <label className="text-sm font-medium text-gray-700">Konten Panduan Teknis</label>
+                 <span className="text-[10px] font-bold tracking-widest text-amber-600 bg-amber-50 px-2 py-1 rounded">WYSIWYG</span>
+              </div>
+              <RichEditor 
+                value={watch('content') || ''} 
+                onChange={(val: string) => setValue('content', val, { shouldValidate: true })}
               />
             </div>
           </div>
@@ -190,7 +192,7 @@ export function PanduanForm({ initialData, onSubmit, title }: PanduanFormProps) 
                   placeholder="https://..."
                 />
                 <MediaPicker 
-                  onSelect={(url) => setValue('cover_image', url, { shouldValidate: true })} 
+                  onSelect={(data) => setValue('cover_image', data.url || data.file_path, { shouldValidate: true })} 
                 />
               </div>
             </div>

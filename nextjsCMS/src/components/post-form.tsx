@@ -9,6 +9,7 @@ import { Save, ChevronLeft, Loader2, Image as ImageIcon, Layout, X } from 'lucid
 import Link from 'next/link'
 import { SlugInput } from './slug-input'
 import { MediaPicker } from './media/media-picker'
+import { RichEditor } from './editor/RichEditor'
 
 const postSchema = z.object({
   title: z.string().min(1, 'Judul wajib diisi'),
@@ -184,17 +185,25 @@ export function PostForm({ initialData, onSubmit, title }: PostFormProps) {
               />
             </div>
 
-            <div className="space-y-2 pt-4 border-t">
+            <div className="space-y-4 pt-4 border-t">
               <div className="flex justify-between items-center mb-1">
-                 <label className="text-sm font-bold text-gray-700">Konten Artikel Utama</label>
-                 <span className="text-[10px] font-bold tracking-widest text-amber-600 bg-amber-50 px-2 py-1 rounded">MARKDOWN KETAT</span>
+                 <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                    Konten Artikel Utama
+                    <span className="text-[10px] font-bold tracking-widest text-amber-600 bg-amber-50 px-2 py-1 rounded">WYSIWYG / Notion-Style</span>
+                 </label>
+                 <div className="text-[10px] text-gray-400 font-medium">Ketikan "/" untuk menu konten cepat</div>
               </div>
-              <textarea
-                {...register('content')}
-                rows={20}
-                className="w-full px-5 py-4 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:ring-2 focus:ring-amber-200 focus:border-amber-500 transition-all font-mono text-sm shadow-inner"
-                placeholder="Tulis konten artikel di sini.&#10;&#10;## Subjudul 1&#10;Gunakan heading, **teks tebal**, dan struktur markdown.&#10;&#10;- Poin 1&#10;- Poin 2"
+              
+              <RichEditor 
+                value={watch('content') || ''} 
+                onChange={(val: string) => {
+                  setValue('content', val, { 
+                    shouldValidate: true,
+                    shouldDirty: true 
+                  })
+                }} 
               />
+              {errors.content && <p className="text-xs text-red-500 mt-1">{errors.content.message}</p>}
             </div>
           </div>
         </div>
