@@ -37,12 +37,14 @@ export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar" }: Medi
 
   const handleSelect = (item: any) => {
     // Generate the full object needed for Astro consumption
-    const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${item.file_path.split('/').pop()}`
+    const publicUrl = item.file_path.startsWith('http') 
+        ? item.file_path 
+        : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${item.file_path}`
     
     // We pass the full item including formats, dominant_color, blurhash etc.
     const enrichedItem = {
       ...item,
-      url: item.file_path.startsWith('http') ? item.file_path : publicUrl, // Ensure valid url
+      url: publicUrl,
     }
     
     onSelect(enrichedItem)
@@ -124,7 +126,7 @@ export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar" }: Medi
                   {filteredMedia.map((item) => {
                     const publicUrl = item.file_path.startsWith('http') 
                         ? item.file_path 
-                        : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${item.file_path.split('/').pop()}`
+                        : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${item.file_path}`
                     
                     return (
                       <div 

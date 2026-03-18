@@ -13,7 +13,9 @@ export function MediaCard({ item }: MediaCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [copied, setCopied] = useState(false)
   
-  const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${item.file_path}`
+  const publicUrl = item.file_path.startsWith('http') 
+    ? item.file_path 
+    : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${item.file_path}`
 
   const handleCopy = () => {
     navigator.clipboard.writeText(publicUrl)
