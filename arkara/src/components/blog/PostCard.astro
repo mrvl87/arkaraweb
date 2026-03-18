@@ -1,5 +1,7 @@
 ---
 import OptimizedImage from '../ui/OptimizedImage.astro';
+import ReadingMeta from './ReadingMeta.astro';
+import { calculateReadingTime } from '../../lib/markdown';
 
 interface Props {
   title: string;
@@ -7,56 +9,61 @@ interface Props {
   category: string;
   date: string;
   slug: string;
+  content: string;
   image?: any;
 }
 
-const { title, excerpt, category, date, slug, image } = Astro.props;
-
-const formattedDate = new Date(date).toLocaleDateString('id-ID', {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-});
+const { title, excerpt, category, date, slug, content, image } = Astro.props;
+const readingTime = calculateReadingTime(content || '');
 ---
 
-<article class="bg-parchment border border-sand rounded-lg overflow-hidden hover:shadow-lg transition duration-300 h-full flex flex-col">
+<article class="group relative flex flex-col h-full bg-white border border-stone/10 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
   {image && (
-    <div class="w-full h-48">
+    <div class="relative w-full aspect-video overflow-hidden">
       <OptimizedImage
         image={image}
         alt={title}
-        class="w-full h-full object-cover"
-        aspectRatio="aspect-4/3 md:aspect-video"
+        class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+        aspectRatio="aspect-video"
       />
+      <!-- Category Badge -->
+      <div class="absolute top-4 left-4 z-10">
+        <span class="bg-forest/90 backdrop-blur-md text-sand px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-[0.15em] shadow-sm">
+          {category}
+        </span>
+      </div>
     </div>
   )}
 
-  <div class="p-6 flex flex-col flex-grow">
-    <div class="mb-3">
-      <span class="inline-block bg-forest text-sand px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
-        {category}
-      </span>
+  <div class="p-6 flex flex-col flex-grow bg-gradient-to-br from-white to-parchment/10">
+    <div class="text-[11px] text-stone/40 font-mono mb-4 flex items-center gap-2">
+       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+       {readingTime} MIN READ
     </div>
 
-    <a href={`/blog/${slug}`} class="no-underline hover:text-amber transition">
-      <h3 class="font-display text-2xl font-bold text-forest mb-3 hover:text-amber">
+    <a href={`/blog/${slug}`} class="block mb-4 group/title text-forest">
+      <h3 class="font-display text-2xl font-black leading-tight group-hover/title:text-amber-600 transition-colors">
         {title}
       </h3>
     </a>
 
-    <p class="text-stone text-sm flex-grow mb-4">
+    <p class="text-stone/70 text-sm flex-grow mb-6 line-clamp-3 leading-relaxed">
       {excerpt}
     </p>
 
-    <div class="flex items-center justify-between pt-4 border-t border-sand">
-      <time class="text-stone/70 text-xs font-mono">
-        {formattedDate}
+    <div class="flex items-center justify-between pt-4 border-t border-stone/5">
+      <time class="text-stone/40 text-[10px] uppercase font-bold tracking-widest">
+        {new Date(date).toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })}
       </time>
       <a
         href={`/blog/${slug}`}
-        class="text-amber hover:text-brown text-sm font-semibold uppercase tracking-wider transition"
+        class="text-amber-600 hover:text-forest text-[11px] font-black uppercase tracking-[0.2em] transform hover:translate-x-1 transition-all"
       >
-        Baca →
+        Lanjutkan →
       </a>
     </div>
   </div>

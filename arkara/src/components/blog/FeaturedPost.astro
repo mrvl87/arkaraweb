@@ -1,0 +1,63 @@
+---
+import OptimizedImage from '../ui/OptimizedImage.astro';
+import ReadingMeta from './ReadingMeta.astro';
+import { calculateReadingTime } from '../../lib/markdown';
+
+interface Props {
+  post: any;
+  categoryLabel: string;
+}
+
+const { post, categoryLabel } = Astro.props;
+const readingTime = calculateReadingTime(post.content || '');
+---
+
+<article class="group relative bg-white border border-stone/10 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 mb-16">
+  <div class="grid grid-cols-1 lg:grid-cols-2">
+    <!-- Image Side -->
+    <div class="relative aspect-video lg:aspect-auto overflow-hidden">
+      <OptimizedImage
+        image={post.banner_image || post.cover_image}
+        alt={post.title}
+        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+        aspectRatio="aspect-video"
+      />
+      <!-- Badge -->
+      <div class="absolute top-6 left-6 z-10">
+        <span class="bg-forest text-sand px-4 py-2 rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg">
+          Terbaru
+        </span>
+      </div>
+    </div>
+
+    <!-- Content Side -->
+    <div class="p-8 lg:p-12 flex flex-col justify-center bg-gradient-to-br from-white to-parchment/30">
+      <ReadingMeta 
+        category={categoryLabel} 
+        date={post.published_at} 
+        readingTime={readingTime}
+        className="mb-6"
+      />
+
+      <a href={`/blog/${post.slug}`} class="block group/title">
+        <h2 class="font-display text-3xl md:text-5xl font-black text-forest mb-6 leading-[1.1] transition group-hover/title:text-amber-600">
+          {post.title}
+        </h2>
+      </a>
+
+      <p class="text-stone/80 text-lg line-clamp-3 mb-8 font-light leading-relaxed">
+        {post.description}
+      </p>
+
+      <div class="mt-auto">
+        <a 
+          href={`/blog/${post.slug}`}
+          class="inline-flex items-center gap-2 bg-forest text-sand px-8 py-4 rounded-2xl font-bold uppercase tracking-widest text-xs hover:bg-amber-600 hover:text-white transition-all transform hover:-translate-y-1 active:scale-95 shadow-lg shadow-forest/10 hover:shadow-amber-600/20"
+        >
+          Baca Selengkapnya
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</article>

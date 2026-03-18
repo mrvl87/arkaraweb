@@ -1,48 +1,33 @@
----
-/**
- * Panduan Detail Page — SSR, data dari Supabase
- */
-
 import { getPanduanBySlug } from '../../lib/content';
-import { renderMarkdown } from '../../lib/markdown';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import OptimizedImage from '../../components/ui/OptimizedImage.astro';
+import { renderMarkdown, extractHeadings } from '../../lib/markdown';
+import PostLayout from '../../layouts/PostLayout.astro';
 
 const { slug } = Astro.params;
 const guide = await getPanduanBySlug(slug!);
 
 if (!guide) return Astro.redirect('/404');
 
+const headings = extractHeadings(guide.content || '');
 const htmlContent = renderMarkdown(guide.content || '');
 ---
 
-<BaseLayout title={guide.title}>
-  <article class="max-w-[--content-width] mx-auto px-6 py-12">
-    <header class="mb-12">
-      {(guide.banner_image || guide.cover_image) && (
-        <div class="w-full h-96 mb-8">
-          <OptimizedImage
-            image={guide.banner_image || guide.cover_image}
-            alt={guide.title}
-            class="w-full h-full object-cover rounded-lg"
-            aspectRatio="aspect-video"
-            loading="eager"
-          />
-        </div>
-      )}
-
-      <h1 class="font-display font-black text-5xl mb-4">{guide.title}</h1>
-
-      <div class="flex gap-4 text-sm text-stone/60">
-        {guide.bab_ref && (
-          <span>Referensi: <strong class="text-moss">{guide.bab_ref}</strong></span>
-        )}
-        {guide.qr_slug && (
-          <span>QR: <strong class="text-amber">{guide.qr_slug}</strong></span>
-        )}
-      </div>
-    </header>
-
-    <div class="prose prose-arkara max-w-none" set:html={htmlContent} />
-  </article>
-</BaseLayout>
+<PostLayout
+  title={guide.title}
+  description={`Panduan Teknis: Bab ${guide.bab_ref || '-'}`}
+  category="Panduan"
+  publishDate={new Date().toISOString()} 
+  coverImage={guide.banner_image || guide.cover_image}
+  headings={headings}
+  content={guide.content || ''}
+>
+  <div class="flex gap-4 text-sm font-mono mb-8 bg-parchment p-4 rounded-xl border border-stone/10">
+    {guide.bab_ref && (
+      <span>REF: <strong class="text-moss">{guide.bab_ref}</strong></span>
+    )}
+    {guide.qr_slug && (
+      <span>QR_CODE: <strong class="text-amber-600">{guide.qr_slug}</strong></span>
+    )}
+  </div>
+  
+  <div set:html={htmlContent} />
+</PostLayout>

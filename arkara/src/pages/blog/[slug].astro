@@ -1,10 +1,5 @@
----
-/**
- * Blog Detail Page — SSR, data dari Supabase
- */
-
 import { getPostBySlug } from '../../lib/content';
-import { renderMarkdown } from '../../lib/markdown';
+import { renderMarkdown, extractHeadings } from '../../lib/markdown';
 import PostLayout from '../../layouts/PostLayout.astro';
 
 const { slug } = Astro.params;
@@ -21,6 +16,7 @@ const categoryLabels: Record<string, string> = {
   komunitas: 'Komunitas',
 };
 
+const headings = extractHeadings(post.content || '');
 const htmlContent = renderMarkdown(post.content || '');
 ---
 
@@ -30,6 +26,8 @@ const htmlContent = renderMarkdown(post.content || '');
   publishDate={post.published_at}
   category={categoryLabels[post.category] || post.category}
   coverImage={post.banner_image || post.cover_image}
+  headings={headings}
+  content={post.content || ''}
 >
   <div set:html={htmlContent} />
 </PostLayout>

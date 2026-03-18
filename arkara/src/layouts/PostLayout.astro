@@ -1,6 +1,9 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 import OptimizedImage from '../components/ui/OptimizedImage.astro';
+import ReadingMeta from '../components/blog/ReadingMeta.astro';
+import TableOfContents from '../components/blog/TableOfContents.astro';
+import { calculateReadingTime } from '../lib/markdown';
 
 interface Props {
   title: string;
@@ -8,168 +11,188 @@ interface Props {
   publishDate?: string;
   category?: string;
   coverImage?: any;
+  headings?: any[];
+  content?: string;
 }
 
-const { title, description, publishDate, category, coverImage } = Astro.props;
+const { title, description, publishDate, category, coverImage, headings = [], content = '' } = Astro.props;
+const readingTime = calculateReadingTime(content);
 ---
 
-<BaseLayout title={title}>
-  <article class="max-w-[--content-width] mx-auto px-6 py-12">
-    <!-- Post Header -->
-    <header class="mb-12">
-      {coverImage && (
-        <div class="w-full h-96 mb-8">
-          <OptimizedImage
-            image={coverImage}
-            alt={title}
-            class="w-full h-full object-cover rounded-lg"
-            aspectRatio="aspect-video"
-            loading="eager"
-          />
-        </div>
-      )}
+<BaseLayout title={title} description={description}>
+  <!-- Hero Header - Full Width -->
+  <header class="w-full bg-forest relative overflow-hidden pt-16 pb-24 md:pt-24 md:pb-40">
+    <!-- Decorative Pattern -->
+    <div class="absolute inset-0 opacity-10 pointer-events-none">
+       <div class="absolute inset-0 bg-[radial-gradient(#E6D8B5_1px,transparent_1px)] [background-size:32px_32px]"></div>
+    </div>
 
-      <div class="flex items-center gap-4 mb-4">
-        {category && (
-          <span class="inline-block bg-forest text-sand px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
-            {category}
-          </span>
+    <div class="max-w-7xl mx-auto px-6 relative z-10">
+      <div class="max-w-4xl">
+        <ReadingMeta 
+          category={category || 'Umum'} 
+          date={publishDate || new Date().toISOString()} 
+          readingTime={readingTime}
+          class="mb-8 text-sand/80"
+        />
+
+        <h1 class="font-display font-black text-4xl md:text-7xl text-sand mb-8 leading-[1.1] tracking-tight">
+          {title}
+        </h1>
+
+        {description && (
+          <p class="text-sand/60 text-lg md:text-2xl font-light mb-0 max-w-2xl leading-relaxed">
+            {description}
+          </p>
         )}
       </div>
-
-      <h1 class="font-display font-black text-5xl mb-4">
-        {title}
-      </h1>
-
-      {description && (
-        <p class="text-stone text-lg font-light mb-4">
-          {description}
-        </p>
-      )}
-
-      {publishDate && (
-        <time class="text-stone/70 text-sm">
-          {new Date(publishDate).toLocaleDateString('id-ID', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}
-        </time>
-      )}
-    </header>
-
-    <!-- Content -->
-    <div class="prose prose-arkara max-w-none">
-      <slot />
     </div>
-  </article>
+  </header>
+
+  <!-- Main Article Body -->
+  <div class="max-w-7xl mx-auto px-6 -mt-16 md:-mt-24 pb-32 relative z-20">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12 items-start">
+      
+      <!-- Content Column -->
+      <article class="bg-white rounded-3xl border border-stone/10 shadow-2xl shadow-forest/5 overflow-hidden">
+        {coverImage && (
+          <div class="w-full aspect-video overflow-hidden border-b border-stone/10">
+            <OptimizedImage
+              image={coverImage}
+              alt={title}
+              class="w-full h-full object-cover"
+              aspectRatio="aspect-video"
+              loading="eager"
+            />
+          </div>
+        )}
+
+        <div class="px-6 py-10 md:p-16">
+          <div class="prose prose-arkara max-w-none">
+            <slot />
+          </div>
+
+          <!-- Article Footer -->
+          <div class="mt-16 pt-8 border-t border-stone/10 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-4">
+               <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-black">A</div>
+               <div>
+                  <p class="text-xs font-black uppercase tracking-widest text-stone/40">Ditulis oleh</p>
+                  <p class="font-bold text-forest text-sm">Tim Redaksi Arkara</p>
+               </div>
+            </div>
+            <a href="/blog" class="text-xs font-black uppercase tracking-[0.2em] text-amber-600 hover:text-forest transition-colors">
+               ← Kembali ke Blog
+            </a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Sidebar Column -->
+      <aside class="space-y-8 hidden lg:block">
+        <TableOfContents headings={headings} />
+        
+        <!-- Sidebar Widget: Newsletter / Join -->
+        <div class="bg-forest rounded-3xl p-8 text-sand shadow-xl relative overflow-hidden group">
+           <div class="relative z-10">
+              <h4 class="font-display text-2xl font-bold mb-4">Siap Menghadapi Krisis?</h4>
+              <p class="text-sand/60 text-sm mb-6 leading-relaxed">Dapatkan panduan teknik survival eksklusif langsung di kotak masuk Anda.</p>
+              <button class="w-full py-3 bg-amber-600 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-white hover:text-forest transition-all shadow-lg shadow-black/20">
+                 Gabung Sekarang
+              </button>
+           </div>
+           <!-- Decorative background icon -->
+           <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:rotate-12 transition-transform duration-700">
+              <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-alert"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+           </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
 </BaseLayout>
 
 <style is:global>
+  /* Base Typography & Color System for Article */
   .prose-arkara {
-    color: var(--stone);
+    --tw-prose-body: var(--stone);
+    --tw-prose-headings: var(--forest);
+    --tw-prose-links: #d97706; /* amber-600 */
+    --tw-prose-bold: var(--forest);
+    --tw-prose-quotes: var(--stone);
+    --tw-prose-quote-borders: var(--amber);
+  }
+
+  .prose-arkara {
+    font-size: 1.125rem; /* 18px text for comfort */
+    line-height: 1.8;
   }
 
   .prose-arkara h2 {
-    font-family: 'Playfair Display', Georgia, serif;
-    color: var(--brown);
-    font-size: 1.875rem;
-    font-weight: bold;
-    margin-top: 2rem;
-    margin-bottom: 1rem;
+    font-family: 'Playfair Display', serif;
+    font-size: 2.25rem;
+    font-weight: 800;
+    margin-top: 3rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.2;
+    scroll-margin-top: 100px;
   }
 
   .prose-arkara h3 {
-    font-family: 'Playfair Display', Georgia, serif;
-    color: var(--brown);
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    scroll-margin-top: 100px;
   }
 
   .prose-arkara p {
-    margin-bottom: 1rem;
-    line-height: 1.75;
-  }
-
-  .prose-arkara a {
-    color: var(--amber);
-    font-weight: 600;
-  }
-
-  .prose-arkara a:hover {
-    color: var(--brown);
-  }
-
-  .prose-arkara ul,
-  .prose-arkara ol {
-    margin-bottom: 1rem;
-    margin-left: 1.5rem;
-  }
-
-  .prose-arkara li {
-    margin-bottom: 0.5rem;
-  }
-
-  .info-box {
-    border-left: 4px solid;
-    background: var(--parchment);
-    padding: 1rem;
-    border-radius: 0 0.5rem 0.5rem 0;
-    margin-bottom: 1rem;
-  }
-
-  .info-box.warning {
-    border-left-color: var(--danger);
-  }
-
-  .info-box.success {
-    border-left-color: var(--moss);
-  }
-
-  .info-box.info {
-    border-left-color: var(--info);
-  }
-
-  .info-box h4 {
-    font-weight: 600;
-    color: var(--forest);
-    margin-bottom: 0.5rem;
-  }
-
-  .info-box p {
-    margin-bottom: 0;
+    margin-bottom: 1.5rem;
   }
 
   .prose-arkara blockquote {
-    border-left: 4px solid var(--amber);
-    padding-left: 1rem;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    font-family: 'Playfair Display', serif;
     font-style: italic;
-    color: rgba(92, 95, 97, 0.8);
-    margin: 1rem 0;
-  }
-
-  .prose-arkara code {
-    background: var(--sand);
+    font-size: 1.5rem;
+    padding: 2rem;
+    background: var(--parchment);
+    border-radius: 1.5rem;
+    border-left: 8px solid var(--amber);
+    margin: 3rem 0;
     color: var(--forest);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.875rem;
   }
 
-  .prose-arkara pre {
-    background: var(--ink);
-    color: var(--sand);
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-    margin-bottom: 1rem;
+  .prose-arkara img {
+    border-radius: 2rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+    margin: 3rem 0;
   }
 
-  .prose-arkara pre code {
-    background: transparent;
-    color: inherit;
+  .prose-arkara ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 2rem 0;
+  }
+
+  .prose-arkara ul li {
+    position: relative;
+    padding-left: 2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .prose-arkara ul li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--amber);
+    font-weight: bold;
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  /* Custom ID for headings to support TOC anchor */
+  .prose-arkara h2[id], .prose-arkara h3[id] {
+    scroll-snap-margin-top: 100px;
   }
 </style>

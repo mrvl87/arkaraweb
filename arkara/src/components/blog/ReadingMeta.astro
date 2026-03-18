@@ -1,0 +1,39 @@
+---
+interface Props {
+  category: string;
+  date: string;
+  readingTime: number;
+  class?: string;
+}
+
+const { category, date, readingTime, class: className = '' } = Astro.props;
+
+const formattedDate = new Date(date).toLocaleDateString('id-ID', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric'
+});
+---
+
+<div class={`flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-stone/70 ${className}`}>
+  <!-- Category -->
+  <span class="flex items-center gap-1 font-bold text-amber-600 uppercase tracking-widest text-[11px] bg-amber-50 px-2 py-0.5 rounded">
+    {category}
+  </span>
+  
+  <span class="text-stone/30">•</span>
+  
+  <!-- Date -->
+  <time datetime={date} class="flex items-center gap-1.5 font-mono">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+    {formattedDate}
+  </time>
+  
+  <span class="text-stone/30">•</span>
+  
+  <!-- Reading Time -->
+  <span class="flex items-center gap-1.5 whitespace-nowrap">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    {readingTime} menit baca
+  </span>
+</div>

@@ -33,53 +33,52 @@ const categories = [
 
 <BaseLayout title="Beranda">
   <!-- Hero Section -->
-  <section class="bg-forest text-sand py-24 px-6 relative overflow-hidden">
-    <div class="absolute inset-0 opacity-10 pointer-events-none">
-      <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-amber blur-[100px]"></div>
-      <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-moss blur-[100px]"></div>
-    </div>
+  <section class="bg-forest text-sand pt-32 pb-48 px-6 relative overflow-hidden">
+    <!-- Decorative elements -->
+    <div class="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#E6D8B5_1.5px,transparent_1.5px)] [background-size:32px_32px]"></div>
+    <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-amber-600/20 blur-[120px]"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-moss/20 blur-[120px]"></div>
 
-    <div class="max-w-4xl mx-auto text-center relative z-10">
-      <h1 class="font-display text-7xl md:text-8xl font-black mb-6 tracking-tight">
+    <div class="max-w-5xl mx-auto text-center relative z-10">
+      <div class="inline-block mb-6 px-4 py-1.5 border border-amber-500/30 rounded-full bg-amber-500/5 backdrop-blur-sm">
+         <span class="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500">Platform Pengetahuan Survival Indonesia</span>
+      </div>
+      <h1 class="font-display text-7xl md:text-9xl font-black mb-8 tracking-tight leading-[0.9]">
         Arkara
       </h1>
-      <p class="text-2xl md:text-3xl font-light mb-4 text-amber font-display italic">
-        Survive with Knowledge
+      <p class="text-2xl md:text-4xl font-light mb-12 text-sand/60 font-display italic max-w-3xl mx-auto leading-relaxed">
+        "<span class="text-sand">Survive with Knowledge</span>. Membangun kemandirian melalui strategi dan taktik praktis."
       </p>
-      <p class="text-sand/80 mb-10 text-xl max-w-2xl mx-auto leading-relaxed">
-        Platform pengetahuan survival Indonesia. Pelajari teknik praktis untuk menghadapi krisis dengan kemandirian yang tepat.
-      </p>
-      <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="/blog">
-          <Button variant="primary" size="lg" class="w-full sm:w-auto">
-            Mulai Belajar
-          </Button>
+      
+      <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
+        <a href="/blog" class="w-full sm:w-auto px-10 py-5 bg-amber-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-white hover:text-forest transition-all transform hover:-translate-y-1 shadow-2xl shadow-amber-600/20 active:scale-95">
+           Eksplor Jurnal
         </a>
-        <a href="/panduan">
-          <Button variant="outline" size="lg" class="w-full sm:w-auto">
-            Lihat Panduan
-          </Button>
+        <a href="/panduan" class="w-full sm:w-auto px-10 py-5 border-2 border-sand/20 text-sand rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-sand/10 transition-all transform hover:-translate-y-1 active:scale-95">
+           Panduan Teknis
         </a>
       </div>
     </div>
   </section>
 
-  <!-- Featured Articles -->
-  <section class="max-w-6xl mx-auto px-6 py-20">
-    <div class="flex justify-between items-end mb-12">
-      <div>
-        <h2 class="font-display text-4xl font-bold text-forest mb-2">
-          Artikel Terbaru
+  <!-- Recent Articles Grid -->
+  <section class="max-w-7xl mx-auto px-6 -mt-24 pb-32 relative z-20">
+    <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+      <div class="max-w-xl">
+        <div class="h-1.5 w-20 bg-amber-600 rounded-full mb-6"></div>
+        <h2 class="font-display text-5xl font-black text-forest mb-4 leading-tight">
+          Jurnal <span class="text-amber-600 font-light italic">Teranyar</span>
         </h2>
-        <p class="text-stone/60">Wawasan terbaru untuk kesiapan Anda</p>
+        <p class="text-stone/60 text-lg font-light leading-relaxed">Wawasan strategis dan teknik lapangan terbaru yang dirancang untuk kesiapan Anda menghadapi segala situasi.</p>
       </div>
-      <a href="/blog" class="text-amber hover:text-brown font-semibold uppercase tracking-wider text-sm hidden md:block">
-        Lihat Semua Artikel →
+      <a href="/blog" class="px-8 py-4 bg-white border border-stone/10 rounded-xl text-forest hover:bg-forest hover:text-sand font-black uppercase tracking-widest text-[10px] transition-all shadow-xl shadow-forest/5 flex items-center gap-3 group">
+        Lihat Semua Jurnal
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="group-hover:translate-x-1 transition-transform"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
       </a>
     </div>
 
     {recentPosts.length > 0 ? (
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
         {recentPosts.map((post) => (
           <PostCard
             title={post.title}
@@ -87,67 +86,65 @@ const categories = [
             category={categoryLabels[post.category] || post.category}
             date={post.published_at || ''}
             slug={post.slug}
+            content={post.content || ''}
             image={post.thumbnail_image || post.cover_image}
           />
         ))}
       </div>
     ) : (
-      <div class="bg-sand/30 border border-sand rounded-xl text-stone/60 text-center py-20">
-        <p class="text-lg">Belum ada artikel. Konten sedang dalam perjalanan.</p>
+      <div class="bg-white border-2 border-dashed border-stone/10 rounded-3xl p-32 text-center">
+        <div class="text-6xl mb-6 opacity-20">📜</div>
+        <p class="text-stone/40 font-display text-xl italic font-light">Belum ada jurnal yang diterbitkan.</p>
       </div>
     )}
-
-    <div class="mt-8 text-center md:hidden">
-      <a href="/blog" class="inline-block text-amber hover:text-brown font-semibold uppercase tracking-wider text-sm">
-        Lihat Semua Artikel →
-      </a>
-    </div>
   </section>
 
-  <!-- Categories -->
-  <section class="bg-parchment py-20 px-6">
-    <div class="max-w-6xl mx-auto">
-      <div class="text-center mb-16">
-        <h2 class="font-display text-4xl font-bold text-forest mb-4">
-          Kategori Pengetahuan
-        </h2>
-        <p class="text-stone/60 max-w-xl mx-auto">
-          Pengetahuan mendalam yang dikelompokkan berdasarkan pilar utama kelangsungan hidup.
+  <!-- Categories Section -->
+  <section class="bg-stone/5 py-32 px-6">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-20 max-w-2xl mx-auto">
+        <h2 class="font-display text-5xl font-black text-forest mb-6">Pilar Pengetahuan</h2>
+        <p class="text-stone/60 text-lg font-light leading-relaxed">
+          Kuasai dasar-dasar kemandirian melalui pilar eksplorasi kami yang mendalam dan terstruktur.
         </p>
       </div>
 
-      <div class="grid grid-cols-2 lg:grid-cols-6 gap-6">
+      <div class="grid grid-cols-2 lg:grid-cols-6 gap-6 md:gap-8">
         {categories.map((cat) => (
-          <a href={`/blog?category=${cat.slug}`} class="block no-underline group">
-            <Card class="text-center hover:shadow-xl transition-all duration-300 group-hover:bg-sand group-hover:-translate-y-1 h-full flex flex-col items-center justify-center p-8">
-              <div class="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">{cat.icon}</div>
-              <h3 class="font-display text-lg font-bold text-forest group-hover:text-amber">{cat.name}</h3>
-            </Card>
+          <a href={`/blog?category=${cat.slug}`} class="block group">
+            <div class="bg-white border border-stone/5 rounded-3xl p-10 flex flex-col items-center justify-center h-full hover:shadow-2xl hover:shadow-forest/5 hover:-translate-y-2 transition-all duration-500 group-hover:border-amber-600/30">
+               <div class="text-6xl mb-8 transform group-hover:scale-125 transition-transform duration-500 drop-shadow-lg">{cat.icon}</div>
+               <h3 class="font-display text-xl font-black text-forest group-hover:text-amber-600 transition-colors uppercase tracking-wider">{cat.name}</h3>
+               <div class="mt-4 w-0 group-hover:w-8 h-1 bg-amber-600 rounded-full transition-all duration-500"></div>
+            </div>
           </a>
         ))}
       </div>
     </div>
   </section>
 
-  <!-- CTA Section -->
-  <section class="bg-amber text-forest py-20 px-6 mt-16 relative overflow-hidden">
-    <div class="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4">
-      <span class="text-[300px] leading-none">⚔️</span>
-    </div>
-
-    <div class="max-w-3xl mx-auto text-center relative z-10">
-      <h2 class="font-display text-4xl font-bold mb-6">
-        Siap Hadapi Krisis?
-      </h2>
-      <p class="mb-10 text-xl leading-relaxed opacity-90">
-        Jangan biarkan ketidaktahuan menjadi penghalang keselamatan Anda. Jelajahi semua panduan teknis yang telah kami siapkan.
-      </p>
-      <a
-        href="/panduan"
-        class="inline-block bg-forest text-sand px-10 py-4 rounded-md font-bold uppercase tracking-widest hover:bg-brown hover:shadow-lg transform transition active:scale-95"
-      >
-        Pelajari Panduan Teknis
-      </a>
-    </div>
+  <!-- Premium CTA Section -->
+  <section class="max-w-7xl mx-auto px-6 py-32">
+     <div class="bg-forest rounded-[3rem] p-12 md:p-24 text-center relative overflow-hidden shadow-2xl shadow-forest/30">
+        <!-- Background Geometry -->
+        <div class="absolute top-0 right-0 w-96 h-96 bg-amber-600/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-[100px]"></div>
+        <div class="absolute bottom-0 left-0 w-96 h-96 bg-moss/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-[100px]"></div>
+        
+        <div class="relative z-10 max-w-3xl mx-auto">
+           <h2 class="font-display text-5xl md:text-7xl font-black text-sand mb-8 leading-tight">
+              Akses Koleksi <br/><span class="text-amber-500 italic">Panduan Taktis</span>
+           </h2>
+           <p class="text-sand/60 text-xl md:text-2xl font-light mb-12 leading-relaxed">
+              Dapat dibaca secara offline dan didesain untuk situasi darurat. Pastikan Anda memiliki salinan pengetahuan sebelum krisis menyapa.
+           </p>
+           <a
+             href="/panduan"
+             class="inline-flex items-center gap-4 bg-amber-600 text-white px-12 py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-white hover:text-forest transition-all transform hover:-translate-y-1 shadow-2xl active:scale-95"
+           >
+             Mulai Pelajari
+             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+           </a>
+        </div>
+     </div>
   </section>
 </BaseLayout>

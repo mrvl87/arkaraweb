@@ -5,28 +5,39 @@ interface Props {
 }
 
 const { headings = [], class: className = '' } = Astro.props;
-
-// Extract headings from the slot (h2, h3 elements)
-// In practice, this would be passed from the parent component
-// or extracted from the MDX content
 ---
 
 {headings && headings.length > 0 && (
-  <aside class={`bg-sand p-6 rounded-lg mb-8 ${className}`}>
-    <h3 class="font-display text-lg font-bold text-forest mb-4">
+  <aside class={`bg-white border border-stone/10 p-8 rounded-3xl sticky top-32 ${className}`}>
+    <h3 class="font-display text-xl font-black text-forest mb-6 flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-align-left text-amber-600"><line x1="21" x2="3" y1="6" y2="6"/><line x1="15" x2="3" y1="12" y2="12"/><line x1="17" x2="3" y1="18" y2="18"/></svg>
       Daftar Isi
     </h3>
-    <ul class="space-y-2 text-sm">
+    <ul class="space-y-4">
       {headings.map((heading) => (
-        <li class={heading.depth === 3 ? 'ml-4' : ''}>
+        <li class={heading.depth === 3 ? 'pl-6 relative before:content-[""] before:absolute before:left-2 before:top-2 before:w-1 before:h-1 before:bg-stone/20 before:rounded-full' : ''}>
           <a
             href={`#${heading.slug}`}
-            class="text-forest hover:text-amber transition font-medium"
+            class={`block text-stone/60 hover:text-amber-600 transition-all duration-300 ${
+              heading.depth === 2 ? 'font-bold text-[13px] uppercase tracking-wider' : 'text-sm'
+            }`}
           >
             {heading.text}
           </a>
         </li>
       ))}
     </ul>
+    
+    <div class="mt-10 pt-8 border-t border-stone/5">
+       <p class="text-[10px] font-black uppercase tracking-[0.2em] text-stone/30 mb-4">Bagikan Artikel</p>
+       <div class="flex gap-4">
+          <button class="w-8 h-8 rounded-lg bg-stone/5 flex items-center justify-center text-stone/40 hover:bg-forest hover:text-sand transition-all">
+             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          </button>
+          <button class="w-8 h-8 rounded-lg bg-stone/5 flex items-center justify-center text-stone/40 hover:bg-forest hover:text-sand transition-all">
+             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
+          </button>
+       </div>
+    </div>
   </aside>
 )}
