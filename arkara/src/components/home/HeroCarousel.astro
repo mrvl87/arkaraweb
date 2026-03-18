@@ -19,7 +19,7 @@ const categoryLabels: Record<string, string> = {
 };
 ---
 
-<section class="relative w-full overflow-hidden bg-forest group/carousel h-[700px] md:h-[800px]">
+<section class="relative w-full overflow-hidden bg-forest group/carousel h-[550px] md:h-[650px]">
   <div id="carousel-container" class="flex transition-transform duration-700 ease-in-out h-full w-full">
     {posts.map((post, index) => (
       <div class="min-w-full h-full relative flex items-center justify-center isolate overflow-hidden">
@@ -32,31 +32,33 @@ const categoryLabels: Record<string, string> = {
                 alt={post.title}
                 class="w-full h-full object-cover transform scale-105"
               />
-              <div class="absolute inset-0 bg-gradient-to-t from-forest via-forest/60 to-transparent"></div>
-              <div class="absolute inset-0 bg-forest/20 backdrop-blur-[2px]"></div>
+              <!-- Stronger Readability Overlays -->
+              <div class="absolute inset-0 bg-black/40 shadow-inner"></div> <!-- Base darkening -->
+              <div class="absolute inset-0 bg-gradient-to-t from-forest via-forest/80 to-black/20"></div> <!-- Vertical gradient -->
+              <div class="absolute inset-0 bg-forest/30 backdrop-blur-[1px]"></div> <!-- Tint -->
             </>
           ) : (
-             <div class="w-full h-full bg-gradient-to-br from-forest via-forest/90 to-amber-900/20"></div>
+             <div class="w-full h-full bg-gradient-to-br from-forest via-forest/90 to-amber-900/40"></div>
           )}
           <!-- Texture -->
           <div class="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#E6D8B5_1.5px,transparent_1.5px)] [background-size:24px_24px]"></div>
         </div>
 
         <!-- Content -->
-        <div class="max-w-7xl mx-auto px-6 w-full relative z-10 pt-20">
+        <div class="max-w-7xl mx-auto px-6 w-full relative z-10 pt-10">
           <div class="max-w-3xl transform translate-y-8 opacity-0 transition-all duration-700 slide-content">
              <ReadingMeta 
                 category={categoryLabels[post.category] || post.category} 
                 date={post.published_at} 
                 readingTime={calculateReadingTime(post.content || '')}
-                class="mb-8 text-sand/80"
+                class="mb-6 text-sand shadow-sm"
              />
 
-             <h2 class="font-display text-4xl md:text-8xl font-black text-sand mb-8 leading-[0.95] tracking-tight">
+             <h2 class="font-display text-4xl md:text-7xl font-black text-white mb-6 leading-[1.0] tracking-tight drop-shadow-2xl">
                {post.title}
              </h2>
 
-             <p class="text-sand/60 text-lg md:text-2xl font-light mb-12 max-w-2xl leading-relaxed line-clamp-2">
+             <p class="text-sand/80 text-lg md:text-xl font-light mb-10 max-w-2xl leading-relaxed line-clamp-2 drop-shadow-md">
                {post.description}
              </p>
 
