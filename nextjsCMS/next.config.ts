@@ -9,6 +9,11 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   serverExternalPackages: ['sharp'],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
 } as NextConfig;
 
 export default nextConfig;
