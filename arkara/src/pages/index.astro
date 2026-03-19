@@ -3,11 +3,13 @@
  * index.astro — Homepage — Retro Survival Manual 2.0
  * Data fetching: unchanged (getRecentPosts from lib/content)
  * Changes:
- *   - Warning band ticker (new — replaces nothing)
- *   - Article grid: card-ink style, section label
- *   - Categories: flat ink-border panels, no rounded, no hover scale
- *   - CTA section: dark ink bg, flat box-shadow (no blur)
+ * - Warning band ticker (new — replaces nothing)
+ * - Article grid: card-ink style, section label
+ * - Categories: flat ink-border panels, no rounded, no hover scale
+ * - CTA section: dark ink bg, flat box-shadow (no blur)
  */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PostCard from '../components/blog/PostCard.astro';
 import HeroCarousel from '../components/home/HeroCarousel.astro';
 import MascotSection from '../components/home/MascotSection.astro';
 import { getRecentPosts, getCtaSection, getSiteSettings, getHeroSection } from '../lib/content';
