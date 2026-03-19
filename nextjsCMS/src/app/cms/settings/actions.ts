@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { triggerFrontendRevalidate } from '@/lib/revalidate'
 
 // 1. General Settings Action
 export async function updateGeneralSettings(settings: Record<string, string>) {
@@ -18,6 +19,7 @@ export async function updateGeneralSettings(settings: Record<string, string>) {
 
   await Promise.all(updates)
   revalidatePath('/cms/settings')
+  await triggerFrontendRevalidate({ type: 'settings' })
 }
 
 // 2. Navigation Actions
@@ -34,6 +36,7 @@ export async function updateNavigationItems(items: any[]) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/cms/settings')
+  await triggerFrontendRevalidate({ type: 'settings' })
 }
 
 export async function deleteNavigationItem(id: string) {
@@ -41,6 +44,7 @@ export async function deleteNavigationItem(id: string) {
   const { error } = await supabase.from('navigation').delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/cms/settings')
+  await triggerFrontendRevalidate({ type: 'settings' })
 }
 
 // 3. Hero Section Action
@@ -53,6 +57,7 @@ export async function updateHeroSection(data: any) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/cms/settings')
+  await triggerFrontendRevalidate({ type: 'settings' })
 }
 
 // 4. CTA Section Action
@@ -65,6 +70,7 @@ export async function updateCtaSection(data: any) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/cms/settings')
+  await triggerFrontendRevalidate({ type: 'settings' })
 }
 
 // 5. Footer Action
@@ -77,4 +83,5 @@ export async function updateFooter(data: any) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/cms/settings')
+  await triggerFrontendRevalidate({ type: 'settings' })
 }

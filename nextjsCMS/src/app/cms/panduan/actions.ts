@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { triggerFrontendRevalidate } from '@/lib/revalidate'
 
 const panduanSchema = z.object({
   title: z.string().min(1, 'Judul wajib diisi'),
@@ -46,6 +47,7 @@ export async function createPanduan(formData: z.infer<typeof panduanSchema>) {
   
   revalidatePath('/cms/panduan')
   revalidatePath('/cms/dashboard')
+  await triggerFrontendRevalidate({ type: 'panduan', slug: formData.slug })
 }
 
 export async function updatePanduan(id: string, formData: z.infer<typeof panduanSchema>) {
@@ -73,6 +75,7 @@ export async function updatePanduan(id: string, formData: z.infer<typeof panduan
   revalidatePath('/cms/panduan')
   revalidatePath(`/cms/panduan/${id}/edit`)
   revalidatePath('/cms/dashboard')
+  await triggerFrontendRevalidate({ type: 'panduan', slug: formData.slug })
 }
 
 export async function deletePanduan(id: string) {
@@ -83,6 +86,7 @@ export async function deletePanduan(id: string) {
   
   revalidatePath('/cms/panduan')
   revalidatePath('/cms/dashboard')
+  await triggerFrontendRevalidate({ type: 'panduan' })
 }
 
 export async function togglePanduanStatus(id: string, currentStatus: 'draft' | 'published') {
@@ -102,4 +106,5 @@ export async function togglePanduanStatus(id: string, currentStatus: 'draft' | '
   
   revalidatePath('/cms/panduan')
   revalidatePath('/cms/dashboard')
+  await triggerFrontendRevalidate({ type: 'panduan' })
 }

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { triggerFrontendRevalidate } from '@/lib/revalidate'
 
 import type { MediaObject } from '@/types/content'
 
@@ -70,6 +71,7 @@ export async function createPost(formData: z.infer<typeof postSchema>) {
   
   revalidatePath('/cms/posts')
   revalidatePath('/cms/dashboard')
+  await triggerFrontendRevalidate({ type: 'post', slug: formData.slug })
   return { success: true }
 }
 
@@ -104,6 +106,7 @@ export async function updatePost(id: string, formData: z.infer<typeof postSchema
   revalidatePath('/cms/posts')
   revalidatePath(`/cms/posts/${id}/edit`)
   revalidatePath('/cms/dashboard')
+  await triggerFrontendRevalidate({ type: 'post', slug: formData.slug })
   return { success: true }
 }
 
@@ -117,6 +120,7 @@ export async function deletePost(id: string) {
   
   revalidatePath('/cms/posts')
   revalidatePath('/cms/dashboard')
+  await triggerFrontendRevalidate({ type: 'post' })
   return { success: true }
 }
 
@@ -139,5 +143,6 @@ export async function togglePostStatus(id: string, currentStatus: 'draft' | 'pub
   
   revalidatePath('/cms/posts')
   revalidatePath('/cms/dashboard')
+  await triggerFrontendRevalidate({ type: 'post' })
   return { success: true }
 }
