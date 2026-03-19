@@ -129,8 +129,9 @@ export function HeroForm({ data }: HeroFormProps) {
                   {...register('cta_secondary_href')}
                   placeholder="URL"
                   className="px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                />
               </div>
+            </div>
+          </div>
         </div>
       </div>
 
