@@ -1,6 +1,9 @@
 [build]
 builder = "nixpacks"
 
+[build.variables]
+NPM_CONFIG_OMIT = "dev"
+
 [deploy]
 startCommand = "npx next start -p ${PORT:-3000} -H 0.0.0.0"
 healthcheckPath = "/healthz"
