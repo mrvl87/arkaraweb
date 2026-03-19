@@ -31,8 +31,9 @@ export async function getMedia() {
 export async function uploadFile(formData: FormData) {
   const supabase = getAdminClient()
   
-  // MOCK USER for testing (consistent with Part 2 & 3)
-  const authorId = '0a4ff12f-4e6f-46c9-817d-06f3d9e7f1ba'
+  // Catatan: media/actions.ts pakai admin client (service role)
+  const authorId = process.env.CMS_SERVICE_AUTHOR_ID
+  if (!authorId) throw new Error('CMS_SERVICE_AUTHOR_ID not configured')
 
   const file = formData.get('file') as File
   const contextName = formData.get('contextName') as string || ''

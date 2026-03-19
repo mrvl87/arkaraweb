@@ -30,9 +30,9 @@ export async function getPanduan() {
 export async function createPanduan(formData: z.infer<typeof panduanSchema>) {
   const supabase = await createClient()
   
-  // const { data: userData } = await supabase.auth.getUser()
-  // if (!userData.user) throw new Error('Unauthorized')
-  const authorId = '0a4ff12f-4e6f-46c9-817d-06f3d9e7f1ba'
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Unauthorized')
+  const authorId = user.id
 
   const data = {
     ...formData,

@@ -24,11 +24,9 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const isCMSRoute = request.nextUrl.pathname.startsWith('/cms')
 
-  /* 
   if (isCMSRoute && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
-  */
 
   return supabaseResponse
 }
