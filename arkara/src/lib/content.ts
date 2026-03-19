@@ -1,5 +1,14 @@
 import { supabase } from './supabase'
 
+export interface MediaObject {
+  url: string
+  alt_text?: string
+  formats?: { sm?: string; md?: string; lg?: string; original?: string }
+  aspect_ratio?: string
+  dominant_color?: string
+  blurhash?: string
+}
+
 export interface Post {
   id: string
   title: string
@@ -9,8 +18,8 @@ export interface Post {
   category: string
   status: string
   cover_image?: string
-  thumbnail_image?: any
-  banner_image?: any
+  thumbnail_image?: MediaObject | null
+  banner_image?: MediaObject | null
   published_at?: string
   meta_title?: string
   meta_desc?: string

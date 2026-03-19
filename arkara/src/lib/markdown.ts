@@ -5,8 +5,17 @@ marked.setOptions({
   breaks: true,
 })
 
+export function renderContent(content: string): string {
+  if (!content || content.trim() === '') return ''
+  const trimmed = content.trim()
+  if (trimmed.startsWith('<')) {
+    return trimmed
+  }
+  return marked.parse(trimmed) as string
+}
+
 export function renderMarkdown(content: string): string {
-  return marked.parse(content) as string
+  return renderContent(content)
 }
 
 export function extractHeadings(content: string) {
