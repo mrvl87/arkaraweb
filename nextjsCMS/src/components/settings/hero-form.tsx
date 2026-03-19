@@ -131,11 +131,6 @@ export function HeroForm({ data }: HeroFormProps) {
                   className="px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 />
               </div>
-            </div>
-            </div>
-          </div>
-        </div>
-
         </div>
       </div>
 
