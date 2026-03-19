@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Save, Loader2, Star, Type, AlignLeft, Link as LinkIcon } from 'lucide-react'
+import { Save, Loader2, Star, Type, AlignLeft, MessageSquare, Quote, User } from 'lucide-react'
 import { updateHeroSection } from '@/app/cms/settings/actions'
+import { MediaPicker } from '@/components/media/media-picker'
 
 interface HeroFormProps {
   data: any
@@ -22,14 +23,23 @@ export function HeroForm({ data }: HeroFormProps) {
       cta_primary_href: '',
       cta_secondary_text: '',
       cta_secondary_href: '',
+      mascot_speech_text: '',
+      mascot_tagline: '',
+      mascot_image: null,
     }
   })
+
+  const [mascotImage, setMascotImage] = useState<any>(data?.mascot_image || null)
 
   const onSubmit = async (formData: any) => {
     setIsSubmitting(true)
     setMessage(null)
     try {
-      await updateHeroSection({ ...formData, id: data.id })
+      await updateHeroSection({ 
+        ...formData, 
+        id: data.id,
+        mascot_image: mascotImage 
+      })
       setMessage({ type: 'success', text: 'Hero Section berhasil diperbarui!' })
     } catch (error) {
       setMessage({ type: 'error', text: 'Gagal memperbarui: ' + (error as Error).message })
@@ -121,6 +131,91 @@ export function HeroForm({ data }: HeroFormProps) {
                   className="px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 />
               </div>
+            </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mascot Section */}
+        <div className="space-y-6">
+          <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Mascot & Tips</h3>
+          
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <User className="w-4 h-4 text-amber-600" /> Mascot Image
+              </label>
+              <MediaPicker 
+                value={mascotImage}
+                onChange={setMascotImage}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-amber-600" /> Speech Bubble Text
+              </label>
+              <textarea
+                {...register('mascot_speech_text')}
+                rows={3}
+                placeholder="Conten tips survival..."
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-amber-100 focus:border-amber-500 transition-all resize-none text-sm"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <Quote className="w-4 h-4 text-amber-600" /> Mascot Tagline
+              </label>
+              <input
+                type="text"
+                {...register('mascot_tagline')}
+                placeholder="e.g. Arkara Guide"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-amber-100 focus:border-amber-500 transition-all text-sm"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mascot Section */}
+      <div className="space-y-6">
+        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Mascot & Tips</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <User className="w-4 h-4 text-amber-600" /> Mascot Image
+              </label>
+              <MediaPicker 
+                value={mascotImage}
+                onSelect={setMascotImage}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-amber-600" /> Speech Bubble Text
+              </label>
+              <textarea
+                {...register('mascot_speech_text')}
+                rows={3}
+                placeholder="Conten tips survival..."
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-amber-100 focus:border-amber-500 transition-all resize-none text-sm"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <Quote className="w-4 h-4 text-amber-600" /> Mascot Tagline
+              </label>
+              <input
+                type="text"
+                {...register('mascot_tagline')}
+                placeholder="e.g. Arkara Guide"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-amber-100 focus:border-amber-500 transition-all text-sm"
+              />
             </div>
           </div>
         </div>

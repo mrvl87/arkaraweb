@@ -10,7 +10,7 @@ interface MediaPickerProps {
   label?: string
 }
 
-export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar" }: MediaPickerProps) {
+export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar", value }: MediaPickerProps & { value?: any }) {
   const [isOpen, setIsOpen] = useState(false)
   const [media, setMedia] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)

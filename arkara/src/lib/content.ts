@@ -135,6 +135,9 @@ export interface HeroSection {
   headline: string
   subheadline?: string
   body_text?: string
+  mascot_image?: any
+  mascot_speech_text?: string
+  mascot_tagline?: string
 }
 
 export async function getHeroSection(): Promise<HeroSection | null> {

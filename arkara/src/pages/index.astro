@@ -8,15 +8,15 @@
  *   - Categories: flat ink-border panels, no rounded, no hover scale
  *   - CTA section: dark ink bg, flat box-shadow (no blur)
  */
-import { getRecentPosts, getCtaSection, getSiteSettings } from '../lib/content';
-import BaseLayout from '../layouts/BaseLayout.astro';
-import PostCard from '../components/blog/PostCard.astro';
 import HeroCarousel from '../components/home/HeroCarousel.astro';
+import MascotSection from '../components/home/MascotSection.astro';
+import { getRecentPosts, getCtaSection, getSiteSettings, getHeroSection } from '../lib/content';
 
-const [recentPosts, cta, settings] = await Promise.all([
+const [recentPosts, cta, settings, hero] = await Promise.all([
   getRecentPosts(5),
   getCtaSection(),
   getSiteSettings(),
+  getHeroSection(),
 ]);
 const displayPosts = recentPosts.slice(0, 3);
 
@@ -44,8 +44,15 @@ const tickerDouble = [...tickerItems, ...tickerItems];
 
 <BaseLayout title="Beranda">
 
-  <!-- ── HERO CAROUSEL ─────────────────────────────────── -->
-  <HeroCarousel posts={recentPosts} />
+  <!-- ── HERO SECTION (GRID 2 COLUMNS) ─────────────────── -->
+  <div class="grid grid-cols-1 md:grid-cols-[1fr_400px] border-b-4 border-zinc-900 bg-zinc-900 overflow-hidden">
+    <HeroCarousel posts={recentPosts} />
+    <MascotSection 
+      mascotImage={hero?.mascot_image} 
+      speechText={hero?.mascot_speech_text} 
+      tagline={hero?.mascot_tagline} 
+    />
+  </div>
 
   <!-- ── WARNING BAND TICKER ───────────────────────────── -->
   <div style="
