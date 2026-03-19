@@ -33,6 +33,11 @@ let blurhash = !isStringUrl && image.blurhash ? image.blurhash : '';
 let dominantColor = !isStringUrl && image.dominant_color ? image.dominant_color : '';
 let hasFormats = !isStringUrl && image.formats && Object.keys(image.formats).length > 0;
 
+const hasFormats = !isStringUrl && image.formats && Object.keys(image.formats).length > 0;
+
+// TAMBAHKAN BARIS INI: Cek apakah class mengandung object-contain
+const objectFit = className.includes('object-contain') ? 'object-contain' : 'object-cover';
+
 if (hasFormats) {
   const formatList = [];
   if (image.formats.sm) formatList.push(`${image.formats.sm} 400w`);
@@ -56,7 +61,7 @@ const placeholderStyle = dominantColor ? `background-color: ${dominantColor};` :
       <img 
         src={blurhash} 
         alt="" 
-        class="absolute inset-0 w-full h-full object-cover blur-xl opacity-50 scale-110" 
+        class="absolute inset-0 w-full h-full ${objectFit} blur-xl opacity-50 scale-110" 
         aria-hidden="true" 
       />
     )}
@@ -71,7 +76,7 @@ const placeholderStyle = dominantColor ? `background-color: ${dominantColor};` :
            alt={altText}
            loading={loading}
            decoding={loading === 'eager' ? 'sync' : 'async'}
-           class={`relative z-10 w-full h-full object-cover transition-opacity duration-300`}
+           class={`relative z-10 w-full h-full ${objectFit} transition-opacity duration-300`}
            // When JS loads, we could fade it in, but native browser behavior is usually fine
          />
        </picture>
@@ -81,7 +86,7 @@ const placeholderStyle = dominantColor ? `background-color: ${dominantColor};` :
         alt={altText}
         loading={loading}
         decoding={loading === 'eager' ? 'sync' : 'async'}
-        class={`relative z-10 w-full h-full object-cover`}
+        class={`relative z-10 w-full h-full ${objectFit}`}
       />
     )}
   </div>

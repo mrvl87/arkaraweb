@@ -34,12 +34,10 @@ const mascotUrl = mascotImage?.url || "/placeholder-mascot.png";
     <div class="absolute -inset-4 bg-amber-400/20 rounded-full blur-2xl group-hover:bg-amber-400/30 transition-all duration-500"></div>
     <div class="relative w-64 h-64 flex items-center justify-center">
        {mascotImage ? (
-         <OptimizedImage 
+         <img 
            src={mascotUrl} 
            alt="Arkara Mascot" 
-           width={400} 
-           height={400}
-           className="w-full h-full object-contain filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)] group-hover:scale-105 transition-transform duration-500"
+           class="w-full h-full object-contain filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)] group-hover:scale-105 transition-transform duration-500"
          />
        ) : (
          <div class="w-full h-full bg-zinc-100 rounded-3xl border-4 border-dashed border-zinc-300 flex items-center justify-center text-zinc-400 font-bold">
