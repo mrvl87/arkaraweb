@@ -8,12 +8,16 @@
  *   - Categories: flat ink-border panels, no rounded, no hover scale
  *   - CTA section: dark ink bg, flat box-shadow (no blur)
  */
-import { getRecentPosts } from '../lib/content';
+import { getRecentPosts, getCtaSection, getSiteSettings } from '../lib/content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PostCard from '../components/blog/PostCard.astro';
 import HeroCarousel from '../components/home/HeroCarousel.astro';
 
-const recentPosts  = await getRecentPosts(5);
+const [recentPosts, cta, settings] = await Promise.all([
+  getRecentPosts(5),
+  getCtaSection(),
+  getSiteSettings(),
+]);
 const displayPosts = recentPosts.slice(0, 3);
 
 const categories = [
@@ -25,13 +29,16 @@ const categories = [
   { name: 'Komunitas', slug: 'komunitas', icon: '👥' },
 ];
 
-const tickerItems = [
-  'Persiapan adalah investasi terbaik',
-  'Bukan panik — tapi siap',
-  'Pengetahuan tidak pernah basi',
-  'Siap sebelum perlu',
-  'Survival bukan gaya hidup — ini kebutuhan',
-];
+const tickerRaw = settings['ticker_items'] 
+const tickerItems = tickerRaw 
+  ? tickerRaw.split('|').map(s => s.trim())
+  : [
+    'Persiapan adalah investasi terbaik',
+    'Bukan panik — tapi siap',
+    'Pengetahuan tidak pernah basi',
+    'Siap sebelum perlu',
+    'Survival bukan gaya hidup — ini kebutuhan',
+  ];
 const tickerDouble = [...tickerItems, ...tickerItems];
 ---
 
@@ -301,19 +308,25 @@ const tickerDouble = [...tickerItems, ...tickerItems];
           color: var(--cream);
           line-height: 0.95;
           margin-bottom: 1rem;
-        ">KOLEKSI<br><span style="font-family:'Special Elite',cursive;text-transform:none;color:var(--yellow-manual);">Panduan Taktis</span></h2>
+        ">
+          {cta?.headline || 'KOLEKSI'}
+          <br>
+          <span style="font-family:'Special Elite',cursive;text-transform:none;color:var(--yellow-manual);">
+            {cta?.body_text ? 'Panduan Taktis' : 'Panduan Taktis'} 
+          </span>
+        </h2>
         <p style="
           font-size: 0.85rem;
           color: var(--warm-grey);
           max-width: 400px;
           line-height: 1.65;
         ">
-          Instruksi teknis yang terhubung dengan Buku Pegangan Krisis. Dapat dibaca offline, dirancang untuk situasi darurat.
+          {cta?.body_text || 'Instruksi teknis yang terhubung dengan Buku Pegangan Krisis. Dapat dibaca offline, dirancang untuk situasi darurat.'}
         </p>
       </div>
 
       <div style="position:relative;z-index:1;flex-shrink:0;">
-        <a href="/panduan" style="
+        <a href={cta?.button_href || '/panduan'} style="
           font-family: 'Share Tech Mono', monospace;
           font-size: 0.72rem;
           letter-spacing: 0.15em;
@@ -332,7 +345,7 @@ const tickerDouble = [...tickerItems, ...tickerItems];
         "
         onmouseover="this.style.background='var(--yellow-manual)';this.style.borderColor='var(--yellow-manual)';this.style.transform='translate(-2px,-2px)';this.style.boxShadow='4px 4px 0 var(--green-terminal)'"
         onmouseout="this.style.background='var(--green-terminal)';this.style.borderColor='var(--green-terminal)';this.style.transform='';this.style.boxShadow=''"
-        >▶ MULAI PELAJARI</a>
+        >▶ {cta?.button_label || 'MULAI PELAJARI'}</a>
       </div>
     </div>
   </section>

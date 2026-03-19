@@ -14,15 +14,15 @@ interface Props {
   title?: string;
   description?: string;
   image?: string;
+  siteName?: string;
 }
 
 const {
   title,
   description = 'Platform pengetahuan survival Indonesia. Pelajari teknik survival praktis untuk menghadapi krisis.',
-  image = '/images/og-default.webp'
+  image = '/images/og-default.webp',
+  siteName = 'Arkara'
 } = Astro.props;
-
-const siteName = 'Arkara';
 const siteTitle = title ? `${title} — ${siteName}` : `${siteName} — Survive with Knowledge`;
 const siteUrl = 'https://arkara.id';
 const canonicalUrl = new URL(Astro.url.pathname, siteUrl);

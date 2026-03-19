@@ -114,3 +114,70 @@ export async function getPanduanBySlug(slug: string): Promise<Panduan | null> {
   }
   return data
 }
+
+// ── SITE SETTINGS ──────────────────────────────────────────
+
+export async function getSiteSettings(): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('key, value')
+  
+  if (error) {
+    console.error('Error fetching site settings:', error)
+    return {}
+  }
+  
+  return Object.fromEntries((data ?? []).map(row => [row.key, row.value]))
+}
+
+export interface HeroSection {
+  id: string
+  headline: string
+  subheadline?: string
+  body_text?: string
+}
+
+export async function getHeroSection(): Promise<HeroSection | null> {
+  const { data, error } = await supabase
+    .from('hero_section')
+    .select('*')
+    .single()
+  
+  if (error) return null
+  return data
+}
+
+export interface CtaSection {
+  id: string
+  headline: string
+  body_text?: string
+  button_label?: string
+  button_href?: string
+}
+
+export async function getCtaSection(): Promise<CtaSection | null> {
+  const { data, error } = await supabase
+    .from('cta_section')
+    .select('*')
+    .single()
+  
+  if (error) return null
+  return data
+}
+
+export interface FooterData {
+  id: string
+  tagline?: string
+  copyright_text?: string
+  social_links?: { platform: string; url: string }[]
+}
+
+export async function getFooterData(): Promise<FooterData | null> {
+  const { data, error } = await supabase
+    .from('footer')
+    .select('*')
+    .single()
+  
+  if (error) return null
+  return data
+}
