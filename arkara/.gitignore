@@ -32,3 +32,7 @@ pnpm-debug.log*
 
 # Local storage (Keystatic)
 .keystatic/
+
+# Backup
+src_backup/
+
