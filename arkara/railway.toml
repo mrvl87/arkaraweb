@@ -1,19 +1,16 @@
 [build]
-builder = "NIXPACKS"
+builder = "nixpacks"
 buildCommand = "npm run build"
 
 [deploy]
-startCommand = "node ./dist/server/entry.mjs"
-healthcheckPath = "/"
-healthcheckTimeout = 300
+startCommand = "HOST=0.0.0.0 node ./dist/server/entry.mjs"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
-[[services]]
-name = "arkara-web"
-
 [services.variables]
-PORT = "3000"
+# Hapus PORT = "3000" agar Railway menyuntikkan $PORT secara dinamis
 HOST = "0.0.0.0"
 NODE_ENV = "production"
 NPM_CONFIG_OMIT = "dev"
