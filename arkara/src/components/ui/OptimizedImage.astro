@@ -33,7 +33,7 @@ let blurhash = !isStringUrl && image.blurhash ? image.blurhash : '';
 let dominantColor = !isStringUrl && image.dominant_color ? image.dominant_color : '';
 let hasFormats = !isStringUrl && image.formats && Object.keys(image.formats).length > 0;
 
-const hasFormats = !isStringUrl && image.formats && Object.keys(image.formats).length > 0;
+
 
 // TAMBAHKAN BARIS INI: Cek apakah class mengandung object-contain
 const objectFit = className.includes('object-contain') ? 'object-contain' : 'object-cover';
