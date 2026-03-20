@@ -38,6 +38,7 @@ export function UploadZone() {
     setPendingFile(file)
     setError(null)
     setCrop(undefined)
+    setCompletedCrop(undefined)
     
     const reader = new FileReader()
     reader.addEventListener('load', () => setImgSrc(reader.result?.toString() || ''))
@@ -57,6 +58,7 @@ export function UploadZone() {
           setCrop(centerAspectCrop(imgRef.current.width, imgRef.current.height, newAspect))
       } else {
           setCrop(undefined)
+          setCompletedCrop(undefined)
       }
   }
 
@@ -209,7 +211,7 @@ export function UploadZone() {
                </div>
             </div>
             <button 
-               onClick={() => { setPendingFile(null); setImgSrc(''); setError(null); }}
+               onClick={() => { setPendingFile(null); setImgSrc(''); setError(null); setCrop(undefined); setCompletedCrop(undefined); }}
                className="p-2 text-gray-400 hover:text-red-500 transition-colors bg-gray-50 rounded-full"
                disabled={isUploading}
             >
