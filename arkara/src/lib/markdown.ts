@@ -8,10 +8,23 @@ marked.setOptions({
 export function renderContent(content: string): string {
   if (!content || content.trim() === '') return ''
   const trimmed = content.trim()
-  if (trimmed.startsWith('<')) {
-    return trimmed
-  }
-  return marked.parse(trimmed) as string
+  
+  let html = trimmed.startsWith('<') 
+    ? trimmed 
+    : marked.parse(trimmed) as string
+
+  // Inject IDs into h2 and h3 tags for TOC navigation
+  return html.replace(/<(h[23])([^>]*)>(.*?)<\/h\1>/gi, (match, tag, attrs, content) => {
+    // If id already exists, don't overwrite
+    if (attrs.includes('id=')) return match;
+    
+    const text = content.replace(/<[^>]*>/g, '').trim();
+    const slug = text.toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-');
+    
+    return `<${tag}${attrs} id="${slug}">${content}</${tag}>`;
+  });
 }
 
 export function renderMarkdown(content: string): string {
