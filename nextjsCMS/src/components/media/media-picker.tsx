@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Image as ImageIcon, Search, Loader2, X, Check } from 'lucide-react'
 import { getMedia } from '@/app/cms/media/actions'
 
@@ -71,8 +72,8 @@ export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar", value,
         {label}
       </button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      {isOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
@@ -166,7 +167,8 @@ export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar", value,
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
