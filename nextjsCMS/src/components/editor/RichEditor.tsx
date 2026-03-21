@@ -36,7 +36,8 @@ import {
   Code, 
   CheckSquare,
   Image as ImageIcon,
-  Type
+  Type,
+  Trash2
 } from 'lucide-react'
 import { MediaPicker } from '../media/media-picker'
 import "./editor.css"
@@ -241,6 +242,12 @@ export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
             >
               <Code className='h-4 w-4' />
             </EditorBubbleItem>
+            <EditorBubbleItem
+              onSelect={(editor) => editor.chain().focus().deleteSelection().run()}
+              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-red-50 aria-selected:text-red-600'
+            >
+              <Trash2 className='h-4 w-4' />
+            </EditorBubbleItem>
           </EditorBubble>
         </EditorContent>
       </EditorRoot>
@@ -264,6 +271,15 @@ function EditorToolbar() {
           }
         }} 
       />
+      <div className="w-[1px] h-4 bg-gray-200 mx-2" />
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().deleteSelection().run()}
+        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+        title="Hapus elemen terpilih"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
     </div>
   )
 }
