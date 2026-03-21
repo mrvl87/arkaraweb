@@ -35,9 +35,9 @@ import {
   Heading2, 
   Code, 
   CheckSquare,
+  Image as ImageIcon,
   Type
 } from 'lucide-react'
-import "./editor.css"
 import { MediaPicker } from '../media/media-picker'
 import "./editor.css"
 
@@ -108,26 +108,27 @@ interface RichEditorProps {
 
 export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
   return (
-    <div className="novel-editor w-full group relative flex flex-col rounded-2xl border border-gray-200 focus-within:border-amber-400 focus-within:ring-4 focus-within:ring-amber-50 transition-all shadow-sm bg-white overflow-hidden">
+    <div className="novel-editor w-full group relative">
       <EditorRoot>
-        <div className="bg-gray-50 border-b border-gray-100 p-2 flex items-center shrink-0">
-          <EditorToolbar />
-        </div>
         <EditorContent
           initialContent={undefined} 
           extensions={extensions}
-          className="relative min-h-[500px] w-full bg-white transition-all pt-4"
+          className="relative min-h-[500px] w-full bg-white rounded-2xl border border-gray-200 
+                     focus-within:border-amber-400 focus-within:ring-4 focus-within:ring-amber-50 
+                     transition-all overflow-hidden shadow-sm pt-0"
           onUpdate={({ editor }) => {
-            // For now sending HTML as fallback since we haven't integrated a markdown serializer extension yet
             const content = editor.getHTML(); 
             onChange(content);
           }}
           editorProps={{
             attributes: {
-              class: `prose prose-lg prose-stone dark:prose-invert focus:outline-none max-w-full p-8`,
+              class: `prose prose-lg prose-stone dark:prose-invert focus:outline-none max-w-full p-8 pt-4`,
             },
           }}
         >
+          {/* EDITOR TOOLBAR — must be inside EditorContent for useEditor() context */}
+          <EditorToolbar />
+
           {/* SLASH COMMAND MENU */}
           <EditorCommand className='z-50 h-auto max-h-[330px] w-72 overflow-y-auto rounded-xl border border-gray-200 bg-white px-1 py-2 shadow-2xl transition-all'>
             <EditorCommandEmpty className='px-2 py-1 text-sm text-gray-400'>No results found</EditorCommandEmpty>
@@ -197,6 +198,20 @@ export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
                 <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><CheckSquare className="w-4 h-4"/></div>
                 <span>Task List</span>
               </EditorCommandItem>
+
+              <EditorCommandItem
+                value='Image'
+                onCommand={({ editor, range }) => {
+                  editor.chain().focus().deleteRange(range).run();
+                  // Trigger the media picker button click
+                  const btn = document.getElementById('editor-media-picker-trigger');
+                  btn?.click();
+                }}
+                className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
+              >
+                <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><ImageIcon className="w-4 h-4"/></div>
+                <span>Sisipkan Gambar</span>
+              </EditorCommandItem>
             </EditorCommandList>
           </EditorCommand>
 
@@ -239,17 +254,16 @@ function EditorToolbar() {
   if (!editor) return null;
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="w-48">
-        <MediaPicker 
-          label="Sisipkan Gambar" 
-          onSelect={(item) => {
-            if (item.url) {
-              editor.chain().focus().setImage({ src: item.url, alt: item.alt_text || item.file_name || 'Gambar sisipan' }).run();
-            }
-          }} 
-        />
-      </div>
+    <div className="sticky top-0 z-40 bg-gray-50/95 backdrop-blur-sm border-b border-gray-100 px-4 py-2 flex items-center gap-2">
+      <MediaPicker
+        id="editor-media-picker-trigger"
+        label="Sisipkan Gambar" 
+        onSelect={(item) => {
+          if (item.url) {
+            editor.chain().focus().setImage({ src: item.url, alt: item.alt_text || item.file_name || 'Gambar sisipan' }).run();
+          }
+        }} 
+      />
     </div>
   )
 }

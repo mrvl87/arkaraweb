@@ -8,9 +8,10 @@ interface MediaPickerProps {
   onSelect: (item: any) => void
   disabled?: boolean
   label?: string
+  id?: string
 }
 
-export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar", value }: MediaPickerProps & { value?: any }) {
+export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar", value, id }: MediaPickerProps & { value?: any }) {
   const [isOpen, setIsOpen] = useState(false)
   const [media, setMedia] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -60,6 +61,7 @@ export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar", value 
     <>
       <button
         type="button"
+        id={id}
         disabled={disabled}
         onClick={handleOpen}
         className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 hover:text-amber-600 hover:border-amber-200 hover:bg-amber-50 transition-all disabled:opacity-50 flex items-center justify-center gap-2 w-full"
