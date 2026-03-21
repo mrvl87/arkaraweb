@@ -62,6 +62,11 @@ export async function uploadFile(formData: FormData) {
       const image = sharp(buffer)
       const metadata = await image.metadata()
       
+      const hasAlpha = metadata.hasAlpha ?? false
+      if (hasAlpha) {
+        formatsObj['has_alpha'] = 'true'
+      }
+      
       if (metadata.width && metadata.height) {
         aspectRatio = `${metadata.width}:${metadata.height}`
         

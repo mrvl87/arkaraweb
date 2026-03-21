@@ -6,6 +6,7 @@ interface Props {
   loading?: 'lazy' | 'eager'; // Priority loading
   aspectRatio?: string; // Optional enforced aspect ratio class e.g., 'aspect-video'
   sizes?: string; // HTML sizes attribute
+  transparent?: boolean; // If true, disable placeholder logic and change default fit
 }
 
 const { 
@@ -14,7 +15,8 @@ const {
   class: className = '', 
   loading = 'lazy',
   aspectRatio = '',
-  sizes = '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
+  sizes = '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw',
+  transparent = false
 } = Astro.props;
 
 // If no image is provided
@@ -35,8 +37,14 @@ let hasFormats = !isStringUrl && image.formats && Object.keys(image.formats).len
 
 
 
-// TAMBAHKAN BARIS INI: Cek apakah class mengandung object-contain
-const objectFit = className.includes('object-contain') ? 'object-contain' : 'object-cover';
+const isTransparent = transparent || (image && image.formats && image.formats.has_alpha === 'true');
+
+// Determine object-fit
+// If transparent is explicitly true, default to contain unless cover is specified.
+// Else default to cover unless contain is specified.
+const objectFit = isTransparent 
+  ? (className.includes('object-cover') ? 'object-cover' : 'object-contain')
+  : (className.includes('object-contain') ? 'object-contain' : 'object-cover');
 
 if (hasFormats) {
   const formatList = [];
@@ -51,13 +59,14 @@ if (hasFormats) {
 }
 
 // Styling for placeholder
-const placeholderStyle = dominantColor ? `background-color: ${dominantColor};` : '';
+const placeholderStyle = isTransparent ? '' : (dominantColor ? `background-color: ${dominantColor};` : '');
+const showBlurhash = !isTransparent && blurhash;
 ---
 
 {src && (
   <div class={`relative overflow-hidden ${aspectRatio} ${className}`} style={placeholderStyle}>
     {/* Optional Blurhash Background (very lightweight base64) */}
-    {blurhash && (
+    {showBlurhash && (
       <img 
         src={blurhash} 
         alt="" 
