@@ -12,14 +12,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/blog/PostCard.astro';
 import FeaturedPost from '../../components/blog/FeaturedPost.astro';
 
-const selectedCategory = Astro.url.searchParams.get('category') || undefined;
-const sortedPosts = await getPublishedPosts({ category: selectedCategory });
-
-const categories = ['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas'];
-const categoryLabels: Record<string, string> = {
-  air: 'Air', energi: 'Energi', pangan: 'Pangan',
-  medis: 'Medis', keamanan: 'Keamanan', komunitas: 'Komunitas',
-};
+const sortedPosts = await getPublishedPosts();
 ---
 
 <BaseLayout title="Blog">
@@ -75,35 +68,6 @@ const categoryLabels: Record<string, string> = {
         Kumpulan pengetahuan, strategi, dan catatan lapangan untuk membangun kemandirian di era ketidakpastian.
       </p>
 
-      <!-- Category filters — flat tab style -->
-      <div style="display:flex;gap:0;flex-wrap:wrap;">
-        <a href="/blog" style={`
-          font-family:'Share Tech Mono',monospace;
-          font-size:0.62rem;letter-spacing:0.12em;
-          text-transform:uppercase;padding:0.5rem 1rem;
-          text-decoration:none;
-          border:2px solid ${!selectedCategory ? 'var(--green-terminal)' : 'rgba(143,175,143,0.2)'};
-          background:${!selectedCategory ? 'var(--green-terminal)' : 'transparent'};
-          color:${!selectedCategory ? 'var(--ink)' : 'var(--warm-grey)'};
-          transition:all 0.15s;
-          margin-right:2px;margin-bottom:4px;
-          font-weight:${!selectedCategory ? '700' : '400'};
-        `}>SEMUA</a>
-
-        {categories.map(cat => (
-          <a href={`/blog?category=${cat}`} style={`
-            font-family:'Share Tech Mono',monospace;
-            font-size:0.62rem;letter-spacing:0.12em;
-            text-transform:uppercase;padding:0.5rem 1rem;
-            text-decoration:none;
-            border:2px solid ${selectedCategory === cat ? 'var(--green-terminal)' : 'rgba(143,175,143,0.2)'};
-            background:${selectedCategory === cat ? 'var(--green-terminal)' : 'transparent'};
-            color:${selectedCategory === cat ? 'var(--ink)' : 'var(--warm-grey)'};
-            transition:all 0.15s;
-            margin-right:2px;margin-bottom:4px;
-            font-weight:${selectedCategory === cat ? '700' : '400'};
-          `}>{categoryLabels[cat]}</a>
-        ))}
       </div>
     </div>
   </header>
@@ -117,14 +81,11 @@ const categoryLabels: Record<string, string> = {
     {sortedPosts.length > 0 ? (
       <>
         {/* Featured */}
-        {!selectedCategory && sortedPosts.length > 0 && (
-          <FeaturedPost
+        <FeaturedPost
             post={sortedPosts[0]}
-            categoryLabel={categoryLabels[sortedPosts[0].category] || sortedPosts[0].category}
+            categoryLabel="BLOG"
           />
-        )}
 
-        <!-- Section label -->
         <div style="
           font-family:'Share Tech Mono',monospace;
           font-size:0.6rem;letter-spacing:0.25em;
@@ -132,18 +93,17 @@ const categoryLabels: Record<string, string> = {
           display:flex;align-items:center;gap:1rem;
           margin-bottom:2rem;
         ">
-          {selectedCategory ? categoryLabels[selectedCategory] : 'ARTIKEL TERBARU'}
+          ARTIKEL TERBARU
           <span style="flex:1;height:1px;background:var(--cream-dark);max-width:80px;"></span>
         </div>
 
-        <!-- Grid -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5px;background:var(--ink);border:3px solid var(--ink);" class="blog-grid">
-          {(selectedCategory ? sortedPosts : sortedPosts.slice(1)).map(post => (
+          {sortedPosts.slice(1).map(post => (
             <div style="background:var(--cream);">
               <PostCard
                 title={post.title}
                 excerpt={post.description || ''}
-                category={categoryLabels[post.category] || post.category}
+                category="ARKARA JURNAL"
                 date={post.published_at || ''}
                 slug={post.slug}
                 content={post.content || ''}
@@ -168,7 +128,7 @@ const categoryLabels: Record<string, string> = {
           color:var(--ink);margin-bottom:0.5rem;
         ">JURNAL BELUM TERSEDIA</h2>
         <p style="font-size:0.85rem;color:var(--warm-grey);margin-bottom:1.5rem;">
-          Belum ada artikel untuk kategori <strong>{selectedCategory}</strong> saat ini.
+          Belum ada artikel yang dipublikasikan saat ini.
         </p>
         <a href="/blog" style="
           font-family:'Share Tech Mono',monospace;

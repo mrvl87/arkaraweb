@@ -14,6 +14,7 @@ const panduanSchema = z.object({
   cover_image: z.string().optional(),
   meta_title: z.string().optional(),
   meta_desc: z.string().optional(),
+  category: z.enum(['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas']).optional(),
   status: z.enum(['draft', 'published']).default('draft'),
 })
 

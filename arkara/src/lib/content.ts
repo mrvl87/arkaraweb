@@ -15,7 +15,7 @@ export interface Post {
   slug: string
   description?: string
   content: string
-  category: string
+  category?: string
   status: string
   cover_image?: string
   thumbnail_image?: MediaObject | null
@@ -30,6 +30,7 @@ export interface Panduan {
   title: string
   slug: string
   content: string
+  category?: string
   bab_ref?: string
   qr_slug?: string
   status: string
@@ -49,9 +50,6 @@ export async function getPublishedPosts(options?: {
     .eq('status', 'published')
     .order('published_at', { ascending: false })
 
-  if (options?.category) {
-    query = query.eq('category', options.category)
-  }
   if (options?.limit) {
     query = query.limit(options.limit)
   }
@@ -86,13 +84,18 @@ export async function getRecentPosts(count: number): Promise<Post[]> {
   return getPublishedPosts({ limit: count })
 }
 
-export async function getPublishedPanduan(): Promise<Panduan[]> {
-  const { data, error } = await supabase
+export async function getPublishedPanduan(options?: { category?: string }): Promise<Panduan[]> {
+  let query = supabase
     .from('panduan')
     .select('*')
     .eq('status', 'published')
     .order('title', { ascending: true })
 
+  if (options?.category) {
+    query = query.eq('category', options.category)
+  }
+
+  const { data, error } = await query
   if (error) {
     console.error('Error fetching panduan:', error)
     return []

@@ -8,6 +8,15 @@ const guide = await getPanduanBySlug(slug!);
 
 if (!guide) return Astro.redirect('/404');
 
+const categoryLabels: Record<string, string> = {
+  air: 'Air',
+  energi: 'Energi',
+  pangan: 'Pangan',
+  medis: 'Medis',
+  keamanan: 'Keamanan',
+  komunitas: 'Komunitas',
+};
+
 const headings = extractHeadings(guide.content || '');
 const htmlContent = renderMarkdown(guide.content || '');
 ---
@@ -15,7 +24,7 @@ const htmlContent = renderMarkdown(guide.content || '');
 <PostLayout
   title={guide.title}
   description={`Panduan Teknis: Bab ${guide.bab_ref || '-'}`}
-  category="Panduan"
+  category={categoryLabels[guide.category] || guide.category || 'PANDUAN'}
   publishDate={new Date().toISOString()} 
   coverImage={guide.banner_image || guide.cover_image}
   headings={headings}

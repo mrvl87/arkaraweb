@@ -10,7 +10,14 @@
 import { getPublishedPanduan } from '../../lib/content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
-const allGuides = await getPublishedPanduan();
+const selectedCategory = Astro.url.searchParams.get('category') || undefined;
+const allGuides = await getPublishedPanduan({ category: selectedCategory });
+
+const categories = ['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas'];
+const categoryLabels: Record<string, string> = {
+  air: 'Air', energi: 'Energi', pangan: 'Pangan',
+  medis: 'Medis', keamanan: 'Keamanan', komunitas: 'Komunitas',
+};
 ---
 
 <BaseLayout title="Panduan Teknis">
@@ -53,6 +60,37 @@ const allGuides = await getPublishedPanduan();
       ">
         Instruksi teknis praktis yang terhubung dengan Buku Pegangan Krisis via QR code.
       </p>
+
+      <!-- Category filters — flat tab style -->
+      <div style="display:flex;gap:0;flex-wrap:wrap;margin-top:2.5rem;">
+        <a href="/panduan" style={`
+          font-family:'Share Tech Mono',monospace;
+          font-size:0.62rem;letter-spacing:0.12em;
+          text-transform:uppercase;padding:0.5rem 1rem;
+          text-decoration:none;
+          border:2px solid ${!selectedCategory ? 'var(--green-terminal)' : 'rgba(143,175,143,0.2)'};
+          background:${!selectedCategory ? 'var(--green-terminal)' : 'transparent'};
+          color:${!selectedCategory ? 'var(--ink)' : 'var(--warm-grey)'};
+          transition:all 0.15s;
+          margin-right:2px;margin-bottom:4px;
+          font-weight:${!selectedCategory ? '700' : '400'};
+        `}>SEMUA</a>
+
+        {categories.map(cat => (
+          <a href={`/panduan?category=${cat}`} style={`
+            font-family:'Share Tech Mono',monospace;
+            font-size:0.62rem;letter-spacing:0.12em;
+            text-transform:uppercase;padding:0.5rem 1rem;
+            text-decoration:none;
+            border:2px solid ${selectedCategory === cat ? 'var(--green-terminal)' : 'rgba(143,175,143,0.2)'};
+            background:${selectedCategory === cat ? 'var(--green-terminal)' : 'transparent'};
+            color:${selectedCategory === cat ? 'var(--ink)' : 'var(--warm-grey)'};
+            transition:all 0.15s;
+            margin-right:2px;margin-bottom:4px;
+            font-weight:${selectedCategory === cat ? '700' : '400'};
+          `}>{categoryLabels[cat]}</a>
+        ))}
+      </div>
     </div>
   </header>
 
@@ -66,7 +104,7 @@ const allGuides = await getPublishedPanduan();
       display:flex;align-items:center;gap:1rem;
       margin-bottom:2rem;
     ">
-      DAFTAR PANDUAN
+      {selectedCategory ? categoryLabels[selectedCategory] : 'DAFTAR PANDUAN'}
       <span style="flex:1;height:1px;background:var(--cream-dark);max-width:80px;"></span>
     </div>
 
@@ -108,6 +146,17 @@ const allGuides = await getPublishedPanduan();
                   color:var(--ink);
                   line-height:1.1;margin:0;
                 ">{guide.title}</h2>
+                {guide.category && (
+                  <span style="
+                    font-family:'Share Tech Mono',monospace;
+                    font-size:0.55rem;letter-spacing:0.15em;
+                    text-transform:uppercase;
+                    color:var(--warm-grey);
+                    background:var(--paper-dark);
+                    padding:0.15rem 0.4rem;
+                    border-radius:2px;
+                  ">{categoryLabels[guide.category] || guide.category}</span>
+                )}
               </div>
               <span style="
                 font-family:'Share Tech Mono',monospace;
@@ -132,7 +181,9 @@ const allGuides = await getPublishedPanduan();
           font-size:1.8rem;font-weight:800;text-transform:uppercase;
           color:var(--ink);margin-bottom:0.5rem;
         ">BELUM ADA PANDUAN</h2>
-        <p style="font-size:0.85rem;color:var(--warm-grey);">Panduan akan segera tersedia.</p>
+        <p style="font-size:0.85rem;color:var(--warm-grey);">
+          {selectedCategory ? `Belum ada panduan untuk kategori ${categoryLabels[selectedCategory]}.` : 'Panduan akan segera tersedia.'}
+        </p>
       </div>
     )}
   </section>

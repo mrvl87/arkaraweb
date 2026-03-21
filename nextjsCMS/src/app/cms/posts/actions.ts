@@ -26,7 +26,6 @@ const postSchema = z.object({
   slug: z.string().min(1, 'Slug wajib diisi'),
   content: z.string().optional().default(''),
   description: z.string().optional(),
-  category: z.enum(['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas']),
   status: z.enum(['draft', 'published']).default('draft'),
   cover_image: z.string().optional(),
   thumbnail_image: mediaObjectSchema,

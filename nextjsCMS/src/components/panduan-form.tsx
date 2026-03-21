@@ -20,6 +20,7 @@ const panduanSchema = z.object({
   cover_image: z.string().catch(''),
   meta_title: z.string().catch(''),
   meta_desc: z.string().catch(''),
+  category: z.enum(['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas']),
   status: z.enum(['draft', 'published']),
 })
 
@@ -54,6 +55,7 @@ export function PanduanForm({ initialData, onSubmit, title }: PanduanFormProps) 
       cover_image: initialData?.cover_image || '',
       meta_title: initialData?.meta_title || '',
       meta_desc: initialData?.meta_desc || '',
+      category: initialData?.category || 'pangan',
     },
   })
 
@@ -195,6 +197,25 @@ export function PanduanForm({ initialData, onSubmit, title }: PanduanFormProps) 
                   onSelect={(data) => setValue('cover_image', data.url || data.file_path, { shouldValidate: true })} 
                 />
               </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
+            <h3 className="font-bold text-gray-900 border-b pb-3">Taksonomi</h3>
+            
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">Topik Kategori Utama</label>
+              <select
+                {...register('category')}
+                className="w-full px-4 py-2.5 bg-gray-50 rounded-lg border border-gray-200 focus:bg-white focus:ring-2 focus:ring-amber-200 focus:border-amber-500 transition-all outline-none font-semibold text-gray-700"
+              >
+                <option value="air">Air (Sistem & Filtrasi)</option>
+                <option value="energi">Energi & Daya</option>
+                <option value="pangan">Pangan & Tani</option>
+                <option value="medis">Medis & P3K</option>
+                <option value="keamanan">Keamanan Pertahanan</option>
+                <option value="komunitas">Komunitas / Logistik</option>
+              </select>
             </div>
           </div>
 

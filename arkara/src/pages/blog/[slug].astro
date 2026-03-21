@@ -8,15 +8,6 @@ const post = await getPostBySlug(slug!);
 
 if (!post) return Astro.redirect('/404');
 
-const categoryLabels: Record<string, string> = {
-  air: 'Air',
-  energi: 'Energi',
-  pangan: 'Pangan',
-  medis: 'Medis',
-  keamanan: 'Keamanan',
-  komunitas: 'Komunitas',
-};
-
 const headings = extractHeadings(post.content || '');
 const htmlContent = renderMarkdown(post.content || '');
 ---
@@ -25,7 +16,7 @@ const htmlContent = renderMarkdown(post.content || '');
   title={post.meta_title || post.title}
   description={post.meta_desc || post.description}
   publishDate={post.published_at}
-  category={categoryLabels[post.category] || post.category}
+  category="ARKARA JURNAL"
   coverImage={post.banner_image || post.cover_image}
   headings={headings}
   content={post.content || ''}

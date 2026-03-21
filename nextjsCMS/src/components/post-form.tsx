@@ -16,7 +16,6 @@ const postSchema = z.object({
   slug: z.string().min(1, 'Slug wajib diisi'),
   content: z.string().catch(''),
   description: z.string().catch(''),
-  category: z.enum(['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas']),
   status: z.enum(['draft', 'published']),
   cover_image: z.string().optional(),
   thumbnail_image: z.any().optional(),
@@ -51,7 +50,6 @@ export function PostForm({ initialData, onSubmit, title }: PostFormProps) {
       slug: initialData?.slug || '',
       content: initialData?.content || '',
       description: initialData?.description || '',
-      category: initialData?.category || 'pangan',
       status: initialData?.status || 'draft',
       cover_image: initialData?.cover_image || '',
       thumbnail_image: initialData?.thumbnail_image || null,
@@ -268,21 +266,6 @@ export function PostForm({ initialData, onSubmit, title }: PostFormProps) {
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
             <h3 className="font-bold text-gray-900 border-b pb-3 border-gray-100">Taksonomi & SEO</h3>
             
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700">Topik Kategori Utama</label>
-              <select
-                {...register('category')}
-                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:ring-2 focus:ring-amber-200 focus:border-amber-500 transition-all outline-none font-semibold text-gray-700"
-              >
-                <option value="air">Air (Sistem & Filtrasi)</option>
-                <option value="energi">Energi & Daya</option>
-                <option value="pangan">Pangan & Tani</option>
-                <option value="medis">Medis & P3K</option>
-                <option value="keamanan">Keamanan Pertahanan</option>
-                <option value="komunitas">Komunitas / Logistik</option>
-              </select>
-            </div>
-
             <div className="space-y-2 pt-4">
               <label className="text-sm font-bold text-gray-700">Meta Title Spesifik (Opsional)</label>
               <input
