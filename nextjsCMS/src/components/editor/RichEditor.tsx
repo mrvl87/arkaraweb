@@ -21,7 +21,8 @@ import {
   TaskList,
   TiptapImage,
   Command,
-  renderItems
+  renderItems,
+  useEditor
 } from 'novel'
 import { 
   Bold, 
@@ -36,7 +37,8 @@ import {
   CheckSquare,
   Type
 } from 'lucide-react'
-import { useState } from 'react'
+import "./editor.css"
+import { MediaPicker } from '../media/media-picker'
 import "./editor.css"
 
 // Predefined extensions for Arkara
@@ -106,14 +108,15 @@ interface RichEditorProps {
 
 export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
   return (
-    <div className="novel-editor w-full group relative">
+    <div className="novel-editor w-full group relative flex flex-col rounded-2xl border border-gray-200 focus-within:border-amber-400 focus-within:ring-4 focus-within:ring-amber-50 transition-all shadow-sm bg-white overflow-hidden">
       <EditorRoot>
+        <div className="bg-gray-50 border-b border-gray-100 p-2 flex items-center shrink-0">
+          <EditorToolbar />
+        </div>
         <EditorContent
           initialContent={undefined} 
           extensions={extensions}
-          className="relative min-h-[500px] w-full bg-white rounded-2xl border border-gray-200 
-                     focus-within:border-amber-400 focus-within:ring-4 focus-within:ring-amber-50 
-                     transition-all overflow-hidden shadow-sm pt-4"
+          className="relative min-h-[500px] w-full bg-white transition-all pt-4"
           onUpdate={({ editor }) => {
             // For now sending HTML as fallback since we haven't integrated a markdown serializer extension yet
             const content = editor.getHTML(); 
@@ -226,6 +229,27 @@ export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
           </EditorBubble>
         </EditorContent>
       </EditorRoot>
+    </div>
+  )
+}
+
+function EditorToolbar() {
+  const { editor } = useEditor();
+  
+  if (!editor) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-48">
+        <MediaPicker 
+          label="Sisipkan Gambar" 
+          onSelect={(item) => {
+            if (item.url) {
+              editor.chain().focus().setImage({ src: item.url, alt: item.alt_text || item.file_name || 'Gambar sisipan' }).run();
+            }
+          }} 
+        />
+      </div>
     </div>
   )
 }
