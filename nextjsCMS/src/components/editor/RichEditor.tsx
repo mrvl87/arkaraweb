@@ -112,7 +112,8 @@ export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
     <div className="novel-editor w-full group relative">
       <EditorRoot>
         <EditorContent
-          initialContent={undefined} 
+          // @ts-ignore - novel typings expect JSONContent but tiptap handles HTML strings natively
+          initialContent={value || undefined} 
           extensions={extensions}
           className="relative min-h-[500px] w-full bg-white rounded-2xl border border-gray-200 
                      focus-within:border-amber-400 focus-within:ring-4 focus-within:ring-amber-50 
