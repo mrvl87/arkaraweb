@@ -158,20 +158,47 @@ const readingTime = calculateReadingTime(content);
                 <p style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.85rem;text-transform:uppercase;color:var(--ink);">Tim Redaksi Arkara</p>
               </div>
             </div>
-            <a href={`/${contentType || 'blog'}`} style="
-              font-family: 'Share Tech Mono', monospace;
-              font-size: 0.62rem;
-              letter-spacing: 0.15em;
-              color: var(--green-terminal);
-              text-decoration: none;
-              text-transform: uppercase;
-              border: 1px solid var(--green-terminal);
-              padding: 0.4rem 0.8rem;
-              transition: background 0.15s;
-            "
-            onmouseover="this.style.background='var(--green-dark)'"
-            onmouseout="this.style.background=''"
-            >← KEMBALI KE {contentType === 'panduan' ? 'PANDUAN' : 'BLOG'}</a>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <a 
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(Astro.url.href)}`} 
+                target="_blank" rel="noopener noreferrer"
+                style="
+                  font-family: 'Share Tech Mono', monospace;
+                  font-size: 0.62rem;
+                  letter-spacing: 0.15em;
+                  color: #1877F2; 
+                  text-decoration: none;
+                  text-transform: uppercase;
+                  border: 1px solid #1877F2;
+                  padding: 0.4rem 0.8rem;
+                  transition: background 0.15s;
+                  display: flex;
+                  align-items: center;
+                  gap: 0.4rem;
+                "
+                onmouseover="this.style.background='rgba(24, 119, 242, 0.1)'"
+                onmouseout="this.style.background=''"
+              >
+                <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                BAGIKAN
+              </a>
+              <a href={`/${contentType || 'blog'}`} style="
+                font-family: 'Share Tech Mono', monospace;
+                font-size: 0.62rem;
+                letter-spacing: 0.15em;
+                color: var(--green-terminal);
+                text-decoration: none;
+                text-transform: uppercase;
+                border: 1px solid var(--green-terminal);
+                padding: 0.4rem 0.8rem;
+                transition: background 0.15s;
+                display: flex;
+                align-items: center;
+              "
+              onmouseover="this.style.background='var(--green-dark)'"
+              onmouseout="this.style.background=''"
+              >← KEMBALI KE {contentType === 'panduan' ? 'PANDUAN' : 'BLOG'}</a>
+            </div>
           </div>
 
           <!-- Related Posts Section -->
