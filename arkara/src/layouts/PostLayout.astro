@@ -30,9 +30,10 @@ interface Props {
 
 const { title, description, publishDate, category, coverImage, headings = [], content = '', currentSlug, contentType } = Astro.props;
 const readingTime = calculateReadingTime(content);
+const ogImageUrl = typeof coverImage === 'string' ? coverImage : coverImage?.src;
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} image={ogImageUrl}>
 
   <!-- ── POST HEADER ───────────────────────────────────── -->
   <header style="
