@@ -20,6 +20,8 @@ const htmlContent = renderMarkdown(post.content || '');
   coverImage={post.banner_image || post.cover_image}
   headings={headings}
   content={post.content || ''}
+  currentSlug={post.slug}
+  contentType="blog"
 >
   <div set:html={htmlContent} />
 </PostLayout>

@@ -37,7 +37,9 @@ import {
   CheckSquare,
   Image as ImageIcon,
   Type,
-  Trash2
+  Trash2,
+  Link as LinkIcon,
+  AlertTriangle
 } from 'lucide-react'
 import { MediaPicker } from '../media/media-picker'
 import "./editor.css"
@@ -242,6 +244,34 @@ export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
               className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
             >
               <Code className='h-4 w-4' />
+            </EditorBubbleItem>
+            <EditorBubbleItem
+              onSelect={(editor) => {
+                const previousUrl = editor.getAttributes('link').href;
+                const url = window.prompt('URL Tautan:', previousUrl || '');
+                if (url === null) return;
+                if (url === '') {
+                  editor.chain().focus().extendMarkRange('link').unsetLink().run();
+                  return;
+                }
+                editor.chain().focus().extendMarkRange('link').setLink({ href: url, target: '_blank' }).run();
+              }}
+              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
+            >
+              <LinkIcon className='h-4 w-4' />
+            </EditorBubbleItem>
+            <EditorBubbleItem
+              onSelect={(editor) => {
+                const isHighlighted = editor.isActive('highlight', { color: '#FDEAEA' });
+                if (isHighlighted) {
+                  editor.chain().focus().unsetHighlight().unsetColor().run();
+                } else {
+                  editor.chain().focus().setHighlight({ color: '#FDEAEA' }).setColor('#B85C5C').run();
+                }
+              }}
+              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-red-50 aria-selected:text-red-600'
+            >
+              <AlertTriangle className='h-4 w-4' />
             </EditorBubbleItem>
             <EditorBubbleItem
               onSelect={(editor) => editor.chain().focus().deleteSelection().run()}

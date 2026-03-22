@@ -29,6 +29,8 @@ const htmlContent = renderMarkdown(guide.content || '');
   coverImage={guide.banner_image || guide.cover_image}
   headings={headings}
   content={guide.content || ''}
+  currentSlug={guide.slug}
+  contentType="panduan"
 >
   <div class="flex gap-4 text-sm font-mono mb-8 bg-parchment p-4 rounded-xl border border-stone/10">
     {guide.bab_ref && (

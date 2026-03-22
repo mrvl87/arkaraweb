@@ -84,6 +84,42 @@ export async function getRecentPosts(count: number): Promise<Post[]> {
   return getPublishedPosts({ limit: count })
 }
 
+export async function getRelatedPosts(currentSlug: string, category: string | undefined, limit: number = 3): Promise<Post[]> {
+  let query = supabase
+    .from('posts')
+    .select('*')
+    .eq('status', 'published')
+    .neq('slug', currentSlug)
+    
+  if (category) {
+    query = query.eq('category', category)
+  }
+  
+  query = query.order('published_at', { ascending: false }).limit(limit)
+
+  const { data, error } = await query
+  
+  // If not enough related via category, fallback to recents
+  if (!error && data && data.length < limit) {
+    const needed = limit - data.length
+    const existingSlugs = [currentSlug, ...data.map(p => p.slug)]
+    
+    const { data: fallback } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('status', 'published')
+      .not('slug', 'in', `(${existingSlugs.join(',')})`)
+      .order('published_at', { ascending: false })
+      .limit(needed)
+      
+    if (fallback) {
+      return [...data, ...fallback]
+    }
+  }
+  
+  return data ?? []
+}
+
 export async function getPublishedPanduan(options?: { category?: string }): Promise<Panduan[]> {
   let query = supabase
     .from('panduan')
@@ -116,6 +152,42 @@ export async function getPanduanBySlug(slug: string): Promise<Panduan | null> {
     return null
   }
   return data
+}
+
+export async function getRelatedPanduan(currentSlug: string, category: string | undefined, limit: number = 3): Promise<Panduan[]> {
+  let query = supabase
+    .from('panduan')
+    .select('*')
+    .eq('status', 'published')
+    .neq('slug', currentSlug)
+    
+  if (category) {
+    query = query.eq('category', category)
+  }
+  
+  query = query.order('title', { ascending: true }).limit(limit)
+
+  const { data, error } = await query
+  
+  // If not enough related via category, fallback to others
+  if (!error && data && data.length < limit) {
+    const needed = limit - data.length
+    const existingSlugs = [currentSlug, ...data.map(p => p.slug)]
+    
+    const { data: fallback } = await supabase
+      .from('panduan')
+      .select('*')
+      .eq('status', 'published')
+      .not('slug', 'in', `(${existingSlugs.join(',')})`)
+      .order('title', { ascending: true })
+      .limit(needed)
+      
+    if (fallback) {
+      return [...data, ...fallback]
+    }
+  }
+  
+  return data ?? []
 }
 
 // ── SITE SETTINGS ──────────────────────────────────────────

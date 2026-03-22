@@ -13,6 +13,7 @@ import BaseLayout from './BaseLayout.astro';
 import OptimizedImage from '../components/ui/OptimizedImage.astro';
 import ReadingMeta from '../components/blog/ReadingMeta.astro';
 import TableOfContents from '../components/blog/TableOfContents.astro';
+import RelatedPosts from '../components/blog/RelatedPosts.astro';
 import { calculateReadingTime } from '../lib/markdown';
 
 interface Props {
@@ -23,9 +24,11 @@ interface Props {
   coverImage?: any;
   headings?: any[];
   content?: string;
+  currentSlug?: string;
+  contentType?: 'blog' | 'panduan';
 }
 
-const { title, description, publishDate, category, coverImage, headings = [], content = '' } = Astro.props;
+const { title, description, publishDate, category, coverImage, headings = [], content = '', currentSlug, contentType } = Astro.props;
 const readingTime = calculateReadingTime(content);
 ---
 
@@ -155,7 +158,7 @@ const readingTime = calculateReadingTime(content);
                 <p style="font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.85rem;text-transform:uppercase;color:var(--ink);">Tim Redaksi Arkara</p>
               </div>
             </div>
-            <a href="/blog" style="
+            <a href={`/${contentType || 'blog'}`} style="
               font-family: 'Share Tech Mono', monospace;
               font-size: 0.62rem;
               letter-spacing: 0.15em;
@@ -168,8 +171,13 @@ const readingTime = calculateReadingTime(content);
             "
             onmouseover="this.style.background='var(--green-dark)'"
             onmouseout="this.style.background=''"
-            >← KEMBALI KE BLOG</a>
+            >← KEMBALI KE {contentType === 'panduan' ? 'PANDUAN' : 'BLOG'}</a>
           </div>
+
+          <!-- Related Posts Section -->
+          {currentSlug && contentType && (
+            <RelatedPosts currentSlug={currentSlug} category={category} contentType={contentType} />
+          )}
         </div>
       </article>
 
