@@ -82,32 +82,72 @@ const { headings = [], class: className = '' } = Astro.props;
         margin-bottom: 0.75rem;
       ">BAGIKAN</p>
       <div style="display: flex; gap: 0.5rem;">
-        <button style="
-          width: 32px; height: 32px;
-          background: var(--paper-dark);
-          border: 2px solid var(--ink);
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer;
-          transition: background 0.15s;
-        "
-        onmouseover="this.style.background='var(--ink)';this.querySelector('svg').style.stroke='var(--cream)'"
-        onmouseout="this.style.background='var(--paper-dark)';this.querySelector('svg').style.stroke='var(--warm-grey)'"
+        <!-- Facebook -->
+        <a 
+          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(Astro.url.href)}`} 
+          target="_blank" rel="noopener noreferrer"
+          style="
+            width: 32px; height: 32px;
+            background: var(--paper-dark);
+            border: 2px solid var(--ink);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s;
+          "
+          onmouseover="this.style.background='var(--ink)';this.querySelector('svg').style.stroke='var(--cream)'"
+          onmouseout="this.style.background='var(--paper-dark)';this.querySelector('svg').style.stroke='var(--warm-grey)'"
+          title="Bagikan ke Facebook"
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--warm-grey)" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-        </button>
-        <button style="
-          width: 32px; height: 32px;
-          background: var(--paper-dark);
-          border: 2px solid var(--ink);
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer;
-          transition: background 0.15s;
-        "
-        onmouseover="this.style.background='var(--ink)';this.querySelector('svg').style.stroke='var(--cream)'"
-        onmouseout="this.style.background='var(--paper-dark)';this.querySelector('svg').style.stroke='var(--warm-grey)'"
+        </a>
+        
+        <!-- X (formerly Twitter) -->
+        <a 
+          href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(Astro.url.href)}`} 
+          target="_blank" rel="noopener noreferrer"
+          style="
+            width: 32px; height: 32px;
+            background: var(--paper-dark);
+            border: 2px solid var(--ink);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s;
+          "
+          onmouseover="this.style.background='var(--ink)';this.querySelector('svg').style.stroke='var(--cream)'"
+          onmouseout="this.style.background='var(--paper-dark)';this.querySelector('svg').style.stroke='var(--warm-grey)'"
+          title="Bagikan ke X"
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--warm-grey)" stroke-width="2"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
-        </button>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--warm-grey)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4l11.733 16h4.267l-11.733 -16z" />
+            <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772" />
+          </svg>
+        </a>
+
+        <!-- Reddit -->
+        <a 
+          href={`https://reddit.com/submit?url=${encodeURIComponent(Astro.url.href)}`} 
+          target="_blank" rel="noopener noreferrer"
+          style="
+            width: 32px; height: 32px;
+            background: var(--paper-dark);
+            border: 2px solid var(--ink);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s;
+          "
+          onmouseover="this.style.background='var(--ink)';this.querySelector('svg').style.stroke='var(--cream)'"
+          onmouseout="this.style.background='var(--paper-dark)';this.querySelector('svg').style.stroke='var(--warm-grey)'"
+          title="Bagikan ke Reddit"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-grey)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 8c2.648 0 5.028 .826 6.675 2.14a2.5 2.5 0 0 1 2.326 4.36c0 3.59 -4.03 6.5 -9 6.5c-4.875 0 -8.845 -2.8 -9 -6.294l-1 -2.706c0 -1.38 .71 -2.5 1.5 -2.5c.34 0 .68 .12 1 .32c1.78 -1.2 4.09 -1.82 6.5 -1.82z" />
+            <path d="M12 8l1 -5l6 1" />
+            <circle cx="19" cy="4" r="1" />
+            <circle cx="9" cy="13" r=".5" fill="currentColor" />
+            <circle cx="15" cy="13" r=".5" fill="currentColor" />
+            <path d="M10 17c.667 .333 1.333 .5 2 .5s1.333 -.167 2 -.5" />
+          </svg>
+        </a>
       </div>
     </div>
   </div>
