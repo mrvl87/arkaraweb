@@ -25,7 +25,7 @@ import {
   renderItems,
   useEditor
 } from 'novel'
-import { Markdown } from '@tiptap/markdown'
+import { Markdown } from 'tiptap-markdown'
 import { 
   Bold, 
   Italic, 
@@ -48,7 +48,7 @@ import {
 import { MediaPicker } from '../media/media-picker'
 import "./editor.css"
 
-// Predefined extensions for Arkara
+// Predefined base extensions
 const extensions = [
   StarterKit.configure({
     codeBlock: false, 
@@ -176,7 +176,7 @@ export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
           >
             {/* EDITOR TOOLBAR — must be inside EditorContent for useEditor() context */}
             <EditorToolbar onSwitchToMarkdown={(editor) => {
-              const md = editor.storage.markdown.getMarkdown()
+              const md = editor.storage.markdown?.getMarkdown() || ""
               setMarkdownDraft(md)
               setIsMarkdownMode(true)
             }} />

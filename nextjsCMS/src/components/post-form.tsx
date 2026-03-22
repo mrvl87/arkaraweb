@@ -9,8 +9,12 @@ import { Save, ChevronLeft, Loader2, Image as ImageIcon, Layout, X } from 'lucid
 import Link from 'next/link'
 import { SlugInput } from './slug-input'
 import { MediaPicker } from './media/media-picker'
-import { RichEditor } from './editor/RichEditor'
+import dynamic from 'next/dynamic'
 
+const RichEditor = dynamic(() => import('./editor/RichEditor').then(mod => mod.RichEditor), { 
+  ssr: false,
+  loading: () => <div className="h-[500px] w-full bg-gray-100 rounded-2xl animate-pulse flex items-center justify-center text-gray-400">Loading Editor...</div>
+})
 const postSchema = z.object({
   title: z.string().min(1, 'Judul wajib diisi'),
   slug: z.string().min(1, 'Slug wajib diisi'),
