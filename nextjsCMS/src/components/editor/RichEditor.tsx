@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from 'react'
 import { 
   EditorRoot, 
   EditorContent, 
@@ -24,6 +25,7 @@ import {
   renderItems,
   useEditor
 } from 'novel'
+import { Markdown } from '@tiptap/markdown'
 import { 
   Bold, 
   Italic, 
@@ -39,7 +41,9 @@ import {
   Type,
   Trash2,
   Link as LinkIcon,
-  AlertTriangle
+  AlertTriangle,
+  Code2,
+  Layout
 } from 'lucide-react'
 import { MediaPicker } from '../media/media-picker'
 import "./editor.css"
@@ -101,6 +105,7 @@ const extensions = [
       render: renderItems,
     },
   }),
+  Markdown,
 ]
 
 interface RichEditorProps {
@@ -110,183 +115,227 @@ interface RichEditorProps {
 }
 
 export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
+  const [isMarkdownMode, setIsMarkdownMode] = useState(false)
+  const [markdownDraft, setMarkdownDraft] = useState('')
+
   return (
     <div className="novel-editor w-full group relative">
-      <EditorRoot>
-        <EditorContent
-          // @ts-ignore - novel typings expect JSONContent but tiptap handles HTML strings natively
-          initialContent={value || undefined} 
-          extensions={extensions}
-          className="relative min-h-[500px] w-full bg-white rounded-2xl border border-gray-200 
-                     focus-within:border-amber-400 focus-within:ring-4 focus-within:ring-amber-50 
-                     transition-all overflow-hidden shadow-sm pt-0"
-          onUpdate={({ editor }) => {
-            const content = editor.getHTML(); 
-            onChange(content);
-          }}
-          editorProps={{
-            attributes: {
-              class: `prose prose-lg prose-stone dark:prose-invert focus:outline-none max-w-full p-8 pt-4`,
-            },
-          }}
-        >
-          {/* EDITOR TOOLBAR — must be inside EditorContent for useEditor() context */}
-          <EditorToolbar />
-
-          {/* SLASH COMMAND MENU */}
-          <EditorCommand className='z-50 h-auto max-h-[330px] w-72 overflow-y-auto rounded-xl border border-gray-200 bg-white px-1 py-2 shadow-2xl transition-all'>
-            <EditorCommandEmpty className='px-2 py-1 text-sm text-gray-400'>No results found</EditorCommandEmpty>
-            <EditorCommandList>
-              <EditorCommandItem
-                value='Heading 1'
-                onCommand={({ editor, range }) => {
-                  editor.chain().focus().deleteRange(range).setNode('heading', { level: 1 }).run();
-                }}
-                className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
-              >
-                <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><Heading1 className="w-4 h-4"/></div>
-                <span>Heading 1</span>
-              </EditorCommandItem>
-
-              <EditorCommandItem
-                value='Heading 2'
-                onCommand={({ editor, range }) => {
-                  editor.chain().focus().deleteRange(range).setNode('heading', { level: 2 }).run();
-                }}
-                className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
-              >
-                <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><Heading2 className="w-4 h-4"/></div>
-                <span>Heading 2</span>
-              </EditorCommandItem>
-
-              <EditorCommandItem
-                value='Bullet List'
-                onCommand={({ editor, range }) => {
-                  editor.chain().focus().deleteRange(range).toggleBulletList().run();
-                }}
-                className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
-              >
-                <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><List className="w-4 h-4"/></div>
-                <span>Bullet List</span>
-              </EditorCommandItem>
-
-              <EditorCommandItem
-                value='Numbered List'
-                onCommand={({ editor, range }) => {
-                  editor.chain().focus().deleteRange(range).toggleOrderedList().run();
-                }}
-                className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
-              >
-                <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><ListOrdered className="w-4 h-4"/></div>
-                <span>Numbered List</span>
-              </EditorCommandItem>
-
-              <EditorCommandItem
-                value='Quote'
-                onCommand={({ editor, range }) => {
-                  editor.chain().focus().deleteRange(range).toggleBlockquote().run();
-                }}
-                className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
-              >
-                <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><Quote className="w-4 h-4"/></div>
-                <span>Quote</span>
-              </EditorCommandItem>
-
-              <EditorCommandItem
-                value='Task List'
-                onCommand={({ editor, range }) => {
-                  editor.chain().focus().deleteRange(range).toggleTaskList().run();
-                }}
-                className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
-              >
-                <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><CheckSquare className="w-4 h-4"/></div>
-                <span>Task List</span>
-              </EditorCommandItem>
-
-              <EditorCommandItem
-                value='Image'
-                onCommand={({ editor, range }) => {
-                  editor.chain().focus().deleteRange(range).run();
-                  // Trigger the media picker button click
-                  const btn = document.getElementById('editor-media-picker-trigger');
-                  btn?.click();
-                }}
-                className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
-              >
-                <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><ImageIcon className="w-4 h-4"/></div>
-                <span>Sisipkan Gambar</span>
-              </EditorCommandItem>
-            </EditorCommandList>
-          </EditorCommand>
-
-          {/* BUBBLE MENU */}
-          <EditorBubble className='flex w-fit max-w-[90vw] overflow-hidden rounded-md border border-gray-200 bg-white shadow-xl'>
-            <EditorBubbleItem
-              onSelect={(editor) => editor.chain().focus().toggleBold().run()}
-              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
-            >
-              <Bold className='h-4 w-4' />
-            </EditorBubbleItem>
-            <EditorBubbleItem
-              onSelect={(editor) => editor.chain().focus().toggleItalic().run()}
-              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
-            >
-              <Italic className='h-4 w-4' />
-            </EditorBubbleItem>
-            <EditorBubbleItem
-              onSelect={(editor) => editor.chain().focus().toggleUnderline().run()}
-              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
-            >
-              <Underline className='h-4 w-4' />
-            </EditorBubbleItem>
-            <EditorBubbleItem
-              onSelect={(editor) => editor.chain().focus().toggleCode().run()}
-              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
-            >
-              <Code className='h-4 w-4' />
-            </EditorBubbleItem>
-            <EditorBubbleItem
-              onSelect={(editor) => {
-                const previousUrl = editor.getAttributes('link').href;
-                const url = window.prompt('URL Tautan:', previousUrl || '');
-                if (url === null) return;
-                if (url === '') {
-                  editor.chain().focus().extendMarkRange('link').unsetLink().run();
-                  return;
-                }
-                editor.chain().focus().extendMarkRange('link').setLink({ href: url, target: '_blank' }).run();
+      {isMarkdownMode ? (
+        <div className="w-full bg-[#1e1e2e] rounded-2xl border border-gray-800 transition-all overflow-hidden shadow-sm pt-0 min-h-[500px] flex flex-col">
+          <div className="sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 px-4 py-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+               <div className="px-2 py-1 bg-amber-500/10 text-amber-500 rounded text-[10px] font-black uppercase tracking-widest border border-amber-500/20">
+                 Markdown Source
+               </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                // Return to WYSIWYG
+                setIsMarkdownMode(false)
+                // Note: The EditorRoot will re-mount. 
+                // Since 'value' in the parent has been updated by markdownDraft,
+                // the new EditorRoot will receive markdown as its initialContent.
               }}
-              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
             >
-              <LinkIcon className='h-4 w-4' />
-            </EditorBubbleItem>
-            <EditorBubbleItem
-              onSelect={(editor) => {
-                const isHighlighted = editor.isActive('highlight', { color: '#FDEAEA' });
-                if (isHighlighted) {
-                  editor.chain().focus().unsetHighlight().unsetColor().run();
-                } else {
-                  editor.chain().focus().setHighlight({ color: '#FDEAEA' }).setColor('#B85C5C').run();
-                }
-              }}
-              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-red-50 aria-selected:text-red-600'
-            >
-              <AlertTriangle className='h-4 w-4' />
-            </EditorBubbleItem>
-            <EditorBubbleItem
-              onSelect={(editor) => editor.chain().focus().deleteSelection().run()}
-              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-red-50 aria-selected:text-red-600'
-            >
-              <Trash2 className='h-4 w-4' />
-            </EditorBubbleItem>
-          </EditorBubble>
-        </EditorContent>
-      </EditorRoot>
+              <Layout className="w-3.5 h-3.5" />
+              Kembali ke Visual
+            </button>
+          </div>
+          <textarea
+            value={markdownDraft}
+            onChange={(e) => {
+              const val = e.target.value
+              setMarkdownDraft(val)
+              // Update parent so that when we switch back or save, the source is preserved
+              onChange(val) 
+            }}
+            placeholder="Tulis markdown di sini..."
+            className="flex-1 w-full p-8 font-mono text-sm bg-transparent text-[#cdd6f4] focus:outline-none resize-none min-h-[460px]"
+          />
+        </div>
+      ) : (
+        <EditorRoot>
+          <EditorContent
+            // @ts-ignore - novel typings expect JSONContent but tiptap handles HTML strings natively
+            initialContent={value || undefined} 
+            extensions={extensions}
+            className="relative min-h-[500px] w-full bg-white rounded-2xl border border-gray-200 
+                       focus-within:border-amber-400 focus-within:ring-4 focus-within:ring-amber-50 
+                       transition-all overflow-hidden shadow-sm pt-0"
+            onUpdate={({ editor }) => {
+              const content = editor.getHTML(); 
+              onChange(content);
+            }}
+            editorProps={{
+              attributes: {
+                class: `prose prose-lg prose-stone dark:prose-invert focus:outline-none max-w-full p-8 pt-4`,
+              },
+            }}
+          >
+            {/* EDITOR TOOLBAR — must be inside EditorContent for useEditor() context */}
+            <EditorToolbar onSwitchToMarkdown={(editor) => {
+              const md = editor.storage.markdown.getMarkdown()
+              setMarkdownDraft(md)
+              setIsMarkdownMode(true)
+            }} />
+
+            {/* SLASH COMMAND MENU */}
+            <EditorCommand className='z-50 h-auto max-h-[330px] w-72 overflow-y-auto rounded-xl border border-gray-200 bg-white px-1 py-2 shadow-2xl transition-all'>
+              <EditorCommandEmpty className='px-2 py-1 text-sm text-gray-400'>No results found</EditorCommandEmpty>
+              <EditorCommandList>
+                <EditorCommandItem
+                  value='Heading 1'
+                  onCommand={({ editor, range }) => {
+                    editor.chain().focus().deleteRange(range).setNode('heading', { level: 1 }).run();
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><Heading1 className="w-4 h-4"/></div>
+                  <span>Heading 1</span>
+                </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='Heading 2'
+                  onCommand={({ editor, range }) => {
+                    editor.chain().focus().deleteRange(range).setNode('heading', { level: 2 }).run();
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><Heading2 className="w-4 h-4"/></div>
+                  <span>Heading 2</span>
+                </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='Bullet List'
+                  onCommand={({ editor, range }) => {
+                    editor.chain().focus().deleteRange(range).toggleBulletList().run();
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><List className="w-4 h-4"/></div>
+                  <span>Bullet List</span>
+                </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='Numbered List'
+                  onCommand={({ editor, range }) => {
+                    editor.chain().focus().deleteRange(range).toggleOrderedList().run();
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><ListOrdered className="w-4 h-4"/></div>
+                  <span>Numbered List</span>
+                </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='Quote'
+                  onCommand={({ editor, range }) => {
+                    editor.chain().focus().deleteRange(range).toggleBlockquote().run();
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><Quote className="w-4 h-4"/></div>
+                  <span>Quote</span>
+                </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='Task List'
+                  onCommand={({ editor, range }) => {
+                    editor.chain().focus().deleteRange(range).toggleTaskList().run();
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><CheckSquare className="w-4 h-4"/></div>
+                  <span>Task List</span>
+                </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='Image'
+                  onCommand={({ editor, range }) => {
+                    editor.chain().focus().deleteRange(range).run();
+                    // Trigger the media picker button click
+                    const btn = document.getElementById('editor-media-picker-trigger');
+                    btn?.click();
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><ImageIcon className="w-4 h-4"/></div>
+                  <span>Sisipkan Gambar</span>
+                </EditorCommandItem>
+              </EditorCommandList>
+            </EditorCommand>
+
+            {/* BUBBLE MENU */}
+            <EditorBubble className='flex w-fit max-w-[90vw] overflow-hidden rounded-md border border-gray-200 bg-white shadow-xl'>
+              <EditorBubbleItem
+                onSelect={(editor) => editor.chain().focus().toggleBold().run()}
+                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
+              >
+                <Bold className='h-4 w-4' />
+              </EditorBubbleItem>
+              <EditorBubbleItem
+                onSelect={(editor) => editor.chain().focus().toggleItalic().run()}
+                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
+              >
+                <Italic className='h-4 w-4' />
+              </EditorBubbleItem>
+              <EditorBubbleItem
+                onSelect={(editor) => editor.chain().focus().toggleUnderline().run()}
+                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
+              >
+                <Underline className='h-4 w-4' />
+              </EditorBubbleItem>
+              <EditorBubbleItem
+                onSelect={(editor) => editor.chain().focus().toggleCode().run()}
+                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
+              >
+                <Code className='h-4 w-4' />
+              </EditorBubbleItem>
+              <EditorBubbleItem
+                onSelect={(editor) => {
+                  const previousUrl = editor.getAttributes('link').href;
+                  const url = window.prompt('URL Tautan:', previousUrl || '');
+                  if (url === null) return;
+                  if (url === '') {
+                    editor.chain().focus().extendMarkRange('link').unsetLink().run();
+                    return;
+                  }
+                  editor.chain().focus().extendMarkRange('link').setLink({ href: url, target: '_blank' }).run();
+                }}
+                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
+              >
+                <LinkIcon className='h-4 w-4' />
+              </EditorBubbleItem>
+              <EditorBubbleItem
+                onSelect={(editor) => {
+                  const isHighlighted = editor.isActive('highlight', { color: '#FDEAEA' });
+                  if (isHighlighted) {
+                    editor.chain().focus().unsetHighlight().unsetColor().run();
+                  } else {
+                    editor.chain().focus().setHighlight({ color: '#FDEAEA' }).setColor('#B85C5C').run();
+                  }
+                }}
+                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-red-50 aria-selected:text-red-600'
+              >
+                <AlertTriangle className='h-4 w-4' />
+              </EditorBubbleItem>
+              <EditorBubbleItem
+                onSelect={(editor) => editor.chain().focus().deleteSelection().run()}
+                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-red-50 aria-selected:text-red-600'
+              >
+                <Trash2 className='h-4 w-4' />
+              </EditorBubbleItem>
+            </EditorBubble>
+          </EditorContent>
+        </EditorRoot>
+      )}
     </div>
   )
 }
 
-function EditorToolbar() {
+function EditorToolbar({ onSwitchToMarkdown }: { onSwitchToMarkdown: (editor: any) => void }) {
   const { editor } = useEditor();
   
   if (!editor) return null;
@@ -310,6 +359,17 @@ function EditorToolbar() {
         title="Hapus elemen terpilih"
       >
         <Trash2 className="w-4 h-4" />
+      </button>
+
+      <div className="flex-1" />
+
+      <button
+        type="button"
+        onClick={() => onSwitchToMarkdown(editor)}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all border border-transparent hover:border-amber-200"
+      >
+        <Code2 className="w-3.5 h-3.5 text-amber-500" />
+        Markdown Mode
       </button>
     </div>
   )
