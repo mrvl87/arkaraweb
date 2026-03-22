@@ -20,7 +20,7 @@ interface Props {
 const {
   title,
   description = 'Platform pengetahuan survival Indonesia. Pelajari teknik survival praktis untuk menghadapi krisis.',
-  image = '/images/og-default.webp',
+  image,
   siteName = 'Arkara'
 } = Astro.props;
 const siteTitle = title ? `${title} — ${siteName}` : `${siteName} — Survive with Knowledge`;
@@ -47,13 +47,13 @@ const navLinks = [
     <meta property="og:url"         content={Astro.url.href} />
     <meta property="og:title"       content={siteTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:image"       content={new URL(image, siteUrl).href} />
+    {image && <meta property="og:image" content={new URL(image, siteUrl).href} />}
 
     <meta property="twitter:card"        content="summary_large_image" />
     <meta property="twitter:url"         content={Astro.url.href} />
     <meta property="twitter:title"       content={siteTitle} />
     <meta property="twitter:description" content={description} />
-    <meta property="twitter:image"       content={new URL(image, siteUrl).href} />
+    {image && <meta property="twitter:image" content={new URL(image, siteUrl).href} />}
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
