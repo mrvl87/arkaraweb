@@ -21,46 +21,52 @@ Panduan untuk mengembangkan fitur dan berkontribusi pada Arkara.
 
 ## 🔄 Development Workflow
 
+Arkara sekarang menggunakan arsitektur **Dual-Project**. Anda harus menjalankan frontend (Astro) dan CMS (Next.js) secara bersamaan untuk workflow penuh.
+
 ### Daily Workflow
 
 ```bash
-# 1. Start dev server
+# Terminal 1: Frontend (Astro)
+cd arkara
 npm run dev
 
-# 2. Keep it running in one terminal
-# Terminal stays open with hot-reload
-
-# 3. Edit files
-# src/pages/blog/[slug].astro
-# src/components/blog/PostCard.astro
-# src/lib/openrouter.ts
-
-# 4. Changes reload automatically in browser
-# Just refresh to see changes
-
-# 5. When done, build to check for errors
-npm run build
-
-# 6. Commit changes
-git add .
-git commit -m "feat: add new feature"
+# Terminal 2: CMS Backend (Next.js)
+cd nextjsCMS
+npm run dev
 ```
 
 ### Hot Reload Behavior
 
-```
-✅ Auto-reload:
-- .astro files
-- .tsx files
-- CSS files
-- .md files
+- **Astro**: Auto-reload untuk perubahan di `arkara/src`.
+- **Next.js**: Auto-reload untuk perubahan di `nextjsCMS/src`.
+- **Database**: Perubahan data di CMS (Next.js) akan langsung terlihat di Astro setelah refresh (karena SSR).
 
-⏱️ Needs manual refresh:
-- Environment variable changes
-- .env file changes
-- tsconfig changes
-- astro.config changes
-```
+---
+
+## 🗄️ Database & CMS Strategy
+
+### 1. Supabase (Source of Truth)
+Seluruh data sekarang tersimpan di Supabase. 
+- Gunakan `nextjsCMS` untuk menambah/edit artikel.
+- Gunakan `arkara/src/lib/content.ts` untuk mengambil data di frontend.
+
+### 2. StudioCMS (Transisi)
+Beberapa bagian lama masih merujuk pada StudioCMS. Fokus pengembangan baru harus diarahkan ke **Supabase integration**.
+
+---
+
+## 🎨 Design System: Retro Survival Manual 2.0
+
+Fokus desain saat ini adalah folder `arkara/refactored/`. Semua komponen baru harus mengikuti token desain ini:
+- **Border**: `3px solid var(--ink)`
+- **Shadow**: `8px 8px 0 var(--ink)` (No blur)
+- **Background**: `var(--cream)` atau `var(--ink)`
+
+---
+
+## 📛 File Naming Conventions
+(Sama seperti sebelumnya, namun terbagi dua folder utama)
+
 
 ---
 

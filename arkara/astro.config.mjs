@@ -7,7 +7,7 @@ import node from '@astrojs/node';
 // https://astro.build/config
 export default defineConfig({
   output: 'server',
-  site: 'https://arkaraweb-production.up.railway.app',
+  site: 'https://arkaraweb.com',
 
   vite: {
     plugins: [tailwindcss()]
