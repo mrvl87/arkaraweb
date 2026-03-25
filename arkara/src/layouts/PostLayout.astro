@@ -123,6 +123,8 @@ const ogImageUrl = typeof coverImage === 'string' ? coverImage : coverImage?.src
               style="filter: saturate(0.7) contrast(1.05); display: block;"
               aspectRatio="aspect-video"
               loading="eager"
+              fetchpriority="high"
+              sizes="(max-width: 1200px) 100vw, 1200px"
             />
           </div>
         )}

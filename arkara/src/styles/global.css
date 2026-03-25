@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Share+Tech+Mono&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap');
+/* Fonts are now loaded in BaseLayout.astro for better performance */
 
 @import "tailwindcss";
 
@@ -147,6 +147,7 @@ code {
   align-items: center;
   gap: 1rem;
   margin-bottom: 1.5rem;
+  contain: content;
 }
 .section-label::after {
   content: '';
@@ -165,8 +166,8 @@ code {
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .card-ink:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 7px 7px 0 var(--ink);
+  transform: translate3d(-3px, -3px, 0);
+  box-shadow: 8px 8px 0 var(--ink);
 }
 
 /* ─── BUTTONS ───────────────────────────────────────────── */

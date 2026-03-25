@@ -19,9 +19,10 @@ interface Props {
   slug: string;
   content: string;
   image?: any;
+  sizes?: string;
 }
 
-const { title, excerpt, category, date, slug, content, image } = Astro.props;
+const { title, excerpt, category, date, slug, content, image, sizes } = Astro.props;
 const readingTime = calculateReadingTime(content || '');
 
 const formattedDate = new Date(date).toLocaleDateString('id-ID', {
@@ -50,6 +51,7 @@ onmouseout="this.style.transform='';this.style.boxShadow='5px 5px 0 var(--ink)'"
         class="w-full object-cover"
         style="filter: saturate(0.65) contrast(1.08); display: block; aspect-ratio: 16/9;"
         aspectRatio="aspect-video"
+        sizes={sizes}
       />
       <!-- Category stamp -->
       <div style="

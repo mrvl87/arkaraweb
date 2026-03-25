@@ -7,6 +7,7 @@ interface Props {
   aspectRatio?: string; // Optional enforced aspect ratio class e.g., 'aspect-video'
   sizes?: string; // HTML sizes attribute
   transparent?: boolean; // If true, disable placeholder logic and change default fit
+  fetchpriority?: 'high' | 'low' | 'auto'; // Priority for LCP
 }
 
 const { 
@@ -16,7 +17,8 @@ const {
   loading = 'lazy',
   aspectRatio = '',
   sizes = '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw',
-  transparent = false
+  transparent = false,
+  fetchpriority = 'auto'
 } = Astro.props;
 
 // If no image is provided
@@ -46,16 +48,39 @@ const objectFit = isTransparent
   ? (className.includes('object-cover') ? 'object-cover' : 'object-contain')
   : (className.includes('object-contain') ? 'object-contain' : 'object-cover');
 
+// ─── SUPABASE TRANSFORMATION UTILITY ─────────────────────
+// Helper to append transformation params if it's a Supabase URL
+function getTransformedUrl(url: string, width?: number, quality: number = 80) {
+  if (!url.includes('supabase.co/storage/v1/object/public')) return url;
+  
+  // Use Supabase on-the-fly transformation if available (project must have it enabled)
+  // Format: https://[ref].supabase.co/storage/v1/render/image/public/[bucket]/[path]?width=[w]&quality=[q]
+  const isPublicUrl = url.includes('/public/');
+  if (isPublicUrl) {
+    const transformedBase = url.replace('/object/public/', '/render/image/public/');
+    const params = new URLSearchParams();
+    if (width) params.append('width', width.toString());
+    params.append('quality', quality.toString());
+    params.append('format', 'webp'); // Force webp for better compression
+    return `${transformedBase}?${params.toString()}`;
+  }
+  return url;
+}
+
 if (hasFormats) {
   const formatList = [];
-  if (image.formats.sm) formatList.push(`${image.formats.sm} 400w`);
-  if (image.formats.md) formatList.push(`${image.formats.md} 800w`);
-  if (image.formats.lg) formatList.push(`${image.formats.lg} 1200w`);
-  if (image.formats.original) formatList.push(`${image.formats.original} 2000w`); // Fallback original
+  if (image.formats.sm) formatList.push(`${getTransformedUrl(image.formats.sm, 400)} 400w`);
+  if (image.formats.md) formatList.push(`${getTransformedUrl(image.formats.md, 800)} 800w`);
+  if (image.formats.lg) formatList.push(`${getTransformedUrl(image.formats.lg, 1200)} 1200w`);
+  if (image.formats.original) formatList.push(`${getTransformedUrl(image.formats.original)} 2000w`); 
   srcSet = formatList.join(', ');
   
-  // Use md as the default fallback src if available
-  if (image.formats.md) src = image.formats.md;
+  // Use md as the default fallback src
+  if (image.formats.md) src = getTransformedUrl(image.formats.md, 800);
+} else if (src) {
+  // If no predefined formats, still try to provide a responsive set using transformations
+  srcSet = `${getTransformedUrl(src, 400)} 400w, ${getTransformedUrl(src, 800)} 800w, ${getTransformedUrl(src, 1200)} 1200w`;
+  src = getTransformedUrl(src, 800);
 }
 
 // Styling for placeholder
@@ -85,6 +110,7 @@ const showBlurhash = !isTransparent && blurhash;
            alt={altText}
            loading={loading}
            decoding={loading === 'eager' ? 'sync' : 'async'}
+           fetchpriority={fetchpriority}
            class={`relative z-10 w-full h-full ${objectFit} transition-opacity duration-300`}
            // When JS loads, we could fade it in, but native browser behavior is usually fine
          />
@@ -95,6 +121,7 @@ const showBlurhash = !isTransparent && blurhash;
         alt={altText}
         loading={loading}
         decoding={loading === 'eager' ? 'sync' : 'async'}
+        fetchpriority={fetchpriority}
         class={`relative z-10 w-full h-full ${objectFit}`}
       />
     )}

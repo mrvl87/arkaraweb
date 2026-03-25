@@ -170,6 +170,7 @@ const tickerDouble = [...tickerItems, ...tickerItems];
               slug={post.slug}
               content={post.content || ''}
               image={post.thumbnail_image || post.cover_image}
+              sizes="(max-width: 640px) 100vw, (max-width: 900px) 50vw, 400px"
             />
           </div>
         ))}

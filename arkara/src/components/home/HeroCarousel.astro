@@ -46,6 +46,9 @@ const categoryLabels: Record<string, string> = {
                 alt={post.title}
                 class="w-full h-full object-cover"
                 style="filter: saturate(0.5) contrast(1.1); display: block;"
+                loading={index === 0 ? 'eager' : 'lazy'}
+                fetchpriority={index === 0 ? 'high' : 'auto'}
+                sizes="100vw"
               />
               <!-- Flat dark overlays, no blur -->
               <div style="position:absolute;inset:0;background:rgba(42,34,24,0.6);"></div>
