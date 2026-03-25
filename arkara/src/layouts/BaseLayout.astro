@@ -24,7 +24,7 @@ const {
   siteName = 'Arkara'
 } = Astro.props;
 const siteTitle = title ? `${title} — ${siteName}` : `${siteName} — Survive with Knowledge`;
-const siteUrl = 'https://arkara.id';
+const siteUrl = 'https://arkaraweb.com';
 const canonicalUrl = new URL(Astro.url.pathname, siteUrl);
 
 const navLinks = [
@@ -41,6 +41,7 @@ const navLinks = [
     <title>{siteTitle}</title>
     <meta name="title"       content={siteTitle} />
     <meta name="description" content={description} />
+    <meta name="robots"      content="index, follow" />
     <link rel="canonical"    href={canonicalUrl.href} />
 
     <meta property="og:type"        content="website" />

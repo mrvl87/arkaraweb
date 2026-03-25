@@ -1,10 +1,19 @@
 ---
-import { getPanduanBySlug } from '../../lib/content';
+import { getPanduanBySlug, getPublishedPanduan } from '../../lib/content';
 import { renderMarkdown, extractHeadings } from '../../lib/markdown';
+
+export async function getStaticPaths() {
+  const guides = await getPublishedPanduan();
+  return guides.map((guide) => ({
+    params: { slug: guide.slug },
+    props: { guide },
+  }));
+}
+
+export const prerender = true;
 import PostLayout from '../../layouts/PostLayout.astro';
 
-const { slug } = Astro.params;
-const guide = await getPanduanBySlug(slug!);
+const { guide } = Astro.props;
 
 if (!guide) return Astro.redirect('/404');
 

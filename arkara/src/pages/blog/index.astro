@@ -13,6 +13,7 @@ import PostCard from '../../components/blog/PostCard.astro';
 import FeaturedPost from '../../components/blog/FeaturedPost.astro';
 
 const sortedPosts = await getPublishedPosts();
+export const prerender = true;
 ---
 
 <BaseLayout title="Blog">

@@ -1,4 +1,5 @@
 ---
+export const prerender = true;
 /**
  * index.astro — Homepage — Retro Survival Manual 2.0
  * Data fetching: unchanged (getRecentPosts from lib/content)
@@ -109,6 +110,9 @@ const tickerDouble = [...tickerItems, ...tickerItems];
       flex-wrap: wrap;
     ">
       <div>
+        <h1 style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">
+          Arkara — Survive with Knowledge | Pengetahuan Survival Indonesia
+        </h1>
         <div style="
           font-family: 'Share Tech Mono', monospace;
           font-size: 0.6rem;
