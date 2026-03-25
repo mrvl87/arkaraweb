@@ -49,38 +49,25 @@ const objectFit = isTransparent
   : (className.includes('object-contain') ? 'object-contain' : 'object-cover');
 
 // ─── SUPABASE TRANSFORMATION UTILITY ─────────────────────
-// Helper to append transformation params if it's a Supabase URL
-function getTransformedUrl(url: string, width?: number, quality: number = 80) {
-  if (!url.includes('supabase.co/storage/v1/object/public')) return url;
-  
-  // Use Supabase on-the-fly transformation if available (project must have it enabled)
-  // Format: https://[ref].supabase.co/storage/v1/render/image/public/[bucket]/[path]?width=[w]&quality=[q]
-  const isPublicUrl = url.includes('/public/');
-  if (isPublicUrl) {
-    const transformedBase = url.replace('/object/public/', '/render/image/public/');
-    const params = new URLSearchParams();
-    if (width) params.append('width', width.toString());
-    params.append('quality', quality.toString());
-    params.append('format', 'webp'); // Force webp for better compression
-    return `${transformedBase}?${params.toString()}`;
-  }
-  return url;
+// Removed /render/ transformation since it requires Supabase Pro plan.
+// We stick to pre-processed formats from the CMS.
+function getTransformedUrl(url: string) {
+  return url; // Return direct public URL
 }
 
 if (hasFormats) {
   const formatList = [];
-  if (image.formats.sm) formatList.push(`${getTransformedUrl(image.formats.sm, 400)} 400w`);
-  if (image.formats.md) formatList.push(`${getTransformedUrl(image.formats.md, 800)} 800w`);
-  if (image.formats.lg) formatList.push(`${getTransformedUrl(image.formats.lg, 1200)} 1200w`);
-  if (image.formats.original) formatList.push(`${getTransformedUrl(image.formats.original)} 2000w`); 
+  if (image.formats.sm) formatList.push(`${image.formats.sm} 400w`);
+  if (image.formats.md) formatList.push(`${image.formats.md} 800w`);
+  if (image.formats.lg) formatList.push(`${image.formats.lg} 1200w`);
+  if (image.formats.original) formatList.push(`${image.formats.original} 2000w`); 
   srcSet = formatList.join(', ');
   
-  // Use md as the default fallback src
-  if (image.formats.md) src = getTransformedUrl(image.formats.md, 800);
+  // Use md as the default fallback src if available
+  if (image.formats.md) src = image.formats.md;
 } else if (src) {
-  // If no predefined formats, still try to provide a responsive set using transformations
-  srcSet = `${getTransformedUrl(src, 400)} 400w, ${getTransformedUrl(src, 800)} 800w, ${getTransformedUrl(src, 1200)} 1200w`;
-  src = getTransformedUrl(src, 800);
+  // Fallback to original src if no formats exist
+  srcSet = ''; 
 }
 
 // Styling for placeholder
