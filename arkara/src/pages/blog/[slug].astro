@@ -1,19 +1,10 @@
 ---
-import { getPostBySlug, getPublishedPosts } from '../../lib/content';
+import { getPostBySlug } from '../../lib/content';
 import { renderMarkdown, extractHeadings } from '../../lib/markdown';
-
-export async function getStaticPaths() {
-  const posts = await getPublishedPosts();
-  return posts.map((post) => ({
-    params: { slug: post.slug },
-    props: { post },
-  }));
-}
-
-export const prerender = true;
 import PostLayout from '../../layouts/PostLayout.astro';
 
-const { post } = Astro.props;
+const { slug } = Astro.params;
+const post = slug ? await getPostBySlug(slug) : null;
 
 if (!post) return Astro.redirect('/404');
 

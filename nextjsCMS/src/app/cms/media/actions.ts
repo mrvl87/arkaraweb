@@ -91,7 +91,10 @@ export async function uploadFile(formData: FormData) {
             const sizeBuffer = await image.clone().resize({ width: size.width, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer()
             const sizePath = `uploads/${fileName}-${size.name}.webp`
             
-            await supabase.storage.from('media').upload(sizePath, sizeBuffer, { contentType: 'image/webp' })
+            await supabase.storage.from('media').upload(sizePath, sizeBuffer, { 
+              contentType: 'image/webp',
+              cacheControl: '31536000'
+            })
             const { data } = supabase.storage.from('media').getPublicUrl(sizePath)
             formatsObj[size.name] = data.publicUrl
           }
@@ -116,9 +119,10 @@ export async function uploadFile(formData: FormData) {
   const filePath = `uploads/${fileName}`
 
   // 2. Upload main file to Supabase Storage
-  const { error: uploadError } = await supabase.storage
-    .from('media')
-    .upload(filePath, finalBuffer, { contentType: mimeType })
+    .upload(filePath, finalBuffer, { 
+      contentType: mimeType,
+      cacheControl: '31536000'
+    })
 
   if (uploadError) throw new Error(uploadError.message)
   
