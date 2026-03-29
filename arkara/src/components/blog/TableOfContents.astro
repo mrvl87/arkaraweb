@@ -11,6 +11,10 @@ interface Props {
   class?: string;
 }
 const { headings = [], class: className = '' } = Astro.props;
+
+// Construct an absolute URL using Astro.site for reliable social scraping
+const siteUrl = Astro.site ? Astro.site.origin : 'https://arkaraweb.com';
+const shareUrl = `${siteUrl}${Astro.url.pathname}`;
 ---
 
 {headings && headings.length > 0 && (
@@ -84,7 +88,7 @@ const { headings = [], class: className = '' } = Astro.props;
       <div style="display: flex; gap: 0.5rem;">
         <!-- Facebook -->
         <a 
-          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(Astro.url.href)}`} 
+          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} 
           target="_blank" rel="noopener noreferrer"
           style="
             width: 32px; height: 32px;
@@ -103,7 +107,7 @@ const { headings = [], class: className = '' } = Astro.props;
         
         <!-- X (formerly Twitter) -->
         <a 
-          href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(Astro.url.href)}`} 
+          href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}`} 
           target="_blank" rel="noopener noreferrer"
           style="
             width: 32px; height: 32px;
@@ -125,7 +129,7 @@ const { headings = [], class: className = '' } = Astro.props;
 
         <!-- Reddit -->
         <a 
-          href={`https://reddit.com/submit?url=${encodeURIComponent(Astro.url.href)}`} 
+          href={`https://reddit.com/submit?url=${encodeURIComponent(shareUrl)}`} 
           target="_blank" rel="noopener noreferrer"
           style="
             width: 32px; height: 32px;
