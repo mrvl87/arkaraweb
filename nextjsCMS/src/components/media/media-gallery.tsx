@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { UploadZone } from './upload-zone'
+import { AIGenerator } from './ai-generator'
 import { MediaCard } from './media-card'
 import { Search, Filter, Image as ImageIcon } from 'lucide-react'
 
@@ -33,18 +34,24 @@ export function MediaGallery({ initialMedia }: MediaGalleryProps) {
       </div>
 
       <div className="space-y-12">
-        {/* Upload Full Width Section */}
-        <div className="bg-white/50 border border-gray-100 rounded-3xl p-6 lg:p-8 shadow-sm">
-           <div className="mb-6 flex items-center gap-3">
-              <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
-                 <ImageIcon className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 tracking-tight">Pusat Unggahan</h3>
-                <p className="text-sm text-gray-500">Mendukung konversi dan optimasi WebP otomatis.</p>
-              </div>
-           </div>
-           <UploadZone />
+        {/* Top Actions: Upload & AI Generation */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Upload Section */}
+          <div className="bg-white/50 border border-gray-100 rounded-3xl p-6 lg:p-8 shadow-sm">
+             <div className="mb-6 flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+                   <ImageIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 tracking-tight">Pusat Unggahan</h3>
+                  <p className="text-sm text-gray-500">Mendukung konversi dan optimasi WebP otomatis.</p>
+                </div>
+             </div>
+             <UploadZone />
+          </div>
+
+          {/* AI Generator Section */}
+          <AIGenerator />
         </div>
 
         {/* Gallery Grid Section */}

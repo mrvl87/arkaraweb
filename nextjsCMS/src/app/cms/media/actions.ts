@@ -28,116 +28,110 @@ export async function getMedia() {
   return data
 }
 
-export async function uploadFile(formData: FormData) {
-  const supabase = getAdminClient()
+export async function processAndUploadImage({
+  buffer,
+  originalName,
+  mimeType,
+  contextName,
+  authorId
+}: {
+  buffer: Buffer;
+  originalName: string;
+  mimeType: string;
+  contextName: string;
+  authorId: string;
+}) {
+  const supabase = getAdminClient();
   
-  // Catatan: media/actions.ts pakai admin client (service role)
-  const authorId = process.env.CMS_SERVICE_AUTHOR_ID
-  if (!authorId) throw new Error('CMS_SERVICE_AUTHOR_ID not configured')
-
-  const file = formData.get('file') as File
-  const contextName = formData.get('contextName') as string || ''
+  let finalBuffer = buffer;
+  let fileExt = originalName.split('.').pop() || 'tmp';
+  let isImage = mimeType.startsWith('image/');
+  let baseName = contextName.trim() ? contextName.trim().replace(/\s+/g, '-').toLowerCase() : Math.random().toString(36).substring(2);
+  let fileName = `${baseName}-${Date.now()}`;
   
-  if (!file) throw new Error('No file provided')
-
-  const arrayBuffer = await file.arrayBuffer()
-  const buffer = Buffer.from(arrayBuffer)
+  let formatsObj: Record<string, string> = {};
+  let dominantColor = '';
+  let blurhash = '';
+  let aspectRatio = '';
+  let fileSize = buffer.length;
   
-  let finalBuffer = buffer
-  let fileExt = file.name.split('.').pop() || 'tmp'
-  let mimeType = file.type
-  let isImage = mimeType.startsWith('image/')
-  let baseName = contextName.trim() ? contextName.trim().replace(/\s+/g, '-').toLowerCase() : Math.random().toString(36).substring(2)
-  let fileName = `${baseName}-${Date.now()}`
-  
-  let formatsObj: Record<string, string> = {}
-  let dominantColor = ''
-  let blurhash = ''
-  let aspectRatio = ''
-  let fileSize = file.size
-  
-  // 1. Image Processing Pipeline
   if (isImage && !mimeType.includes('svg')) {
     try {
-      const image = sharp(buffer)
-      const metadata = await image.metadata()
+      const image = sharp(buffer);
+      const metadata = await image.metadata();
       
-      const hasAlpha = metadata.hasAlpha ?? false
+      const hasAlpha = metadata.hasAlpha ?? false;
       if (hasAlpha) {
-        formatsObj['has_alpha'] = 'true'
+        formatsObj['has_alpha'] = 'true';
       }
       
       if (metadata.width && metadata.height) {
-        aspectRatio = `${metadata.width}:${metadata.height}`
+        aspectRatio = `${metadata.width}:${metadata.height}`;
         
-        // Generate tiny placeholder (blurhash alternative)
-        const tinyBuffer = await image.clone().resize(10, 10, { fit: 'inside' }).webp({ quality: 20 }).toBuffer()
-        blurhash = `data:image/webp;base64,${tinyBuffer.toString('base64')}`
+        const tinyBuffer = await image.clone().resize(10, 10, { fit: 'inside' }).webp({ quality: 20 }).toBuffer();
+        blurhash = `data:image/webp;base64,${tinyBuffer.toString('base64')}`;
         
-        // Dominant color
-        const stats = await image.stats()
-        const { r, g, b } = stats.dominant
-        dominantColor = `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`
+        const stats = await image.stats();
+        const { r, g, b } = stats.dominant;
+        dominantColor = `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`;
         
-        // Settings for formats
         const sizes = [
           { name: 'sm', width: 400 },
           { name: 'md', width: 800 },
           { name: 'lg', width: 1200 }
-        ]
+        ];
         
         for (const size of sizes) {
           if (metadata.width >= size.width) {
-            const sizeBuffer = await image.clone().resize({ width: size.width, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer()
-            const sizePath = `uploads/${fileName}-${size.name}.webp`
+            const sizeBuffer = await image.clone().resize({ width: size.width, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
+            const sizePath = `uploads/${fileName}-${size.name}.webp`;
             
             await supabase.storage.from('media').upload(sizePath, sizeBuffer, { 
               contentType: 'image/webp',
               cacheControl: '31536000'
-            })
-            const { data } = supabase.storage.from('media').getPublicUrl(sizePath)
-            formatsObj[size.name] = data.publicUrl
+            });
+            const { data } = supabase.storage.from('media').getPublicUrl(sizePath);
+            formatsObj[size.name] = data.publicUrl;
           }
         }
       }
       
-      // Convert main image to webp
-      finalBuffer = (await image.clone().webp({ quality: 80 }).toBuffer()) as any
-      fileExt = 'webp'
-      mimeType = 'image/webp'
-      fileSize = finalBuffer.length
-      fileName = `${fileName}.webp`
+      finalBuffer = (await image.clone().webp({ quality: 80 }).toBuffer()) as any;
+      fileExt = 'webp';
+      mimeType = 'image/webp';
+      fileSize = finalBuffer.length;
+      fileName = `${fileName}.webp`;
     } catch (err) {
-      console.error('Error processing image:', err)
+      console.error('Error processing image:', err);
       // Fallback
-      fileName = `${fileName}.${fileExt}`
+      fileName = `${fileName}.${fileExt}`;
     }
   } else {
-    fileName = `${fileName}.${fileExt}`
+    fileName = `${fileName}.${fileExt}`;
   }
 
-  const filePath = `uploads/${fileName}`
+  const filePath = `uploads/${fileName}`;
 
-  // 2. Upload main file to Supabase Storage
+  const { error: uploadError } = await supabase.storage
+    .from('media')
     .upload(filePath, finalBuffer, { 
       contentType: mimeType,
       cacheControl: '31536000'
-    })
+    });
 
-  if (uploadError) throw new Error(uploadError.message)
+  if (uploadError) throw new Error(uploadError.message);
   
-  const { data: publicUrlData } = supabase.storage.from('media').getPublicUrl(filePath)
+  const { data: publicUrlData } = supabase.storage.from('media').getPublicUrl(filePath);
   
   if (Object.keys(formatsObj).length > 0) {
-      formatsObj['original'] = publicUrlData.publicUrl
+      formatsObj['original'] = publicUrlData.publicUrl;
   }
 
-  // 3. Insert metadata to 'media' table
-  const altText = contextName.trim() || file.name
+  const altText = contextName.trim() || originalName;
   
   const { error: dbError } = await supabase.from('media').insert({
     file_name: fileName,
-    file_path: publicUrlData.publicUrl, // Store full public URL for easier access
+    file_path: publicUrlData.publicUrl,
     file_type: mimeType,
     file_size: fileSize,
     alt_text: altText,
@@ -146,16 +140,36 @@ export async function uploadFile(formData: FormData) {
     dominant_color: dominantColor || null,
     blurhash: blurhash || null,
     aspect_ratio: aspectRatio || null
-  })
+  });
 
   if (dbError) {
-    // Cleanup main file
-    await supabase.storage.from('media').remove([filePath])
-    throw new Error(dbError.message)
+    await supabase.storage.from('media').remove([filePath]);
+    throw new Error(dbError.message);
   }
+}
 
-  revalidatePath('/cms/media')
-  return { success: true }
+export async function uploadFile(formData: FormData) {
+  const authorId = process.env.CMS_SERVICE_AUTHOR_ID;
+  if (!authorId) throw new Error('CMS_SERVICE_AUTHOR_ID not configured');
+
+  const file = formData.get('file') as File;
+  const contextName = formData.get('contextName') as string || '';
+  
+  if (!file) throw new Error('No file provided');
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  
+  await processAndUploadImage({
+    buffer,
+    originalName: file.name,
+    mimeType: file.type,
+    contextName,
+    authorId
+  });
+
+  revalidatePath('/cms/media');
+  return { success: true };
 }
 
 export async function deleteFile(id: string, filePath: string) {
