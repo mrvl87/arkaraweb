@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { triggerFrontendRevalidate } from '@/lib/revalidate'
+import { notifyGoogleIndexing } from '@/lib/google-indexing'
+
+const SITE_URL = process.env.FRONTEND_SITE_URL || 'https://arkaraweb.com'
 
 const panduanSchema = z.object({
   title: z.string().min(1, 'Judul wajib diisi'),
@@ -49,6 +52,11 @@ export async function createPanduan(formData: z.infer<typeof panduanSchema>) {
   revalidatePath('/cms/panduan')
   revalidatePath('/cms/dashboard')
   await triggerFrontendRevalidate({ type: 'panduan', slug: formData.slug })
+
+  // Kirim notifikasi ke Google hanya jika konten dipublish
+  if (formData.status === 'published') {
+    notifyGoogleIndexing(`${SITE_URL}/panduan/${formData.slug}`, 'URL_UPDATED')
+  }
 }
 
 export async function updatePanduan(id: string, formData: z.infer<typeof panduanSchema>) {
@@ -77,6 +85,11 @@ export async function updatePanduan(id: string, formData: z.infer<typeof panduan
   revalidatePath(`/cms/panduan/${id}/edit`)
   revalidatePath('/cms/dashboard')
   await triggerFrontendRevalidate({ type: 'panduan', slug: formData.slug })
+
+  // Kirim notifikasi ke Google hanya jika konten berstatus published
+  if (formData.status === 'published') {
+    notifyGoogleIndexing(`${SITE_URL}/panduan/${formData.slug}`, 'URL_UPDATED')
+  }
 }
 
 export async function deletePanduan(id: string) {
@@ -88,6 +101,7 @@ export async function deletePanduan(id: string) {
   revalidatePath('/cms/panduan')
   revalidatePath('/cms/dashboard')
   await triggerFrontendRevalidate({ type: 'panduan' })
+  // Catatan: deletePanduan dipanggil tanpa slug
 }
 
 export async function togglePanduanStatus(id: string, currentStatus: 'draft' | 'published') {
@@ -108,4 +122,17 @@ export async function togglePanduanStatus(id: string, currentStatus: 'draft' | '
   revalidatePath('/cms/panduan')
   revalidatePath('/cms/dashboard')
   await triggerFrontendRevalidate({ type: 'panduan' })
+}
+
+/**
+ * Toggle status dan notifikasi Google sesuai status baru.
+ * Versi dengan slug untuk mendukung Google Indexing API.
+ */
+export async function togglePanduanStatusAndIndex(id: string, currentStatus: 'draft' | 'published', slug: string) {
+  await togglePanduanStatus(id, currentStatus)
+
+  const newStatus = currentStatus === 'published' ? 'draft' : 'published'
+  if (newStatus === 'published') {
+    notifyGoogleIndexing(`${SITE_URL}/panduan/${slug}`, 'URL_UPDATED')
+  }
 }

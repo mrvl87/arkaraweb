@@ -4,8 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { triggerFrontendRevalidate } from '@/lib/revalidate'
+import { notifyGoogleIndexing } from '@/lib/google-indexing'
 
 import type { MediaObject } from '@/types/content'
+
+const SITE_URL = process.env.FRONTEND_SITE_URL || 'https://arkaraweb.com'
 
 const mediaObjectSchema = z.object({
   url: z.string().url(),
@@ -71,6 +74,12 @@ export async function createPost(formData: z.infer<typeof postSchema>) {
   revalidatePath('/cms/posts')
   revalidatePath('/cms/dashboard')
   await triggerFrontendRevalidate({ type: 'post', slug: formData.slug })
+
+  // Kirim notifikasi ke Google hanya jika konten dipublish
+  if (formData.status === 'published') {
+    notifyGoogleIndexing(`${SITE_URL}/blog/${formData.slug}`, 'URL_UPDATED')
+  }
+
   return { success: true }
 }
 
@@ -106,6 +115,12 @@ export async function updatePost(id: string, formData: z.infer<typeof postSchema
   revalidatePath(`/cms/posts/${id}/edit`)
   revalidatePath('/cms/dashboard')
   await triggerFrontendRevalidate({ type: 'post', slug: formData.slug })
+
+  // Kirim notifikasi ke Google hanya jika konten berstatus published
+  if (formData.status === 'published') {
+    notifyGoogleIndexing(`${SITE_URL}/blog/${formData.slug}`, 'URL_UPDATED')
+  }
+
   return { success: true }
 }
 
@@ -120,6 +135,10 @@ export async function deletePost(id: string) {
   revalidatePath('/cms/posts')
   revalidatePath('/cms/dashboard')
   await triggerFrontendRevalidate({ type: 'post' })
+
+  // Catatan: deletePost dipanggil tanpa slug, tidak bisa notify Google per-URL
+  // Gunakan bulk-index.js untuk membersihkan URL yang dihapus jika diperlukan
+
   return { success: true }
 }
 
@@ -144,4 +163,20 @@ export async function togglePostStatus(id: string, currentStatus: 'draft' | 'pub
   revalidatePath('/cms/dashboard')
   await triggerFrontendRevalidate({ type: 'post' })
   return { success: true }
+}
+
+/**
+ * Toggle status dan notifikasi Google sesuai status baru.
+ * Dipanggil dari list page — perlu slug jadi kita fetch dulu dari DB.
+ */
+export async function togglePostStatusAndIndex(id: string, currentStatus: 'draft' | 'published', slug: string) {
+  const result = await togglePostStatus(id, currentStatus)
+  if (result?.error) return result
+
+  const newStatus = currentStatus === 'published' ? 'draft' : 'published'
+  if (newStatus === 'published') {
+    notifyGoogleIndexing(`${SITE_URL}/blog/${slug}`, 'URL_UPDATED')
+  }
+
+  return result
 }

@@ -9,7 +9,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "bulk-index": "node --experimental-vm-modules scripts/bulk-index.js",
+    "bulk-index:dry": "node --experimental-vm-modules scripts/bulk-index.js --dry-run"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -26,6 +28,7 @@
     "date-fns": "^4.1.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.1.6",
+    "google-auth-library": "^10.6.2",
     "lucide-react": "^0.577.0",
     "next": "^16.1.6",
     "novel": "^1.0.2",

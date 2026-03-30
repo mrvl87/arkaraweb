@@ -1,0 +1,12 @@
+# Google Service Account credentials — JANGAN di-commit!
+*-service-account*.json
+expanded-genius-*.json
+client_secret_*.json
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
