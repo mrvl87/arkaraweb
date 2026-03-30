@@ -26,6 +26,10 @@ import {
   useEditor
 } from 'novel'
 import { Markdown } from 'tiptap-markdown'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableCell } from '@tiptap/extension-table-cell'
+import { TableHeader } from '@tiptap/extension-table-header'
 import { 
   Bold, 
   Italic, 
@@ -43,7 +47,8 @@ import {
   Link as LinkIcon,
   AlertTriangle,
   Code2,
-  Layout
+  Layout,
+  Table as TableIcon
 } from 'lucide-react'
 import { MediaPicker } from '../media/media-picker'
 import "./editor.css"
@@ -106,6 +111,28 @@ const extensions = [
     },
   }),
   Markdown,
+  // Table extensions
+  Table.configure({
+    resizable: false,
+    HTMLAttributes: {
+      class: 'border-collapse w-full my-6',
+    },
+  }),
+  TableRow.configure({
+    HTMLAttributes: {
+      class: 'border-b border-gray-200',
+    },
+  }),
+  TableHeader.configure({
+    HTMLAttributes: {
+      class: 'bg-amber-50 text-left px-4 py-2 font-semibold text-gray-700 border border-gray-200 text-sm',
+    },
+  }),
+  TableCell.configure({
+    HTMLAttributes: {
+      class: 'px-4 py-2 border border-gray-200 text-sm text-gray-600',
+    },
+  }),
 ]
 
 interface RichEditorProps {
@@ -263,6 +290,19 @@ export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
                 >
                   <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><ImageIcon className="w-4 h-4"/></div>
                   <span>Sisipkan Gambar</span>
+                </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='Table'
+                  onCommand={({ editor, range }) => {
+                    editor.chain().focus().deleteRange(range)
+                      .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                      .run();
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><TableIcon className="w-4 h-4"/></div>
+                  <span>Tabel</span>
                 </EditorCommandItem>
               </EditorCommandList>
             </EditorCommand>

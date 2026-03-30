@@ -323,6 +323,54 @@ code {
   letter-spacing: 0.05em;
 }
 
+/* ─── TABLES (prose-arkara) ─────────────────────────────── */
+
+.prose-arkara table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  font-size: 0.925rem;
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  overflow-x: auto;
+  display: block;
+}
+.prose-arkara thead {
+  background: var(--ink);
+  color: var(--green-terminal);
+}
+.prose-arkara thead th {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-right: 1px solid var(--green-dark);
+  color: var(--green-terminal);
+}
+.prose-arkara thead th:last-child { border-right: none; }
+.prose-arkara tbody tr {
+  border-bottom: 1px solid var(--cream-dark);
+  transition: background 0.1s;
+}
+.prose-arkara tbody tr:nth-child(even) {
+  background: rgba(143, 175, 143, 0.06);
+}
+.prose-arkara tbody tr:hover {
+  background: rgba(216, 197, 138, 0.12);
+}
+.prose-arkara tbody td {
+  padding: 0.65rem 1rem;
+  border-right: 1px solid var(--cream-dark);
+  vertical-align: top;
+  color: var(--ink-light);
+  line-height: 1.6;
+}
+.prose-arkara tbody td:last-child { border-right: none; }
+
+
 /* ─── ANIMATIONS ─────────────────────────────────────────── */
 
 @keyframes blink {
