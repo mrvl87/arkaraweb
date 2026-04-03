@@ -30,10 +30,26 @@ interface Props {
 
 const { title, description, publishDate, category, coverImage, headings = [], content = '', currentSlug, contentType } = Astro.props;
 const readingTime = calculateReadingTime(content);
-const ogImageUrl = typeof coverImage === 'string' ? coverImage : coverImage?.src;
+
+function resolveSocialImage(image: any): string | undefined {
+  if (!image) return undefined;
+  if (typeof image === 'string') return image;
+
+  return image.formats?.lg
+    || image.formats?.original
+    || image.formats?.md
+    || image.url
+    || image.src
+    || undefined;
+}
+
+const ogImageUrl = resolveSocialImage(coverImage);
+const ogImageAlt = typeof coverImage === 'string'
+  ? title
+  : coverImage?.alt_text || title;
 ---
 
-<BaseLayout title={title} description={description} image={ogImageUrl} type="article">
+<BaseLayout title={title} description={description} image={ogImageUrl} imageAlt={ogImageAlt} type="article">
 
   <!-- ── POST HEADER ───────────────────────────────────── -->
   <header style="

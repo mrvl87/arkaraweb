@@ -14,6 +14,7 @@ interface Props {
   title?: string;
   description?: string;
   image?: string;
+  imageAlt?: string;
   siteName?: string;
   type?: 'website' | 'article';
   robots?: string;
@@ -23,6 +24,7 @@ const {
   title,
   description = 'Platform pengetahuan survival Indonesia. Pelajari teknik survival praktis untuk menghadapi krisis.',
   image,
+  imageAlt,
   siteName = 'Arkara',
   type = 'website',
   robots = 'index, follow'
@@ -54,12 +56,15 @@ const navLinks = [
     <meta property="og:title"       content={siteTitle} />
     <meta property="og:description" content={description} />
     {image && <meta property="og:image" content={new URL(image, siteUrl).href} />}
+    {image && <meta property="og:image:secure_url" content={new URL(image, siteUrl).href} />}
+    {imageAlt && <meta property="og:image:alt" content={imageAlt} />}
 
     <meta property="twitter:card"        content="summary_large_image" />
     <meta property="twitter:url"         content={canonicalUrl.href} />
     <meta property="twitter:title"       content={siteTitle} />
     <meta property="twitter:description" content={description} />
     {image && <meta property="twitter:image" content={new URL(image, siteUrl).href} />}
+    {imageAlt && <meta property="twitter:image:alt" content={imageAlt} />}
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
