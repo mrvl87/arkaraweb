@@ -1,12 +1,17 @@
 ---
 import { getPanduanBySlug } from '../../lib/content';
 import { renderMarkdown, extractHeadings } from '../../lib/markdown';
+import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostLayout from '../../layouts/PostLayout.astro';
 
 const { slug } = Astro.params;
 const guide = slug ? await getPanduanBySlug(slug) : null;
+const guideNotFound = !guide;
 
-if (!guide) return Astro.redirect('/404');
+if (guideNotFound) {
+  Astro.response.status = 404;
+  Astro.response.statusText = 'Not Found';
+}
 
 const categoryLabels: Record<string, string> = {
   air: 'Air',
@@ -17,29 +22,86 @@ const categoryLabels: Record<string, string> = {
   komunitas: 'Komunitas',
 };
 
-const headings = extractHeadings(guide.content || '');
-const htmlContent = renderMarkdown(guide.content || '');
+const headings = extractHeadings(guide?.content || '');
+const htmlContent = renderMarkdown(guide?.content || '');
 ---
 
-<PostLayout
-  title={guide.title}
-  description={`Panduan Teknis: Bab ${guide.bab_ref || '-'}`}
-  category={categoryLabels[guide.category] || guide.category || 'PANDUAN'}
-  publishDate={new Date().toISOString()} 
-  coverImage={guide.banner_image || guide.cover_image}
-  headings={headings}
-  content={guide.content || ''}
-  currentSlug={guide.slug}
-  contentType="panduan"
->
-  <div class="flex gap-4 text-sm font-mono mb-8 bg-parchment p-4 rounded-xl border border-stone/10">
-    {guide.bab_ref && (
-      <span>REF: <strong class="text-moss">{guide.bab_ref}</strong></span>
-    )}
-    {guide.qr_slug && (
-      <span>QR_CODE: <strong class="text-amber-600">{guide.qr_slug}</strong></span>
-    )}
-  </div>
-  
-  <div set:html={htmlContent} />
-</PostLayout>
+{guideNotFound ? (
+  <BaseLayout
+    title="Panduan Tidak Ditemukan"
+    description="Panduan yang Anda cari tidak tersedia atau sudah dipindahkan."
+    robots="noindex, nofollow"
+  >
+    <section style="
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 5rem 2rem 6rem;
+    ">
+      <div style="
+        background: var(--paper);
+        border: 3px solid var(--ink);
+        box-shadow: 6px 6px 0 var(--ink);
+        padding: 2rem;
+      ">
+        <p style="
+          font-family: 'Share Tech Mono', monospace;
+          font-size: 0.65rem;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          color: var(--warm-grey);
+          margin-bottom: 1rem;
+        ">Error 404</p>
+        <h1 style="
+          font-family: 'Barlow Condensed', sans-serif;
+          font-size: clamp(2.2rem, 8vw, 4rem);
+          text-transform: uppercase;
+          line-height: 0.95;
+          margin-bottom: 1rem;
+          color: var(--ink);
+        ">Panduan Tidak Ditemukan</h1>
+        <p style="
+          font-size: 1rem;
+          line-height: 1.7;
+          color: var(--ink);
+          max-width: 48ch;
+          margin-bottom: 1.5rem;
+        ">Slug panduan ini tidak tersedia lagi di publikasi aktif Arkara. Periksa kembali URL atau kembali ke daftar panduan.</p>
+        <a href="/panduan" style="
+          display: inline-block;
+          font-family: 'Share Tech Mono', monospace;
+          font-size: 0.7rem;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          text-decoration: none;
+          color: var(--green-terminal);
+          background: var(--ink);
+          border: 2px solid var(--green-terminal);
+          padding: 0.75rem 1rem;
+        ">Kembali ke Panduan</a>
+      </div>
+    </section>
+  </BaseLayout>
+) : (
+  <PostLayout
+    title={guide.title}
+    description={`Panduan Teknis: Bab ${guide.bab_ref || '-'}`}
+    category={categoryLabels[guide.category] || guide.category || 'PANDUAN'}
+    publishDate={new Date().toISOString()} 
+    coverImage={guide.banner_image || guide.cover_image}
+    headings={headings}
+    content={guide.content || ''}
+    currentSlug={guide.slug}
+    contentType="panduan"
+  >
+    <div class="flex gap-4 text-sm font-mono mb-8 bg-parchment p-4 rounded-xl border border-stone/10">
+      {guide.bab_ref && (
+        <span>REF: <strong class="text-moss">{guide.bab_ref}</strong></span>
+      )}
+      {guide.qr_slug && (
+        <span>QR_CODE: <strong class="text-amber-600">{guide.qr_slug}</strong></span>
+      )}
+    </div>
+    
+    <div set:html={htmlContent} />
+  </PostLayout>
+)}

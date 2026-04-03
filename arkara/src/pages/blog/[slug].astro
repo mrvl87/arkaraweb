@@ -1,27 +1,89 @@
 ---
 import { getPostBySlug } from '../../lib/content';
 import { renderMarkdown, extractHeadings } from '../../lib/markdown';
+import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostLayout from '../../layouts/PostLayout.astro';
 
 const { slug } = Astro.params;
 const post = slug ? await getPostBySlug(slug) : null;
+const postNotFound = !post;
 
-if (!post) return Astro.redirect('/404');
+if (postNotFound) {
+  Astro.response.status = 404;
+  Astro.response.statusText = 'Not Found';
+}
 
-const headings = extractHeadings(post.content || '');
-const htmlContent = renderMarkdown(post.content || '');
+const headings = extractHeadings(post?.content || '');
+const htmlContent = renderMarkdown(post?.content || '');
 ---
 
-<PostLayout
-  title={post.meta_title || post.title}
-  description={post.meta_desc || post.description}
-  publishDate={post.published_at}
-  category="ARKARA JURNAL"
-  coverImage={post.banner_image || post.cover_image}
-  headings={headings}
-  content={post.content || ''}
-  currentSlug={post.slug}
-  contentType="blog"
->
-  <div set:html={htmlContent} />
-</PostLayout>
+{postNotFound ? (
+  <BaseLayout
+    title="Artikel Tidak Ditemukan"
+    description="Artikel yang Anda cari tidak tersedia atau sudah dipindahkan."
+    robots="noindex, nofollow"
+  >
+    <section style="
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 5rem 2rem 6rem;
+    ">
+      <div style="
+        background: var(--paper);
+        border: 3px solid var(--ink);
+        box-shadow: 6px 6px 0 var(--ink);
+        padding: 2rem;
+      ">
+        <p style="
+          font-family: 'Share Tech Mono', monospace;
+          font-size: 0.65rem;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          color: var(--warm-grey);
+          margin-bottom: 1rem;
+        ">Error 404</p>
+        <h1 style="
+          font-family: 'Barlow Condensed', sans-serif;
+          font-size: clamp(2.2rem, 8vw, 4rem);
+          text-transform: uppercase;
+          line-height: 0.95;
+          margin-bottom: 1rem;
+          color: var(--ink);
+        ">Artikel Tidak Ditemukan</h1>
+        <p style="
+          font-size: 1rem;
+          line-height: 1.7;
+          color: var(--ink);
+          max-width: 48ch;
+          margin-bottom: 1.5rem;
+        ">Slug ini tidak tersedia lagi di publikasi aktif Arkara. Periksa kembali URL atau kembali ke arsip blog.</p>
+        <a href="/blog" style="
+          display: inline-block;
+          font-family: 'Share Tech Mono', monospace;
+          font-size: 0.7rem;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          text-decoration: none;
+          color: var(--green-terminal);
+          background: var(--ink);
+          border: 2px solid var(--green-terminal);
+          padding: 0.75rem 1rem;
+        ">Kembali ke Blog</a>
+      </div>
+    </section>
+  </BaseLayout>
+) : (
+  <PostLayout
+    title={post.meta_title || post.title}
+    description={post.meta_desc || post.description}
+    publishDate={post.published_at}
+    category="ARKARA JURNAL"
+    coverImage={post.banner_image || post.cover_image}
+    headings={headings}
+    content={post.content || ''}
+    currentSlug={post.slug}
+    contentType="blog"
+  >
+    <div set:html={htmlContent} />
+  </PostLayout>
+)}

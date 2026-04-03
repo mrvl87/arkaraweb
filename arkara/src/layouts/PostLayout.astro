@@ -33,7 +33,7 @@ const readingTime = calculateReadingTime(content);
 const ogImageUrl = typeof coverImage === 'string' ? coverImage : coverImage?.src;
 ---
 
-<BaseLayout title={title} description={description} image={ogImageUrl}>
+<BaseLayout title={title} description={description} image={ogImageUrl} type="article">
 
   <!-- ── POST HEADER ───────────────────────────────────── -->
   <header style="
