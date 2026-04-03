@@ -13,8 +13,8 @@ if (postNotFound) {
   Astro.response.statusText = 'Not Found';
 }
 
-const headings = extractHeadings(post?.content || '');
 const htmlContent = renderMarkdown(post?.content || '');
+const headings = extractHeadings(htmlContent);
 ---
 
 {postNotFound ? (

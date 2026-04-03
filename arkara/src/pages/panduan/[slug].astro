@@ -22,8 +22,8 @@ const categoryLabels: Record<string, string> = {
   komunitas: 'Komunitas',
 };
 
-const headings = extractHeadings(guide?.content || '');
 const htmlContent = renderMarkdown(guide?.content || '');
+const headings = extractHeadings(htmlContent);
 ---
 
 {guideNotFound ? (
