@@ -45,7 +45,7 @@ const navLinks = [
     <link rel="canonical"    href={canonicalUrl.href} />
 
     <meta property="og:type"        content="website" />
-    <meta property="og:url"         content={Astro.url.href} />
+    <meta property="og:url"         content={canonicalUrl.href} />
     <meta property="og:title"       content={siteTitle} />
     <meta property="og:description" content={description} />
     {image && <meta property="og:image" content={new URL(image, siteUrl).href} />}
