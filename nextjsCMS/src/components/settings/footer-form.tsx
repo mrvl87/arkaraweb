@@ -2,20 +2,39 @@
 
 import { useState } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
-import { Save, Loader2, PanelBottom, Plus, Trash2, Globe, Github, Facebook, Twitter, Instagram, Youtube } from 'lucide-react'
+import { Save, Loader2, PanelBottom, Plus, Trash2 } from 'lucide-react'
 import { updateFooter } from '@/app/cms/settings/actions'
 
 interface FooterFormProps {
   data: any
 }
 
-const SOCIAL_ICONS: any = {
-  globe: Globe,
-  github: Github,
-  facebook: Facebook,
-  twitter: Twitter,
-  instagram: Instagram,
-  youtube: Youtube,
+const SOCIAL_PLATFORM_OPTIONS = [
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'x', label: 'X' },
+  { value: 'reddit', label: 'Reddit' },
+  { value: 'tiktok', label: 'TikTok' },
+] as const
+
+function normalizeSocialLinks(links: unknown) {
+  if (!Array.isArray(links)) return []
+
+  return links.map((item) => {
+    const record = item && typeof item === 'object' ? item as Record<string, unknown> : {}
+    const platform = typeof record.platform === 'string' ? record.platform : 'facebook'
+    const normalizedPlatform = platform === 'twitter'
+      ? 'x'
+      : SOCIAL_PLATFORM_OPTIONS.some((option) => option.value === platform)
+        ? platform
+        : 'facebook'
+
+    return {
+      platform: normalizedPlatform,
+      url: typeof record.url === 'string' ? record.url : '',
+    }
+  })
 }
 
 export function FooterForm({ data }: FooterFormProps) {
@@ -23,10 +42,10 @@ export function FooterForm({ data }: FooterFormProps) {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const { register, control, handleSubmit } = useForm({
-    defaultValues: data || {
-      tagline: '',
-      copyright_text: '',
-      social_links: [],
+    defaultValues: {
+      tagline: data?.tagline || '',
+      copyright_text: data?.copyright_text || '',
+      social_links: normalizeSocialLinks(data?.social_links),
     }
   })
 
@@ -87,12 +106,15 @@ export function FooterForm({ data }: FooterFormProps) {
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Social Links</h3>
             <button
               type="button"
-              onClick={() => append({ platform: 'globe', url: '' })}
+              onClick={() => append({ platform: 'facebook', url: '' })}
               className="flex items-center gap-1.5 text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg transition-colors"
             >
               <Plus className="w-3 h-3" /> Tambah Link
             </button>
           </div>
+          <p className="text-xs text-gray-500 -mt-3">
+            Pilih platform lalu isi URL. Baris bisa ditambah atau dihapus sesuai kebutuhan footer.
+          </p>
           
           <div className="space-y-4">
             {fields.length === 0 ? (
@@ -109,12 +131,11 @@ export function FooterForm({ data }: FooterFormProps) {
                         {...register(`social_links.${index}.platform` as any)}
                         className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-amber-500"
                       >
-                        <option value="globe">Lainnya (Web)</option>
-                        <option value="github">GitHub</option>
-                        <option value="facebook">Facebook</option>
-                        <option value="twitter">Twitter</option>
-                        <option value="instagram">Instagram</option>
-                        <option value="youtube">YouTube</option>
+                        {SOCIAL_PLATFORM_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>

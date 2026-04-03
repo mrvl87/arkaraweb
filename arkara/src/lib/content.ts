@@ -247,7 +247,7 @@ export interface FooterData {
   id: string
   tagline?: string
   copyright_text?: string
-  social_links?: { platform: string; url: string }[]
+  social_links?: { platform: 'facebook' | 'youtube' | 'instagram' | 'x' | 'reddit' | 'tiktok' | 'twitter'; url: string }[]
 }
 
 export async function getFooterData(): Promise<FooterData | null> {

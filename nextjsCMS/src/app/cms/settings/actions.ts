@@ -75,11 +75,39 @@ export async function updateCtaSection(data: any) {
 
 // 5. Footer Action
 export async function updateFooter(data: any) {
+  const footerSchema = z.object({
+    id: z.string().uuid(),
+    tagline: z.string().optional().default(''),
+    copyright_text: z.string().optional().default(''),
+    social_links: z.array(
+      z.object({
+        platform: z.enum(['facebook', 'youtube', 'instagram', 'x', 'reddit', 'tiktok', 'twitter']),
+        url: z.string().url(),
+      })
+    ).default([]),
+  })
+
+  const normalizedLinks = Array.isArray(data?.social_links)
+    ? data.social_links
+        .map((item: any) => ({
+          platform: item?.platform === 'twitter' ? 'x' : item?.platform,
+          url: typeof item?.url === 'string' ? item.url.trim() : '',
+        }))
+        .filter((item: { platform?: string; url: string }) => item.platform && item.url)
+    : []
+
+  const parsed = footerSchema.parse({
+    id: data?.id,
+    tagline: typeof data?.tagline === 'string' ? data.tagline.trim() : '',
+    copyright_text: typeof data?.copyright_text === 'string' ? data.copyright_text.trim() : '',
+    social_links: normalizedLinks,
+  })
+
   const supabase = await createClient()
   const { error } = await supabase
     .from('footer')
-    .update({ ...data, updated_at: new Date().toISOString() })
-    .eq('id', data.id)
+    .update({ ...parsed, updated_at: new Date().toISOString() })
+    .eq('id', parsed.id)
 
   if (error) throw new Error(error.message)
   revalidatePath('/cms/settings')

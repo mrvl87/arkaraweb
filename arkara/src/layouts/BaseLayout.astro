@@ -9,6 +9,7 @@
  *   - Typography: Barlow Condensed + Share Tech Mono
  */
 import '../styles/global.css';
+import { getFooterData } from '../lib/content';
 
 interface Props {
   title?: string;
@@ -32,11 +33,77 @@ const {
 const siteTitle = title ? `${title} — ${siteName}` : `${siteName} — Survive with Knowledge`;
 const siteUrl = 'https://arkaraweb.com';
 const canonicalUrl = new URL(Astro.url.pathname, siteUrl);
+const footerData = await getFooterData();
 
 const navLinks = [
   { label: 'BLOG',    href: '/blog' },
   { label: 'PANDUAN', href: '/panduan' },
 ];
+
+const footerTagline = footerData?.tagline?.trim()
+  || 'Membangun ketangguhan bangsa melalui pengetahuan yang bisa diakses dan dipraktekkan siapa saja.';
+const footerCopyright = footerData?.copyright_text?.trim()
+  || '© 2026 ARKARA — SURVIVE WITH KNOWLEDGE';
+
+function normalizePlatform(platform?: string) {
+  return platform === 'twitter' ? 'x' : platform;
+}
+
+function getSocialCode(platform?: string) {
+  switch (normalizePlatform(platform)) {
+    case 'facebook':
+      return 'FB';
+    case 'youtube':
+      return 'YT';
+    case 'instagram':
+      return 'IG';
+    case 'x':
+      return 'X';
+    case 'reddit':
+      return 'RD';
+    case 'tiktok':
+      return 'TT';
+    default:
+      return null;
+  }
+}
+
+function getSocialLabel(platform?: string) {
+  switch (normalizePlatform(platform)) {
+    case 'facebook':
+      return 'Facebook';
+    case 'youtube':
+      return 'YouTube';
+    case 'instagram':
+      return 'Instagram';
+    case 'x':
+      return 'X';
+    case 'reddit':
+      return 'Reddit';
+    case 'tiktok':
+      return 'TikTok';
+    default:
+      return 'Social';
+  }
+}
+
+function isValidHttpUrl(url?: string) {
+  if (!url) return false;
+
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+const footerSocialLinks = (footerData?.social_links ?? [])
+  .map((link) => ({
+    platform: normalizePlatform(link?.platform),
+    url: typeof link?.url === 'string' ? link.url.trim() : '',
+  }))
+  .filter((link) => getSocialCode(link.platform) && isValidHttpUrl(link.url));
 ---
 
 <!doctype html>
@@ -213,8 +280,52 @@ const navLinks = [
               line-height: 1.65;
               max-width: 240px;
             ">
-              Membangun ketangguhan bangsa melalui pengetahuan yang bisa diakses dan dipraktekkan siapa saja.
+              {footerTagline}
             </p>
+            {footerSocialLinks.length > 0 && (
+              <div style="margin-top: 1.25rem;">
+                <div style="
+                  font-family: 'Share Tech Mono', monospace;
+                  font-size: 0.55rem;
+                  letter-spacing: 0.2em;
+                  color: var(--green-terminal);
+                  text-transform: uppercase;
+                  margin-bottom: 0.75rem;
+                ">JARINGAN</div>
+                <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                  {footerSocialLinks.map((link) => (
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={getSocialLabel(link.platform)}
+                      title={getSocialLabel(link.platform)}
+                      style="
+                        display:inline-flex;
+                        align-items:center;
+                        justify-content:center;
+                        min-width:38px;
+                        height:32px;
+                        padding:0 0.6rem;
+                        border:1px solid rgba(143,175,143,0.35);
+                        color:var(--cream-dark);
+                        text-decoration:none;
+                        font-family:'Share Tech Mono', monospace;
+                        font-size:0.65rem;
+                        letter-spacing:0.12em;
+                        text-transform:uppercase;
+                        background:rgba(143,175,143,0.05);
+                        transition:background 0.15s,color 0.15s,border-color 0.15s;
+                      "
+                      onmouseover="this.style.background='var(--green-dark)';this.style.color='var(--green-terminal)';this.style.borderColor='var(--green-terminal)'"
+                      onmouseout="this.style.background='rgba(143,175,143,0.05)';this.style.color='var(--cream-dark)';this.style.borderColor='rgba(143,175,143,0.35)'"
+                    >
+                      {getSocialCode(link.platform)}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <!-- Nav column -->
@@ -280,6 +391,9 @@ const navLinks = [
           gap: 1rem;
         ">
           <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:var(--warm-grey-dark);">
+            {footerCopyright}
+          </p>
+          <p aria-hidden="true" style="display:none;font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:var(--warm-grey-dark);">
             © 2026 ARKARA — SURVIVE WITH KNOWLEDGE
           </p>
           <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:var(--warm-grey-dark);">
