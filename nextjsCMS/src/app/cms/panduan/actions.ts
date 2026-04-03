@@ -64,7 +64,7 @@ export async function updatePanduan(id: string, formData: z.infer<typeof panduan
   
   const { data: existing } = await supabase
     .from('panduan')
-    .select('status')
+    .select('status, slug')
     .eq('id', id)
     .single()
 
@@ -86,9 +86,15 @@ export async function updatePanduan(id: string, formData: z.infer<typeof panduan
   revalidatePath('/cms/dashboard')
   await triggerFrontendRevalidate({ type: 'panduan', slug: formData.slug })
 
-  // Kirim notifikasi ke Google hanya jika konten berstatus published
+  const oldUrl = existing?.slug ? `${SITE_URL}/panduan/${existing.slug}` : null
+  const newUrl = `${SITE_URL}/panduan/${formData.slug}`
+
+  if (existing?.status === 'published' && oldUrl && (formData.status !== 'published' || existing.slug !== formData.slug)) {
+    notifyGoogleIndexing(oldUrl, 'URL_DELETED')
+  }
+
   if (formData.status === 'published') {
-    notifyGoogleIndexing(`${SITE_URL}/panduan/${formData.slug}`, 'URL_UPDATED')
+    notifyGoogleIndexing(newUrl, 'URL_UPDATED')
   }
 }
 

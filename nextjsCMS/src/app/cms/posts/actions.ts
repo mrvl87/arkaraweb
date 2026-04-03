@@ -88,7 +88,7 @@ export async function updatePost(id: string, formData: z.infer<typeof postSchema
   
   const { data: existingPost } = await supabase
     .from('posts')
-    .select('status')
+    .select('status, slug')
     .eq('id', id)
     .single()
 
@@ -116,9 +116,15 @@ export async function updatePost(id: string, formData: z.infer<typeof postSchema
   revalidatePath('/cms/dashboard')
   await triggerFrontendRevalidate({ type: 'post', slug: formData.slug })
 
-  // Kirim notifikasi ke Google hanya jika konten berstatus published
+  const oldUrl = existingPost?.slug ? `${SITE_URL}/blog/${existingPost.slug}` : null
+  const newUrl = `${SITE_URL}/blog/${formData.slug}`
+
+  if (existingPost?.status === 'published' && oldUrl && (formData.status !== 'published' || existingPost.slug !== formData.slug)) {
+    notifyGoogleIndexing(oldUrl, 'URL_DELETED')
+  }
+
   if (formData.status === 'published') {
-    notifyGoogleIndexing(`${SITE_URL}/blog/${formData.slug}`, 'URL_UPDATED')
+    notifyGoogleIndexing(newUrl, 'URL_UPDATED')
   }
 
   return { success: true }

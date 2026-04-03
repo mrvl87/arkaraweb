@@ -1,0 +1,301 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+interface Props {
+  pageTitle: string;
+  pageDescription: string;
+  message: string;
+  fallbackHref?: string;
+  fallbackLabel?: string;
+  homeHref?: string;
+  homeLabel?: string;
+  codeLabel?: string;
+  mascotImage?: any;
+  mascotAlt?: string;
+}
+
+const {
+  pageTitle,
+  pageDescription,
+  message,
+  fallbackHref = '/',
+  fallbackLabel = 'Lihat Halaman Aman',
+  homeHref = '/',
+  homeLabel = 'Kembali ke Beranda',
+  codeLabel = 'Error 404',
+  mascotImage = '/images/404-mascot.png',
+  mascotAlt = 'Maskot Arkara',
+} = Astro.props;
+
+const mascotUrl =
+  typeof mascotImage === 'string'
+    ? mascotImage
+    : mascotImage?.url;
+---
+
+<BaseLayout
+  title={pageTitle}
+  description={pageDescription}
+  image={mascotUrl}
+  imageAlt={mascotAlt}
+  robots="noindex, nofollow"
+>
+  <section class="nf-shell">
+    <div class="nf-card">
+      <div class="nf-copy">
+        <div class="stamp stamp-red">{codeLabel}</div>
+        <p class="nf-label">Rute tidak ditemukan di arsip aktif Arkara</p>
+        <h1>{pageTitle}</h1>
+        <p class="nf-message">{message}</p>
+
+        <div class="nf-actions">
+          <button
+            type="button"
+            class="btn btn-primary"
+            data-back-button
+            data-fallback-href={fallbackHref}
+          >
+            Kembali ke Halaman Sebelumnya
+          </button>
+          <a href={homeHref} class="btn btn-secondary">{homeLabel}</a>
+        </div>
+
+        <p class="nf-note">
+          Jika halaman ini dibuka langsung tanpa riwayat navigasi, tombol kembali akan membawa Anda ke {fallbackLabel}.
+        </p>
+      </div>
+
+      <div class="nf-mascot">
+        <div class="nf-mascot-frame">
+          {mascotUrl ? (
+            <img src={mascotUrl} alt={mascotAlt} class="nf-mascot-image" />
+          ) : (
+            <div class="nf-mascot-placeholder" aria-hidden="true">
+              <span>MASKOT</span>
+              <span>SIAP DIPASANG</span>
+            </div>
+          )}
+        </div>
+        <div class="nf-status">
+          <span class="nf-status-dot"></span>
+          NAVIGASI CADANGAN AKTIF
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const backButtons = document.querySelectorAll('[data-back-button]');
+
+    backButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const fallbackHref = button.getAttribute('data-fallback-href') || '/';
+
+        if (window.history.length > 1) {
+          window.history.back();
+          return;
+        }
+
+        window.location.href = fallbackHref;
+      });
+    });
+  </script>
+</BaseLayout>
+
+<style>
+  .nf-shell {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 4rem 2rem 5rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .nf-card {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(360px, 1.15fr);
+    gap: 0;
+    align-items: stretch;
+    background: rgba(240, 232, 208, 0.96);
+    border: 3px solid var(--ink);
+    box-shadow: 10px 10px 0 var(--ink);
+    overflow: hidden;
+  }
+
+  .nf-copy {
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .nf-label {
+    margin: 1rem 0 1.25rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--warm-grey-dark);
+  }
+
+  .nf-message {
+    max-width: 44ch;
+    margin: 0 0 1.75rem;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: var(--ink-light);
+  }
+
+  .nf-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .nf-note {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--warm-grey-dark);
+    max-width: 48ch;
+  }
+
+  .nf-mascot {
+    padding: 1.5rem;
+    background:
+      radial-gradient(circle at top left, rgba(255, 245, 220, 0.6), transparent 38%),
+      linear-gradient(180deg, rgba(143, 175, 143, 0.18), rgba(61, 92, 61, 0.08)),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 28px,
+        rgba(42, 34, 24, 0.07) 28px,
+        rgba(42, 34, 24, 0.07) 29px
+      ),
+      var(--paper-dark);
+    border-left: 3px solid var(--ink);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .nf-mascot-frame {
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid var(--ink);
+    background:
+      linear-gradient(180deg, rgba(255, 252, 244, 0.95), rgba(238, 227, 198, 0.92));
+    box-shadow:
+      inset 0 0 0 3px rgba(216, 197, 138, 0.45),
+      8px 8px 0 rgba(42, 34, 24, 0.16);
+    padding: 0.75rem;
+    overflow: hidden;
+  }
+
+  .nf-mascot-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    border: 1px solid rgba(42, 34, 24, 0.18);
+    filter:
+      saturate(0.94)
+      contrast(1.02)
+      drop-shadow(0 14px 18px rgba(42, 34, 24, 0.18));
+    animation: nf-float 4s ease-in-out infinite;
+  }
+
+  .nf-mascot-placeholder {
+    width: 100%;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    border: 2px dashed rgba(42, 34, 24, 0.35);
+    color: var(--warm-grey-dark);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .nf-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
+    color: var(--green-dark);
+    text-transform: uppercase;
+    justify-content: center;
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 2px solid rgba(42, 34, 24, 0.2);
+    background: rgba(253, 250, 241, 0.66);
+  }
+
+  .nf-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green-terminal);
+    box-shadow: 0 0 0 3px rgba(143, 175, 143, 0.24);
+    animation: pulse-dot 1.8s infinite;
+  }
+
+  @keyframes nf-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  @media (max-width: 900px) {
+    .nf-card {
+      grid-template-columns: 1fr;
+    }
+
+    .nf-mascot {
+      border-left: none;
+      border-top: 3px solid var(--ink);
+    }
+
+    .nf-mascot-frame {
+      aspect-ratio: 16 / 9;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .nf-shell {
+      padding: 2rem 1rem 3rem;
+    }
+
+    .nf-copy,
+    .nf-mascot {
+      padding: 1.5rem;
+    }
+
+    .nf-mascot-frame {
+      aspect-ratio: 4 / 3;
+    }
+
+    .nf-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .nf-actions :global(.btn) {
+      justify-content: center;
+      width: 100%;
+    }
+  }
+</style>

@@ -141,7 +141,12 @@ export function PanduanForm({ initialData, onSubmit, title }: PanduanFormProps) 
             <SlugInput
               titleValue={titleValue}
               value={slugValue}
-              onChange={(val) => setValue('slug', val)}
+              mode={initialData ? 'edit' : 'create'}
+              onChange={(val) => setValue('slug', val, {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              })}
               error={errors.slug?.message}
             />
 
