@@ -5,73 +5,6 @@ marked.setOptions({
   breaks: true,
 })
 
-type HeadingEntry = {
-  text: string
-  slug: string
-  depth: number
-}
-
-function stripHtml(value: string): string {
-  return value.replace(/<[^>]*>/g, '').trim()
-}
-
-function decodeHtmlEntities(value: string): string {
-  return value
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-}
-
-function slugifyHeading(value: string): string {
-  return decodeHtmlEntities(stripHtml(value))
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
-function createUniqueSlug(baseSlug: string, seen: Map<string, number>): string {
-  const fallbackSlug = baseSlug || 'section'
-  const currentCount = seen.get(fallbackSlug) ?? 0
-  seen.set(fallbackSlug, currentCount + 1)
-
-  return currentCount === 0 ? fallbackSlug : `${fallbackSlug}-${currentCount + 1}`
-}
-
-function extractExistingId(attrs: string): string | null {
-  const match = attrs.match(/\sid=["']([^"']+)["']/i)
-  return match?.[1] ?? null
-}
-
-function collectHtmlHeadings(content: string): {
-  html: string
-  headings: HeadingEntry[]
-} {
-  const seen = new Map<string, number>()
-  const headings: HeadingEntry[] = []
-
-  const html = content.replace(/<(h[23])([^>]*)>(.*?)<\/h\1>/gis, (match, tag, attrs, inner) => {
-    const depth = parseInt(tag[1], 10)
-    const text = decodeHtmlEntities(stripHtml(inner))
-    const existingId = extractExistingId(attrs)
-    const slug = existingId || createUniqueSlug(slugifyHeading(inner), seen)
-
-    headings.push({ text, slug, depth })
-
-    if (existingId) {
-      return match
-    }
-
-    return `<${tag}${attrs} id="${slug}">${inner}</${tag}>`
-  })
-
-  return { html, headings }
-}
-
 export function renderContent(content: string): string {
   if (!content || content.trim() === '') return ''
   const trimmed = content.trim()
@@ -80,7 +13,18 @@ export function renderContent(content: string): string {
     ? trimmed 
     : marked.parse(trimmed) as string
 
-  return collectHtmlHeadings(html).html
+  // Inject IDs into h2 and h3 tags for TOC navigation
+  return html.replace(/<(h[23])([^>]*)>(.*?)<\/h\1>/gi, (match, tag, attrs, content) => {
+    // If id already exists, don't overwrite
+    if (attrs.includes('id=')) return match;
+    
+    const text = content.replace(/<[^>]*>/g, '').trim();
+    const slug = text.toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-');
+    
+    return `<${tag}${attrs} id="${slug}">${content}</${tag}>`;
+  });
 }
 
 export function renderMarkdown(content: string): string {
@@ -89,27 +33,31 @@ export function renderMarkdown(content: string): string {
 
 export function extractHeadings(content: string) {
   // Extract h2 and h3 from HTML or Markdown
-  const headings: HeadingEntry[] = []
+  const headings: { text: string; slug: string; depth: number }[] = [];
   
   // Try to find h2 and h3 in HTML tags (from Novel/Tiptap)
-  const htmlResult = collectHtmlHeadings(content)
-  headings.push(...htmlResult.headings)
+  const htmlRegex = /<h([23])[^>]*>(.*?)<\/h\1>/gi;
+  let match;
+  
+  while ((match = htmlRegex.exec(content)) !== null) {
+    const depth = parseInt(match[1]);
+    const text = match[2].replace(/<[^>]*>/g, '').trim();
+    const slug = text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+    headings.push({ text, slug, depth });
+  }
   
   // If no HTML headings, try Markdown style (##, ###)
   if (headings.length === 0) {
-    const seen = new Map<string, number>()
-    const mdRegex = /^(#{2,3})\s+(.*)$/gm
-    let match
-
+    const mdRegex = /^(#{2,3})\s+(.*)$/gm;
     while ((match = mdRegex.exec(content)) !== null) {
-      const depth = match[1].length
-      const text = decodeHtmlEntities(match[2].trim())
-      const slug = createUniqueSlug(slugifyHeading(text), seen)
-      headings.push({ text, slug, depth })
+      const depth = match[1].length;
+      const text = match[2].trim();
+      const slug = text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+      headings.push({ text, slug, depth });
     }
   }
 
-  return headings
+  return headings;
 }
 
 export function calculateReadingTime(content: string): number {
