@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -9,13 +8,29 @@ import { Save, ChevronLeft, Loader2, Image as ImageIcon, Layout, X } from 'lucid
 import Link from 'next/link'
 import { SlugInput } from './slug-input'
 import { MediaPicker } from './media/media-picker'
+import { AIFieldAssist } from './ai/ai-field-assist'
+import { DraftGeneratorPanel } from './ai/draft-generator-panel'
+import { ImagePromptsPanel } from './ai/image-prompts-panel'
+import {
+  postAIGenerateSlug,
+  postAIGenerateSeoPack,
+  postAIGenerateFullDraft,
+  postAIGenerateImagePrompts,
+  postAIRewriteSection,
+  postAIExpandSection,
+  postAIGenerateFAQ,
+} from '@/app/cms/posts/actions-ai'
+import type { FormAIHistoryState } from '@/lib/ai/history'
+import type { GenerateSlugOutput, GenerateSEOPackOutput } from '@/lib/ai/schemas'
 import dynamic from 'next/dynamic'
+import type { RichEditorHandle } from './editor/RichEditor'
 
-const RichEditor = dynamic(() => import('./editor/RichEditor').then(mod => mod.RichEditor), { 
+const RichEditor = dynamic(() => import('./editor/RichEditor').then(mod => mod.RichEditor), {
   ssr: false,
   loading: () => <div className="h-[500px] w-full bg-gray-100 rounded-2xl animate-pulse flex items-center justify-center text-gray-400">Loading Editor...</div>
 })
 const postSchema = z.object({
+  id: z.string().uuid().optional(),
   title: z.string().min(1, 'Judul wajib diisi'),
   slug: z.string().min(1, 'Slug wajib diisi'),
   content: z.string().catch(''),
@@ -32,14 +47,18 @@ type PostFormValues = z.infer<typeof postSchema>
 
 interface PostFormProps {
   initialData?: any
+  initialAIState?: FormAIHistoryState
   onSubmit: (data: PostFormValues) => Promise<void>
   title: string
 }
 
-export function PostForm({ initialData, onSubmit, title }: PostFormProps) {
-  const router = useRouter()
+export function PostForm({ initialData, initialAIState, onSubmit, title }: PostFormProps) {
+  const [recordId] = useState(() => initialData?.id ?? crypto.randomUUID())
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [slugMode, setSlugMode] = useState<'auto' | 'manual'>(initialData ? 'manual' : 'auto')
+  const [isEditorReady, setIsEditorReady] = useState(false)
+  const editorApiRef = useRef<RichEditorHandle | null>(null)
 
   const {
     register,
@@ -50,6 +69,7 @@ export function PostForm({ initialData, onSubmit, title }: PostFormProps) {
   } = useForm<PostFormValues>({
     resolver: zodResolver(postSchema),
     defaultValues: {
+      id: initialData?.id || recordId,
       title: initialData?.title || '',
       slug: initialData?.slug || '',
       content: initialData?.content || '',
@@ -65,6 +85,8 @@ export function PostForm({ initialData, onSubmit, title }: PostFormProps) {
 
   const titleValue = watch('title')
   const slugValue = watch('slug')
+  const contentValue = watch('content')
+  const descriptionValue = watch('description')
   const watchThumbnail = watch('thumbnail_image')
   const watchBanner = watch('banner_image')
 
@@ -107,8 +129,45 @@ export function PostForm({ initialData, onSubmit, title }: PostFormProps) {
      )
   }
 
+  const handleEditorReady = (api: RichEditorHandle | null) => {
+    editorApiRef.current = api
+    setIsEditorReady(Boolean(api))
+  }
+
+  const applyDraftToEditor = (mode: 'replace' | 'append', markdown: string) => {
+    if (!editorApiRef.current) {
+      setError('Editor belum siap menerima draft AI. Coba lagi dalam beberapa detik.')
+      return
+    }
+
+    setError(null)
+
+    if (mode === 'replace') {
+      editorApiRef.current.replaceContent(markdown, { format: 'markdown' })
+      return
+    }
+
+    editorApiRef.current.appendContent(markdown, { format: 'markdown' })
+  }
+
+  const applyDraftMetadata = (data: { suggested_slug?: string; suggested_meta_title?: string; suggested_meta_desc?: string }) => {
+    if (data.suggested_slug) {
+      setSlugMode('manual')
+      setValue('slug', data.suggested_slug, { shouldDirty: true, shouldValidate: true })
+    }
+
+    if (data.suggested_meta_title) {
+      setValue('meta_title', data.suggested_meta_title, { shouldDirty: true })
+    }
+
+    if (data.suggested_meta_desc) {
+      setValue('meta_desc', data.suggested_meta_desc, { shouldDirty: true })
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8 pb-20">
+      <input type="hidden" {...register('id')} />
       <div className="flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md py-4 z-10 border-b mb-6 px-2">
         <div className="flex items-center gap-4">
           <Link
@@ -170,17 +229,61 @@ export function PostForm({ initialData, onSubmit, title }: PostFormProps) {
               {errors.title && <p className="text-xs text-red-500 mt-1 font-medium">{errors.title.message}</p>}
             </div>
 
-            <SlugInput
-              titleValue={titleValue}
-              value={slugValue}
-              mode={initialData ? 'edit' : 'create'}
-              onChange={(val) => setValue('slug', val, {
-                shouldDirty: true,
-                shouldTouch: true,
-                shouldValidate: true,
-              })}
-              error={errors.slug?.message}
-            />
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <SlugInput
+                  titleValue={titleValue}
+                  value={slugValue}
+                  mode={initialData ? 'edit' : 'create'}
+                  modePreference={slugMode}
+                  onModeChange={setSlugMode}
+                  onChange={(val) => setValue('slug', val, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true,
+                  })}
+                  error={errors.slug?.message}
+                />
+              </div>
+              <div className="pt-6">
+                <AIFieldAssist<GenerateSlugOutput>
+                  label="AI Slug"
+                  compact
+                  disabled={!titleValue}
+                  generate={() => postAIGenerateSlug({ title: titleValue }, { postId: recordId })}
+                  onApply={(data) => {
+                    setSlugMode('manual')
+                    setValue('slug', data.slug, { shouldDirty: true, shouldValidate: true })
+                  }}
+                  renderPreview={(data) => (
+                    <div className="space-y-2">
+                      <div className="p-2 bg-arkara-amber/10 rounded-lg">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Utama</span>
+                        <p className="text-sm font-bold text-arkara-green">{data.slug}</p>
+                      </div>
+                      {data.alternatives && data.alternatives.length > 0 && (
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase">Alternatif</span>
+                          {data.alternatives.map((alt, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => {
+                                setSlugMode('manual')
+                                setValue('slug', alt, { shouldDirty: true, shouldValidate: true })
+                              }}
+                              className="block w-full text-left p-1.5 text-xs bg-gray-50 hover:bg-arkara-amber/10 rounded transition-colors"
+                            >
+                              {alt}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                />
+              </div>
+            </div>
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-gray-700">Ringkasan (Dilihat di Google & Kartu Artikel)</label>
@@ -200,9 +303,31 @@ export function PostForm({ initialData, onSubmit, title }: PostFormProps) {
                  </label>
                  <div className="text-[10px] text-gray-400 font-medium">Ketikan "/" untuk menu konten cepat</div>
               </div>
-              
+
+              <DraftGeneratorPanel
+                title={titleValue}
+                entityLabel="artikel"
+                editorReady={isEditorReady}
+                initialState={initialAIState?.fullDraft ? {
+                  input: initialAIState.fullDraft.input,
+                  result: initialAIState.fullDraft.output,
+                  model: initialAIState.fullDraft.model,
+                } : undefined}
+                generateDraft={(input) => postAIGenerateFullDraft(input, { postId: recordId })}
+                onReplaceContent={(markdown) => applyDraftToEditor('replace', markdown)}
+                onAppendContent={(markdown) => applyDraftToEditor('append', markdown)}
+                onApplyMetadata={applyDraftMetadata}
+              />
+
               <RichEditor 
-                value={watch('content') || ''} 
+                value={contentValue || ''}
+                onEditorReady={handleEditorReady}
+                aiConfig={{
+                  title: titleValue,
+                  rewriteSection: (input) => postAIRewriteSection(input, { postId: recordId }),
+                  expandSection: (input) => postAIExpandSection(input, { postId: recordId }),
+                  generateFAQ: (input) => postAIGenerateFAQ(input, { postId: recordId }),
+                }}
                 onChange={(val: string) => {
                   setValue('content', val, { 
                     shouldValidate: true,
@@ -271,9 +396,67 @@ export function PostForm({ initialData, onSubmit, title }: PostFormProps) {
             </div>
           </div>
 
+          <ImagePromptsPanel
+            title={titleValue}
+            content={contentValue || ''}
+            excerpt={descriptionValue || undefined}
+            entityLabel="artikel blog"
+            initialResult={initialAIState?.imagePrompts?.output ?? null}
+            initialModel={initialAIState?.imagePrompts?.model ?? null}
+            initialGeneratedFrom={initialAIState?.imagePrompts ? {
+              title: initialAIState.imagePrompts.input.title,
+              content: initialAIState.imagePrompts.input.content,
+              excerpt: initialAIState.imagePrompts.input.excerpt,
+              focusKeyword: initialAIState.imagePrompts.input.focus_keyword,
+              category: initialAIState.imagePrompts.input.category,
+            } : null}
+            generatePrompts={(input) => postAIGenerateImagePrompts(input, { postId: recordId })}
+          />
+
           {/* META & KATEGORI */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
-            <h3 className="font-bold text-gray-900 border-b pb-3 border-gray-100">Taksonomi & SEO</h3>
+            <div className="flex items-center justify-between border-b pb-3 border-gray-100">
+              <h3 className="font-bold text-gray-900">Taksonomi & SEO</h3>
+              <AIFieldAssist<GenerateSEOPackOutput>
+                label="AI SEO Pack"
+                compact
+                disabled={!titleValue}
+                generate={() => postAIGenerateSeoPack(
+                  { title: titleValue, content: contentValue, description: descriptionValue },
+                  { postId: recordId }
+                )}
+                onApply={(data) => {
+                  setValue('meta_title', data.meta_title, { shouldDirty: true })
+                  setValue('meta_desc', data.meta_desc, { shouldDirty: true })
+                  setValue('description', data.excerpt, { shouldDirty: true })
+                }}
+                renderPreview={(data) => (
+                  <div className="space-y-2">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">Meta Title</span>
+                      <p className="text-xs text-gray-800">{data.meta_title}</p>
+                      <span className="text-[10px] text-gray-400">{data.meta_title.length}/60</span>
+                    </div>
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">Meta Description</span>
+                      <p className="text-xs text-gray-800">{data.meta_desc}</p>
+                      <span className="text-[10px] text-gray-400">{data.meta_desc.length}/155</span>
+                    </div>
+                    <div className="p-2 bg-emerald-50 rounded-lg">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">Excerpt</span>
+                      <p className="text-xs text-gray-800">{data.excerpt}</p>
+                    </div>
+                    <div className="p-2 bg-amber-50 rounded-lg">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">Focus Keyword</span>
+                      <p className="text-xs font-bold text-arkara-green">{data.focus_keyword}</p>
+                      {data.secondary_keywords && (
+                        <p className="text-[10px] text-gray-500 mt-1">{data.secondary_keywords.join(', ')}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              />
+            </div>
             
             <div className="space-y-2 pt-4">
               <label className="text-sm font-bold text-gray-700">Meta Title Spesifik (Opsional)</label>

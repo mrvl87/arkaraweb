@@ -157,3 +157,26 @@ CREATE POLICY "auth manage hero" ON hero_section FOR ALL USING (auth.role() = 'a
 CREATE POLICY "auth manage cta" ON cta_section FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "auth manage footer" ON footer FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "auth manage media" ON media FOR ALL USING (auth.role() = 'authenticated');
+
+-- AI GENERATIONS (logging)
+CREATE TABLE IF NOT EXISTS ai_generations (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID NULL,
+  target_type  TEXT NULL,
+  target_id    UUID NULL,
+  operation    TEXT NOT NULL,
+  model        TEXT NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'success'
+               CHECK (status IN ('success','error')),
+  input_json   JSONB NOT NULL DEFAULT '{}'::jsonb,
+  output_json  JSONB NOT NULL DEFAULT '{}'::jsonb,
+  prompt_version TEXT NOT NULL DEFAULT 'v1',
+  error_message TEXT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_generations_operation ON ai_generations(operation);
+CREATE INDEX IF NOT EXISTS idx_ai_generations_target ON ai_generations(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_ai_generations_created ON ai_generations(created_at DESC);
+
+ALTER TABLE ai_generations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "auth manage ai_generations" ON ai_generations FOR ALL USING (auth.role() = 'authenticated');

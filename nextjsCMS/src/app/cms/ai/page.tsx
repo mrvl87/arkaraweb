@@ -1,23 +1,22 @@
-import { AIInterface } from '@/components/ai/ai-interface'
+import { AIWorkspacePanel } from '@/components/ai/ai-workspace-panel'
 import { Sparkles } from 'lucide-react'
 
 export default function AIPage() {
   return (
-    <div className="space-y-12 pb-20">
-      <div className="text-left border-b border-arkara-green/5 pb-8">
-        <h1 className="text-4xl font-extrabold flex items-center gap-4 text-arkara-green uppercase tracking-tighter">
-          <div className="bg-arkara-amber p-3 rounded-2xl shadow-lg shadow-arkara-amber/20">
-             <Sparkles className="w-8 h-8 text-arkara-green animate-pulse" />
+    <div className="space-y-8 pb-20">
+      <div className="text-left border-b border-arkara-green/5 pb-6">
+        <h1 className="text-3xl font-extrabold flex items-center gap-3 text-arkara-green uppercase tracking-tighter">
+          <div className="bg-arkara-amber p-2.5 rounded-2xl shadow-lg shadow-arkara-amber/20">
+             <Sparkles className="w-7 h-7 text-arkara-green" />
           </div>
-          ASISTEN <span className="text-arkara-amber">CERDAS</span>
+          AI <span className="text-arkara-amber">Workspace</span>
         </h1>
-        <p className="text-gray-500 mt-4 font-medium max-w-2xl leading-relaxed">
-           Berdayakan konten survival Anda dengan kecerdasan buatan. Hasilkan kerangka artikel, riset mendalam, atau ringkasan teknis secara instan.
+        <p className="text-gray-500 mt-3 font-medium max-w-2xl leading-relaxed text-sm">
+           Editorial planning workspace — generate SEO packs, outlines, full drafts, dan ide klaster konten dengan AI.
         </p>
       </div>
 
-      <AIInterface />
+      <AIWorkspacePanel />
     </div>
   )
 }
-

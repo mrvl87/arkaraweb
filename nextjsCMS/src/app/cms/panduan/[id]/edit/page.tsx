@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getFormAIHistoryState } from '@/lib/ai/history'
 import { PanduanFormWrapper } from './edit-form'
 
 interface EditPanduanPageProps {
@@ -20,9 +21,14 @@ export default async function EditPanduanPage({ params }: EditPanduanPageProps) 
     notFound()
   }
 
+  const initialAIState = await getFormAIHistoryState('panduan', id, {
+    fallbackTitle: panduan.title,
+    fallbackCreatedAt: panduan.created_at,
+  })
+
   return (
     <div className="max-w-6xl mx-auto">
-      <PanduanFormWrapper initialData={panduan} panduanId={id} />
+      <PanduanFormWrapper initialData={panduan} initialAIState={initialAIState} panduanId={id} />
     </div>
   )
 }

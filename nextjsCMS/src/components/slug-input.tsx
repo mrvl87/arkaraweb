@@ -7,6 +7,8 @@ interface SlugInputProps {
   value: string
   onChange: (value: string) => void
   mode?: 'create' | 'edit'
+  modePreference?: 'auto' | 'manual'
+  onModeChange?: (mode: 'auto' | 'manual') => void
   label?: string
   error?: string
   disabled?: boolean
@@ -27,11 +29,25 @@ export function SlugInput({
   value,
   onChange,
   mode = 'create',
+  modePreference,
+  onModeChange,
   label = "Slug (URL)",
   error,
   disabled = false
 }: SlugInputProps) {
-  const [isAutoMode, setIsAutoMode] = useState(mode === 'create')
+  const [isAutoMode, setIsAutoMode] = useState(
+    modePreference ? modePreference === 'auto' : mode === 'create'
+  )
+
+  useEffect(() => {
+    if (!modePreference) return
+    setIsAutoMode(modePreference === 'auto')
+  }, [modePreference])
+
+  const updateMode = (nextMode: boolean) => {
+    setIsAutoMode(nextMode)
+    onModeChange?.(nextMode ? 'auto' : 'manual')
+  }
 
   // Auto-generate slug from title only while auto mode is active.
   useEffect(() => {
@@ -46,11 +62,11 @@ export function SlugInput({
 
   const handleToggleMode = () => {
     if (isAutoMode) {
-      setIsAutoMode(false)
+      updateMode(false)
       return
     }
 
-    setIsAutoMode(true)
+    updateMode(true)
 
     const generated = slugify(titleValue)
     if (generated && generated !== value) {

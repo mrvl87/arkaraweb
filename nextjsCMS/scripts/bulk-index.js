@@ -14,11 +14,7 @@
 
 import { GoogleAuth } from 'google-auth-library'
 import { createClient } from '@supabase/supabase-js'
-import { config } from 'dotenv'
-import { resolve } from 'path'
-
-// Load .env.local dari root nextjsCMS
-config({ path: resolve(process.cwd(), '.env.local') })
+// Env vars di-load via --env-file flag di npm script (Node.js 20+)
 
 const SITE_URL = process.env.FRONTEND_SITE_URL || 'https://arkaraweb.com'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getFormAIHistoryState } from '@/lib/ai/history'
 import { PostFormWrapper } from './edit-form'
 
 interface EditPostPageProps {
@@ -20,9 +21,14 @@ export default async function EditPostPage({ params }: EditPostPageProps) {
     notFound()
   }
 
+  const initialAIState = await getFormAIHistoryState('post', id, {
+    fallbackTitle: post.title,
+    fallbackCreatedAt: post.created_at,
+  })
+
   return (
     <div className="max-w-6xl mx-auto">
-      <PostFormWrapper initialData={post} postId={id} />
+      <PostFormWrapper initialData={post} initialAIState={initialAIState} postId={id} />
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Sparkles, Send, Copy, Check, RotateCcw, Lightbulb, Terminal, Search, AlertTriangle, Loader2 } from 'lucide-react'
 import { AI_TEMPLATES } from './prompt-templates'
-import { generateAIContent } from '@/app/cms/ai/actions'
+import { actionGenerateOutline } from '@/app/cms/ai/actions'
 
 const iconMap: any = {
   Lightbulb,
@@ -23,15 +23,17 @@ export function AIInterface() {
     const finalPrompt = customPrompt || prompt
     if (!finalPrompt.trim()) return
 
-    console.log("🚀 Client: Clicked Generate with prompt:", finalPrompt.substring(0, 30));
     setIsLoading(true)
     setError(null)
     try {
-      const data = await generateAIContent(finalPrompt)
-      console.log("✨ Client: Received AI data");
-      setResult(data.content)
+      // Temporary: uses outline generator until Phase 2 rebuilds this UI
+      const res = await actionGenerateOutline({ title: finalPrompt })
+      if (res.success) {
+        setResult(JSON.stringify(res.data, null, 2))
+      } else {
+        setError(res.error)
+      }
     } catch (err) {
-      console.error("🔥 Client Error:", err);
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat menghubungi AI.')
     } finally {
       setIsLoading(false)
