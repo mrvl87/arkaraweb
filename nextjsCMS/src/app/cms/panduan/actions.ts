@@ -9,6 +9,7 @@ import { notifyGoogleIndexing } from '@/lib/google-indexing'
 const SITE_URL = process.env.FRONTEND_SITE_URL || 'https://arkaraweb.com'
 
 const panduanSchema = z.object({
+  id: z.string().uuid().optional(),
   title: z.string().min(1, 'Judul wajib diisi'),
   slug: z.string().min(1, 'Slug wajib diisi'),
   content: z.string().optional().default(''),
@@ -39,10 +40,12 @@ export async function createPanduan(formData: z.infer<typeof panduanSchema>) {
   if (authError || !user) throw new Error('Unauthorized')
   const authorId = user.id
 
+  const { id: panduanId, ...restFormData } = formData
   const data = {
-    ...formData,
+    ...restFormData,
+    ...(panduanId ? { id: panduanId } : {}),
     author_id: authorId,
-    published_at: formData.status === 'published' ? new Date().toISOString() : null,
+    published_at: restFormData.status === 'published' ? new Date().toISOString() : null,
   }
 
   const { error } = await supabase.from('panduan').insert(data)
@@ -51,11 +54,11 @@ export async function createPanduan(formData: z.infer<typeof panduanSchema>) {
   
   revalidatePath('/cms/panduan')
   revalidatePath('/cms/dashboard')
-  await triggerFrontendRevalidate({ type: 'panduan', slug: formData.slug })
+  await triggerFrontendRevalidate({ type: 'panduan', slug: restFormData.slug })
 
   // Kirim notifikasi ke Google hanya jika konten dipublish
-  if (formData.status === 'published') {
-    notifyGoogleIndexing(`${SITE_URL}/panduan/${formData.slug}`, 'URL_UPDATED')
+  if (restFormData.status === 'published') {
+    notifyGoogleIndexing(`${SITE_URL}/panduan/${restFormData.slug}`, 'URL_UPDATED')
   }
 }
 
@@ -68,12 +71,13 @@ export async function updatePanduan(id: string, formData: z.infer<typeof panduan
     .eq('id', id)
     .single()
 
+  const { id: _ignoredId, ...restFormData } = formData
   const data = {
-    ...formData,
+    ...restFormData,
     published_at: 
-      formData.status === 'published' && existing?.status !== 'published'
+      restFormData.status === 'published' && existing?.status !== 'published'
         ? new Date().toISOString()
-        : formData.status === 'draft' ? null : undefined,
+        : restFormData.status === 'draft' ? null : undefined,
     updated_at: new Date().toISOString(),
   }
 
@@ -84,16 +88,16 @@ export async function updatePanduan(id: string, formData: z.infer<typeof panduan
   revalidatePath('/cms/panduan')
   revalidatePath(`/cms/panduan/${id}/edit`)
   revalidatePath('/cms/dashboard')
-  await triggerFrontendRevalidate({ type: 'panduan', slug: formData.slug })
+  await triggerFrontendRevalidate({ type: 'panduan', slug: restFormData.slug })
 
   const oldUrl = existing?.slug ? `${SITE_URL}/panduan/${existing.slug}` : null
-  const newUrl = `${SITE_URL}/panduan/${formData.slug}`
+  const newUrl = `${SITE_URL}/panduan/${restFormData.slug}`
 
-  if (existing?.status === 'published' && oldUrl && (formData.status !== 'published' || existing.slug !== formData.slug)) {
+  if (existing?.status === 'published' && oldUrl && (restFormData.status !== 'published' || existing.slug !== restFormData.slug)) {
     notifyGoogleIndexing(oldUrl, 'URL_DELETED')
   }
 
-  if (formData.status === 'published') {
+  if (restFormData.status === 'published') {
     notifyGoogleIndexing(newUrl, 'URL_UPDATED')
   }
 }

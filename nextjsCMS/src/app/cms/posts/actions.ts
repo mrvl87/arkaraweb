@@ -25,6 +25,7 @@ const mediaObjectSchema = z.object({
 }).nullable().optional()
 
 const postSchema = z.object({
+  id: z.string().uuid().optional(),
   title: z.string().min(1, 'Judul wajib diisi'),
   slug: z.string().min(1, 'Slug wajib diisi'),
   content: z.string().optional().default(''),
@@ -55,14 +56,16 @@ export async function createPost(formData: z.infer<typeof postSchema>) {
   if (authError || !user) return { error: 'Unauthorized' }
   const authorId = user.id
 
+  const { id: postId, ...restFormData } = formData
   const postData = {
-    ...formData,
+    ...restFormData,
+    ...(postId ? { id: postId } : {}),
     author_id: authorId,
-    cover_image: formData.cover_image
-      || (formData.thumbnail_image as MediaObject)?.url
-      || (formData.banner_image as MediaObject)?.url
+    cover_image: restFormData.cover_image
+      || (restFormData.thumbnail_image as MediaObject)?.url
+      || (restFormData.banner_image as MediaObject)?.url
       || null,
-    published_at: formData.status === 'published' ? new Date().toISOString() : null,
+    published_at: restFormData.status === 'published' ? new Date().toISOString() : null,
   }
 
   const { error } = await supabase.from('posts').insert(postData)
@@ -73,11 +76,11 @@ export async function createPost(formData: z.infer<typeof postSchema>) {
   
   revalidatePath('/cms/posts')
   revalidatePath('/cms/dashboard')
-  await triggerFrontendRevalidate({ type: 'post', slug: formData.slug })
+  await triggerFrontendRevalidate({ type: 'post', slug: restFormData.slug })
 
   // Kirim notifikasi ke Google hanya jika konten dipublish
-  if (formData.status === 'published') {
-    notifyGoogleIndexing(`${SITE_URL}/blog/${formData.slug}`, 'URL_UPDATED')
+  if (restFormData.status === 'published') {
+    notifyGoogleIndexing(`${SITE_URL}/blog/${restFormData.slug}`, 'URL_UPDATED')
   }
 
   return { success: true }
@@ -92,16 +95,17 @@ export async function updatePost(id: string, formData: z.infer<typeof postSchema
     .eq('id', id)
     .single()
 
+  const { id: _ignoredId, ...restFormData } = formData
   const postData = {
-    ...formData,
-    cover_image: formData.cover_image
-      || (formData.thumbnail_image as MediaObject)?.url
-      || (formData.banner_image as MediaObject)?.url
+    ...restFormData,
+    cover_image: restFormData.cover_image
+      || (restFormData.thumbnail_image as MediaObject)?.url
+      || (restFormData.banner_image as MediaObject)?.url
       || null,
     published_at: 
-      formData.status === 'published' && existingPost?.status !== 'published'
+      restFormData.status === 'published' && existingPost?.status !== 'published'
         ? new Date().toISOString()
-        : formData.status === 'draft' ? null : undefined,
+        : restFormData.status === 'draft' ? null : undefined,
     updated_at: new Date().toISOString(),
   }
 
@@ -114,16 +118,16 @@ export async function updatePost(id: string, formData: z.infer<typeof postSchema
   revalidatePath('/cms/posts')
   revalidatePath(`/cms/posts/${id}/edit`)
   revalidatePath('/cms/dashboard')
-  await triggerFrontendRevalidate({ type: 'post', slug: formData.slug })
+  await triggerFrontendRevalidate({ type: 'post', slug: restFormData.slug })
 
   const oldUrl = existingPost?.slug ? `${SITE_URL}/blog/${existingPost.slug}` : null
-  const newUrl = `${SITE_URL}/blog/${formData.slug}`
+  const newUrl = `${SITE_URL}/blog/${restFormData.slug}`
 
-  if (existingPost?.status === 'published' && oldUrl && (formData.status !== 'published' || existingPost.slug !== formData.slug)) {
+  if (existingPost?.status === 'published' && oldUrl && (restFormData.status !== 'published' || existingPost.slug !== restFormData.slug)) {
     notifyGoogleIndexing(oldUrl, 'URL_DELETED')
   }
 
-  if (formData.status === 'published') {
+  if (restFormData.status === 'published') {
     notifyGoogleIndexing(newUrl, 'URL_UPDATED')
   }
 

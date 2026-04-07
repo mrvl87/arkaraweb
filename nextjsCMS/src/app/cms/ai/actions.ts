@@ -1,48 +1,70 @@
 "use server"
 
-import { SURVIVAL_SYSTEM_PROMPT } from "@/components/ai/prompt-templates";
+/**
+ * AI Server Actions — /cms/ai workspace.
+ *
+ * Thin server action layer that delegates to src/lib/ai/operations.
+ * These are callable from client components in the AI workspace.
+ */
 
-export async function generateAIContent(userPrompt: string) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+import {
+  generateSlug,
+  generateSeoPack,
+  generateOutline,
+  generateFullDraft,
+  generateImagePrompts,
+  generateClusterIdeas,
+  rewriteSection,
+  expandSection,
+  generateFAQ,
+} from '@/lib/ai/operations'
+import type {
+  GenerateSlugInput,
+  GenerateSEOPackInput,
+  GenerateOutlineInput,
+  GenerateFullDraftInput,
+  GenerateImagePromptsInput,
+  GenerateClusterIdeasInput,
+  RewriteSectionInput,
+  ExpandSectionInput,
+  GenerateFAQInput,
+} from '@/lib/ai/schemas'
 
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY is not configured in environment variables.");
-  }
+// ─── Workspace context (no specific target) ──────────────────────
+const workspaceCtx = { targetType: 'workspace' as const }
 
-  try {
-    const headers = {
-        "Authorization": `Bearer ${apiKey}`,
-        "HTTP-Referer": siteUrl,
-        "X-Title": "Arkara CMS",
-        "Content-Type": "application/json",
-    };
+export async function actionGenerateSlug(input: GenerateSlugInput) {
+  return generateSlug(input, workspaceCtx)
+}
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify({
-        model: "google/gemini-2.0-flash-001",
-        messages: [
-          { role: "system", content: SURVIVAL_SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.7,
-      }),
-    });
+export async function actionGenerateSeoPack(input: GenerateSEOPackInput) {
+  return generateSeoPack(input, workspaceCtx)
+}
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || "Failed to generate AI content");
-    }
+export async function actionGenerateOutline(input: GenerateOutlineInput) {
+  return generateOutline(input, workspaceCtx)
+}
 
-    const data = await response.json();
-    return {
-      content: data.choices[0].message.content,
-      model: data.model,
-    };
-  } catch (error) {
-    console.error("AI Generation Error:", error);
-    throw new Error(error instanceof Error ? error.message : "An unexpected error occurred");
-  }
+export async function actionGenerateFullDraft(input: GenerateFullDraftInput) {
+  return generateFullDraft(input, workspaceCtx)
+}
+
+export async function actionGenerateImagePrompts(input: GenerateImagePromptsInput) {
+  return generateImagePrompts(input, workspaceCtx)
+}
+
+export async function actionGenerateClusterIdeas(input: GenerateClusterIdeasInput) {
+  return generateClusterIdeas(input, workspaceCtx)
+}
+
+export async function actionRewriteSection(input: RewriteSectionInput) {
+  return rewriteSection(input, workspaceCtx)
+}
+
+export async function actionExpandSection(input: ExpandSectionInput) {
+  return expandSection(input, workspaceCtx)
+}
+
+export async function actionGenerateFAQ(input: GenerateFAQInput) {
+  return generateFAQ(input, workspaceCtx)
 }

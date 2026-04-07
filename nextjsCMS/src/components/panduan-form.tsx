@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -9,7 +9,25 @@ import { Save, ChevronLeft, Loader2, Image as ImageIcon, QrCode, Book } from 'lu
 import Link from 'next/link'
 import { SlugInput } from './slug-input'
 import { MediaPicker } from './media/media-picker'
+import { AIFieldAssist } from './ai/ai-field-assist'
+import { DraftGeneratorPanel } from './ai/draft-generator-panel'
+import { ImagePromptsPanel } from './ai/image-prompts-panel'
+import {
+  panduanAIGenerateSlug,
+  panduanAIGenerateSeoPack,
+  panduanAIGenerateFullDraft,
+  panduanAIGenerateImagePrompts,
+  panduanAIRewriteSection,
+  panduanAIExpandSection,
+  panduanAIGenerateFAQ,
+} from '@/app/cms/panduan/actions-ai'
+import type {
+  GenerateSlugOutput,
+  GenerateSEOPackOutput,
+} from '@/lib/ai/schemas'
+import type { FormAIHistoryState } from '@/lib/ai/history'
 import dynamic from 'next/dynamic'
+import type { RichEditorHandle } from './editor/RichEditor'
 
 const RichEditor = dynamic(() => import('./editor/RichEditor').then(mod => mod.RichEditor), {
   ssr: false,
@@ -17,6 +35,7 @@ const RichEditor = dynamic(() => import('./editor/RichEditor').then(mod => mod.R
 })
 
 const panduanSchema = z.object({
+  id: z.string().uuid().optional(),
   title: z.string().min(1, 'Judul wajib diisi'),
   slug: z.string().min(1, 'Slug wajib diisi'),
   content: z.string().catch(''),
@@ -33,14 +52,19 @@ type PanduanFormValues = z.infer<typeof panduanSchema>
 
 interface PanduanFormProps {
   initialData?: any
+  initialAIState?: FormAIHistoryState
   onSubmit: (data: PanduanFormValues) => Promise<void>
   title: string
 }
 
-export function PanduanForm({ initialData, onSubmit, title }: PanduanFormProps) {
+export function PanduanForm({ initialData, initialAIState, onSubmit, title }: PanduanFormProps) {
+  const [recordId] = useState(() => initialData?.id ?? crypto.randomUUID())
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [slugMode, setSlugMode] = useState<'auto' | 'manual'>(initialData ? 'manual' : 'auto')
+  const [isEditorReady, setIsEditorReady] = useState(false)
+  const editorApiRef = useRef<RichEditorHandle | null>(null)
 
   const {
     register,
@@ -51,6 +75,7 @@ export function PanduanForm({ initialData, onSubmit, title }: PanduanFormProps) 
   } = useForm<PanduanFormValues>({
     resolver: zodResolver(panduanSchema),
     defaultValues: {
+      id: initialData?.id || recordId,
       title: initialData?.title || '',
       slug: initialData?.slug || '',
       content: initialData?.content || '',
@@ -66,6 +91,45 @@ export function PanduanForm({ initialData, onSubmit, title }: PanduanFormProps) 
 
   const titleValue = watch('title')
   const slugValue = watch('slug')
+  const contentValue = watch('content')
+  const metaDescValue = watch('meta_desc')
+  const categoryValue = watch('category')
+
+  const handleEditorReady = (api: RichEditorHandle | null) => {
+    editorApiRef.current = api
+    setIsEditorReady(Boolean(api))
+  }
+
+  const applyDraftToEditor = (mode: 'replace' | 'append', markdown: string) => {
+    if (!editorApiRef.current) {
+      setError('Editor belum siap menerima draft AI. Coba lagi dalam beberapa detik.')
+      return
+    }
+
+    setError(null)
+
+    if (mode === 'replace') {
+      editorApiRef.current.replaceContent(markdown, { format: 'markdown' })
+      return
+    }
+
+    editorApiRef.current.appendContent(markdown, { format: 'markdown' })
+  }
+
+  const applyDraftMetadata = (data: { suggested_slug?: string; suggested_meta_title?: string; suggested_meta_desc?: string }) => {
+    if (data.suggested_slug) {
+      setSlugMode('manual')
+      setValue('slug', data.suggested_slug, { shouldDirty: true, shouldValidate: true })
+    }
+
+    if (data.suggested_meta_title) {
+      setValue('meta_title', data.suggested_meta_title, { shouldDirty: true })
+    }
+
+    if (data.suggested_meta_desc) {
+      setValue('meta_desc', data.suggested_meta_desc, { shouldDirty: true })
+    }
+  }
 
   const handleFormSubmit = async (data: PanduanFormValues) => {
     setIsSubmitting(true)
@@ -82,6 +146,7 @@ export function PanduanForm({ initialData, onSubmit, title }: PanduanFormProps) 
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8 pb-20">
+      <input type="hidden" {...register('id')} />
       <div className="flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md py-4 z-10 border-b mb-6 text-left">
         <div className="flex items-center gap-4">
           <Link
@@ -138,17 +203,61 @@ export function PanduanForm({ initialData, onSubmit, title }: PanduanFormProps) 
               {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title.message}</p>}
             </div>
 
-            <SlugInput
-              titleValue={titleValue}
-              value={slugValue}
-              mode={initialData ? 'edit' : 'create'}
-              onChange={(val) => setValue('slug', val, {
-                shouldDirty: true,
-                shouldTouch: true,
-                shouldValidate: true,
-              })}
-              error={errors.slug?.message}
-            />
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <SlugInput
+                  titleValue={titleValue}
+                  value={slugValue}
+                  mode={initialData ? 'edit' : 'create'}
+                  modePreference={slugMode}
+                  onModeChange={setSlugMode}
+                  onChange={(val) => setValue('slug', val, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true,
+                  })}
+                  error={errors.slug?.message}
+                />
+              </div>
+              <div className="pt-6">
+                <AIFieldAssist<GenerateSlugOutput>
+                  label="AI Slug"
+                  compact
+                  disabled={!titleValue}
+                  generate={() => panduanAIGenerateSlug({ title: titleValue }, { panduanId: recordId })}
+                  onApply={(data) => {
+                    setSlugMode('manual')
+                    setValue('slug', data.slug, { shouldDirty: true, shouldValidate: true })
+                  }}
+                  renderPreview={(data) => (
+                    <div className="space-y-2">
+                      <div className="p-2 bg-arkara-amber/10 rounded-lg">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Utama</span>
+                        <p className="text-sm font-bold text-arkara-green">{data.slug}</p>
+                      </div>
+                      {data.alternatives && data.alternatives.length > 0 && (
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase">Alternatif</span>
+                          {data.alternatives.map((alt, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => {
+                                setSlugMode('manual')
+                                setValue('slug', alt, { shouldDirty: true, shouldValidate: true })
+                              }}
+                              className="block w-full text-left p-1.5 text-xs bg-gray-50 hover:bg-arkara-amber/10 rounded transition-colors"
+                            >
+                              {alt}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                />
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -182,9 +291,32 @@ export function PanduanForm({ initialData, onSubmit, title }: PanduanFormProps) 
                  <label className="text-sm font-medium text-gray-700">Konten Panduan Teknis</label>
                  <span className="text-[10px] font-bold tracking-widest text-amber-600 bg-amber-50 px-2 py-1 rounded">WYSIWYG</span>
               </div>
-              <RichEditor 
-                value={watch('content') || ''} 
-                onChange={(val: string) => setValue('content', val, { shouldValidate: true })}
+
+              <DraftGeneratorPanel
+                title={titleValue}
+                entityLabel="panduan"
+                editorReady={isEditorReady}
+                initialState={initialAIState?.fullDraft ? {
+                  input: initialAIState.fullDraft.input,
+                  result: initialAIState.fullDraft.output,
+                  model: initialAIState.fullDraft.model,
+                } : undefined}
+                generateDraft={(input) => panduanAIGenerateFullDraft(input, { panduanId: recordId })}
+                onReplaceContent={(markdown) => applyDraftToEditor('replace', markdown)}
+                onAppendContent={(markdown) => applyDraftToEditor('append', markdown)}
+                onApplyMetadata={applyDraftMetadata}
+              />
+
+              <RichEditor
+                value={contentValue || ''}
+                onEditorReady={handleEditorReady}
+                aiConfig={{
+                  title: titleValue,
+                  rewriteSection: (input) => panduanAIRewriteSection(input, { panduanId: recordId }),
+                  expandSection: (input) => panduanAIExpandSection(input, { panduanId: recordId }),
+                  generateFAQ: (input) => panduanAIGenerateFAQ(input, { panduanId: recordId }),
+                }}
+                onChange={(val: string) => setValue('content', val, { shouldValidate: true, shouldDirty: true })}
               />
             </div>
           </div>
@@ -229,8 +361,57 @@ export function PanduanForm({ initialData, onSubmit, title }: PanduanFormProps) 
             </div>
           </div>
 
+          <ImagePromptsPanel
+            title={titleValue}
+            content={contentValue || ''}
+            excerpt={metaDescValue || undefined}
+            category={categoryValue}
+            entityLabel="panduan teknis"
+            initialResult={initialAIState?.imagePrompts?.output ?? null}
+            initialModel={initialAIState?.imagePrompts?.model ?? null}
+            initialGeneratedFrom={initialAIState?.imagePrompts ? {
+              title: initialAIState.imagePrompts.input.title,
+              content: initialAIState.imagePrompts.input.content,
+              excerpt: initialAIState.imagePrompts.input.excerpt,
+              focusKeyword: initialAIState.imagePrompts.input.focus_keyword,
+              category: initialAIState.imagePrompts.input.category,
+            } : null}
+            generatePrompts={(input) => panduanAIGenerateImagePrompts(input, { panduanId: recordId })}
+          />
+
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
-            <h3 className="font-bold text-gray-900 border-b pb-3">SEO Settings</h3>
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-bold text-gray-900">SEO Settings</h3>
+              <AIFieldAssist<GenerateSEOPackOutput>
+                label="AI SEO Pack"
+                compact
+                disabled={!titleValue}
+                generate={() => panduanAIGenerateSeoPack(
+                  { title: titleValue, content: contentValue },
+                  { panduanId: recordId }
+                )}
+                onApply={(data) => {
+                  setValue('meta_title', data.meta_title, { shouldDirty: true })
+                  setValue('meta_desc', data.meta_desc, { shouldDirty: true })
+                }}
+                renderPreview={(data) => (
+                  <div className="space-y-2">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">Meta Title</span>
+                      <p className="text-xs text-gray-800">{data.meta_title}</p>
+                    </div>
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">Meta Description</span>
+                      <p className="text-xs text-gray-800">{data.meta_desc}</p>
+                    </div>
+                    <div className="p-2 bg-amber-50 rounded-lg">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">Focus Keyword</span>
+                      <p className="text-xs font-bold text-arkara-green">{data.focus_keyword}</p>
+                    </div>
+                  </div>
+                )}
+              />
+            </div>
             
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-700">Meta Title</label>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { 
   EditorRoot, 
   EditorContent, 
@@ -48,9 +48,25 @@ import {
   AlertTriangle,
   Code2,
   Layout,
-  Table as TableIcon
+  Table as TableIcon,
+  Sparkles,
+  Wand2,
+  ArrowDownToLine,
+  MessageSquareQuote,
+  Copy,
+  Replace,
+  Loader2
 } from 'lucide-react'
 import { MediaPicker } from '../media/media-picker'
+import MarkdownIt from 'markdown-it'
+import type {
+  RewriteSectionInput,
+  RewriteSectionOutput,
+  ExpandSectionInput,
+  ExpandSectionOutput,
+  GenerateFAQInput,
+  GenerateFAQOutput,
+} from '@/lib/ai/schemas'
 import "./editor.css"
 
 // Predefined base extensions
@@ -135,13 +151,39 @@ const extensions = [
   }),
 ]
 
+const markdownRenderer = new MarkdownIt({
+  breaks: true,
+  linkify: true,
+})
+
+type AIResponse<T> = Promise<
+  | { success: true; data: T; model: string }
+  | { success: false; error: string }
+>
+
+export interface RichEditorAIConfig {
+  title: string
+  rewriteSection: (input: RewriteSectionInput) => AIResponse<RewriteSectionOutput>
+  expandSection: (input: ExpandSectionInput) => AIResponse<ExpandSectionOutput>
+  generateFAQ: (input: GenerateFAQInput) => AIResponse<GenerateFAQOutput>
+}
+
 interface RichEditorProps {
   value: string
   onChange: (markdown: string) => void
   placeholder?: string
+  onEditorReady?: (api: RichEditorHandle | null) => void
+  aiConfig?: RichEditorAIConfig
 }
 
-export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
+export interface RichEditorHandle {
+  replaceContent: (content: string, options?: { format?: 'html' | 'markdown' }) => void
+  appendContent: (content: string, options?: { format?: 'html' | 'markdown' }) => void
+  getHTML: () => string
+  getMarkdown: () => string
+}
+
+export function RichEditor({ value, onChange, placeholder, onEditorReady, aiConfig }: RichEditorProps) {
   const [isMarkdownMode, setIsMarkdownMode] = useState(false)
   const [markdownDraft, setMarkdownDraft] = useState('')
 
@@ -202,11 +244,16 @@ export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
             }}
           >
             {/* EDITOR TOOLBAR — must be inside EditorContent for useEditor() context */}
-            <EditorToolbar onSwitchToMarkdown={(editor) => {
-              const md = editor.storage.markdown?.getMarkdown() || ""
-              setMarkdownDraft(md)
-              setIsMarkdownMode(true)
-            }} />
+            <EditorToolbar
+              aiConfig={aiConfig}
+              onEditorReady={onEditorReady}
+              onContentChange={onChange}
+              onSwitchToMarkdown={(editor) => {
+                const md = editor.storage.markdown?.getMarkdown() || ""
+                setMarkdownDraft(md)
+                setIsMarkdownMode(true)
+              }}
+            />
 
             {/* SLASH COMMAND MENU */}
             <EditorCommand className='z-50 h-auto max-h-[330px] w-72 overflow-y-auto rounded-xl border border-gray-200 bg-white px-1 py-2 shadow-2xl transition-all'>
@@ -375,42 +422,441 @@ export function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
   )
 }
 
-function EditorToolbar({ onSwitchToMarkdown }: { onSwitchToMarkdown: (editor: any) => void }) {
+function EditorToolbar({
+  onSwitchToMarkdown,
+  onEditorReady,
+  onContentChange,
+  aiConfig,
+}: {
+  onSwitchToMarkdown: (editor: any) => void
+  onEditorReady?: (api: RichEditorHandle | null) => void
+  onContentChange: (content: string) => void
+  aiConfig?: RichEditorAIConfig
+}) {
   const { editor } = useEditor();
-  
+  const [activeTool, setActiveTool] = useState<'rewrite' | 'expand' | 'faq' | null>(null)
+  const [instruction, setInstruction] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [preview, setPreview] = useState<{
+    operation: 'rewrite' | 'expand' | 'faq'
+    selection: { from: number; to: number }
+    originalText: string
+    resultMarkdown: string
+  } | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (!onEditorReady) return
+
+    if (!editor) {
+      onEditorReady(null)
+      return
+    }
+
+    const getMarkdown = () => editor.storage.markdown?.getMarkdown?.() || ''
+    const syncContent = () => {
+      onContentChange(editor.getHTML())
+    }
+
+    const api: RichEditorHandle = {
+      replaceContent: (content) => {
+        editor.commands.setContent(content, true)
+        syncContent()
+      },
+      appendContent: (content, options) => {
+        if (options?.format === 'markdown') {
+          const currentMarkdown = getMarkdown().trim()
+          const nextMarkdown = currentMarkdown
+            ? `${currentMarkdown}\n\n${content.trim()}`
+            : content.trim()
+
+          editor.commands.setContent(nextMarkdown, true)
+          syncContent()
+          return
+        }
+
+        const currentHTML = editor.getHTML()
+        const nextHTML = currentHTML && currentHTML !== '<p></p>'
+          ? `${currentHTML}${content}`
+          : content
+
+        editor.commands.setContent(nextHTML, true)
+        syncContent()
+      },
+      getHTML: () => editor.getHTML(),
+      getMarkdown,
+    }
+
+    onEditorReady(api)
+
+    return () => {
+      onEditorReady(null)
+    }
+  }, [editor, onContentChange, onEditorReady])
+
   if (!editor) return null;
 
+  const selection = editor.state.selection
+  const hasSelection = !selection.empty
+  const selectedText = hasSelection
+    ? editor.state.doc.textBetween(selection.from, selection.to, '\n\n').trim()
+    : ''
+
+  const closeAIPanel = () => {
+    setActiveTool(null)
+    setInstruction('')
+    setError(null)
+    setPreview(null)
+    setCopied(false)
+    setIsLoading(false)
+  }
+
+  const openAITool = (operation: 'rewrite' | 'expand' | 'faq') => {
+    setActiveTool(operation)
+    setError(null)
+    setPreview(null)
+    setCopied(false)
+  }
+
+  const runAITool = async (operation: 'rewrite' | 'expand' | 'faq') => {
+    if (!aiConfig || !selectedText) return
+
+    setActiveTool(operation)
+    setIsLoading(true)
+    setError(null)
+    setPreview(null)
+    setCopied(false)
+
+    const currentSelection = { from: selection.from, to: selection.to }
+
+    try {
+      if (operation === 'rewrite') {
+        const response = await aiConfig.rewriteSection({
+          section_text: selectedText,
+          instruction: instruction || undefined,
+        })
+
+        if (!response.success) {
+          setError(response.error)
+          return
+        }
+
+        setPreview({
+          operation,
+          selection: currentSelection,
+          originalText: selectedText,
+          resultMarkdown: response.data.rewritten_text,
+        })
+        return
+      }
+
+      if (operation === 'expand') {
+        const response = await aiConfig.expandSection({
+          section_text: selectedText,
+          direction: instruction || undefined,
+        })
+
+        if (!response.success) {
+          setError(response.error)
+          return
+        }
+
+        setPreview({
+          operation,
+          selection: currentSelection,
+          originalText: selectedText,
+          resultMarkdown: response.data.expanded_text,
+        })
+        return
+      }
+
+      const response = await aiConfig.generateFAQ({
+        title: aiConfig.title,
+        content: selectedText,
+      })
+
+      if (!response.success) {
+        setError(response.error)
+        return
+      }
+
+      setPreview({
+        operation,
+        selection: currentSelection,
+        originalText: selectedText,
+        resultMarkdown: formatFAQMarkdown(response.data),
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'AI tool gagal dijalankan.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const replaceSelectionWithPreview = () => {
+    if (!preview) return
+
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(preview.selection, markdownRenderer.render(preview.resultMarkdown))
+      .run()
+    onContentChange(editor.getHTML())
+
+    closeAIPanel()
+  }
+
+  const insertPreviewBelowSelection = () => {
+    if (!preview) return
+
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(preview.selection.to, `<p></p>${markdownRenderer.render(preview.resultMarkdown)}`)
+      .run()
+    onContentChange(editor.getHTML())
+
+    closeAIPanel()
+  }
+
+  const appendPreviewToEnd = () => {
+    if (!preview) return
+
+    const currentHTML = editor.getHTML()
+    const nextHTML = currentHTML && currentHTML !== '<p></p>'
+      ? `${currentHTML}<p></p>${markdownRenderer.render(preview.resultMarkdown)}`
+      : markdownRenderer.render(preview.resultMarkdown)
+
+    editor.commands.setContent(nextHTML, true)
+    onContentChange(editor.getHTML())
+    closeAIPanel()
+  }
+
+  const copyPreview = async () => {
+    if (!preview) return
+
+    await navigator.clipboard.writeText(preview.resultMarkdown)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
-    <div className="sticky top-0 z-40 bg-gray-50/95 backdrop-blur-sm border-b border-gray-100 px-4 py-2 flex items-center gap-2">
-      <MediaPicker
-        id="editor-media-picker-trigger"
-        label="Sisipkan Gambar" 
-        onSelect={(item) => {
-          if (item.url) {
-            editor.chain().focus().setImage({ src: item.url, alt: item.alt_text || item.file_name || 'Gambar sisipan' }).run();
-          }
-        }} 
-      />
-      <div className="w-[1px] h-4 bg-gray-200 mx-2" />
-      <button
-        type="button"
-        onClick={() => editor.chain().focus().deleteSelection().run()}
-        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-        title="Hapus elemen terpilih"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
+    <div className="sticky top-0 z-40 bg-gray-50/95 backdrop-blur-sm border-b border-gray-100">
+      <div className="px-4 py-2 flex items-center gap-2">
+        <MediaPicker
+          id="editor-media-picker-trigger"
+          label="Sisipkan Gambar" 
+          onSelect={(item) => {
+            if (item.url) {
+              editor.chain().focus().setImage({ src: item.url, alt: item.alt_text || item.file_name || 'Gambar sisipan' }).run();
+            }
+          }} 
+        />
+        <div className="w-[1px] h-4 bg-gray-200 mx-2" />
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().deleteSelection().run()}
+          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+          title="Hapus elemen terpilih"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
 
-      <div className="flex-1" />
+        {aiConfig && (
+          <>
+            <div className="w-[1px] h-4 bg-gray-200 mx-1" />
+            <button
+              type="button"
+              onClick={() => openAITool('rewrite')}
+              disabled={!hasSelection || isLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all border border-transparent hover:border-blue-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Tulis ulang teks yang dipilih"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+              Rewrite
+            </button>
+            <button
+              type="button"
+              onClick={() => openAITool('expand')}
+              disabled={!hasSelection || isLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all border border-transparent hover:border-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Perluas teks yang dipilih"
+            >
+              <Wand2 className="w-3.5 h-3.5 text-emerald-500" />
+              Expand
+            </button>
+            <button
+              type="button"
+              onClick={() => openAITool('faq')}
+              disabled={!hasSelection || isLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all border border-transparent hover:border-amber-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Buat FAQ dari teks yang dipilih"
+            >
+              <MessageSquareQuote className="w-3.5 h-3.5 text-amber-500" />
+              FAQ
+            </button>
+          </>
+        )}
 
-      <button
-        type="button"
-        onClick={() => onSwitchToMarkdown(editor)}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all border border-transparent hover:border-amber-200"
-      >
-        <Code2 className="w-3.5 h-3.5 text-amber-500" />
-        Markdown Mode
-      </button>
+        <div className="flex-1" />
+
+        <button
+          type="button"
+          onClick={() => onSwitchToMarkdown(editor)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all border border-transparent hover:border-amber-200"
+        >
+          <Code2 className="w-3.5 h-3.5 text-amber-500" />
+          Markdown Mode
+        </button>
+      </div>
+
+      {aiConfig && activeTool && (
+        <div className="border-t border-gray-100 bg-white px-4 py-4 space-y-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-arkara-green">
+                {activeTool === 'rewrite' && 'AI Rewrite Selection'}
+                {activeTool === 'expand' && 'AI Expand Selection'}
+                {activeTool === 'faq' && 'AI Generate FAQ'}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Hasil AI selalu ditinjau dulu sebelum mengganti atau menambahkan konten ke editor.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={closeAIPanel}
+              className="px-2.5 py-1 rounded-lg bg-gray-100 text-xs font-bold text-gray-500 hover:bg-gray-200 transition-all"
+            >
+              Tutup
+            </button>
+          </div>
+
+          {(activeTool === 'rewrite' || activeTool === 'expand') && (
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                Instruksi Tambahan
+              </label>
+              <input
+                type="text"
+                value={instruction}
+                onChange={(event) => setInstruction(event.target.value)}
+                placeholder={
+                  activeTool === 'rewrite'
+                    ? 'Contoh: buat lebih ringkas, lebih persuasif, atau lebih formal'
+                    : 'Contoh: tambahkan contoh praktis atau langkah yang lebih detail'
+                }
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none text-sm"
+              />
+            </div>
+          )}
+
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-2">
+              Teks Terpilih
+            </span>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+              {selectedText || 'Pilih teks di editor untuk memakai AI tools ini.'}
+            </p>
+          </div>
+
+          {!preview && (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => runAITool(activeTool)}
+                disabled={!hasSelection || isLoading}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-arkara-amber text-arkara-green text-sm font-bold hover:bg-arkara-amber/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                Jalankan AI
+              </button>
+              {!hasSelection && (
+                <span className="text-xs text-red-500">
+                  Pilih teks dulu agar tool AI bisa dijalankan.
+                </span>
+              )}
+            </div>
+          )}
+
+          {error && (
+            <div className="p-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {preview && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
+                    Sebelum
+                  </span>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                    {preview.originalText}
+                  </p>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 block">
+                    Saran AI
+                  </span>
+                  <pre className="text-sm text-gray-800 whitespace-pre-wrap break-words font-sans leading-relaxed">
+                    {preview.resultMarkdown}
+                  </pre>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                {(preview.operation === 'rewrite' || preview.operation === 'expand') && (
+                  <button
+                    type="button"
+                    onClick={replaceSelectionWithPreview}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-arkara-amber text-arkara-green text-sm font-bold hover:bg-arkara-amber/90 transition-all"
+                  >
+                    <Replace className="w-4 h-4" />
+                    Replace Selection
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={insertPreviewBelowSelection}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover:border-emerald-300 hover:bg-emerald-50 transition-all"
+                >
+                  <ArrowDownToLine className="w-4 h-4 text-emerald-600" />
+                  Insert di Bawah
+                </button>
+                {preview.operation === 'faq' && (
+                  <button
+                    type="button"
+                    onClick={appendPreviewToEnd}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover:border-amber-300 hover:bg-amber-50 transition-all"
+                  >
+                    <ArrowDownToLine className="w-4 h-4 text-amber-600" />
+                    Append ke Akhir
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={copyPreview}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                >
+                  {copied ? <Sparkles className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-gray-500" />}
+                  {copied ? 'Tersalin' : 'Copy Hasil'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
+}
+
+function formatFAQMarkdown(data: GenerateFAQOutput): string {
+  return [
+    '## FAQ',
+    '',
+    ...data.faqs.flatMap((item) => [`### ${item.question}`, '', item.answer, '']),
+  ].join('\n').trim()
 }

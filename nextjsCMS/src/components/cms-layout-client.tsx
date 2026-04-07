@@ -23,7 +23,7 @@ const navItems = [
   { icon: BookOpen, label: 'Panduan', href: '/cms/panduan' },
   { icon: Image, label: 'Media', href: '/cms/media' },
   { icon: Settings, label: 'Settings', href: '/cms/settings' },
-  { icon: Sparkles, label: 'AI Generator', href: '/cms/ai' },
+  { icon: Sparkles, label: 'AI Workspace', href: '/cms/ai' },
 ]
 
 interface CMSLayoutClientProps {
