@@ -15,7 +15,7 @@ import type {
   GenerateFAQInput,
 } from './schemas'
 
-export const PROMPT_VERSION = 'v4'
+export const PROMPT_VERSION = 'v5'
 
 export type AIContentProfile = 'post' | 'panduan' | 'workspace'
 
@@ -67,28 +67,51 @@ ${getProfileDirective(profile)}`
 }
 
 function getArkaraImageStyleAnchor(): string {
-  return `editorial illustration with graphic novel influence, detailed painterly quality, bold clean linework, National Geographic meets contemporary graphic novel style, rich muted palette with deep forest green and warm amber accents, cinematic narrative composition, modern Indonesian setting, empowering and calm mood`
+  return `editorial illustration with graphic novel influence, detailed painterly quality, bold clean linework, National Geographic meets contemporary graphic novel style, rich muted palette with deep forest green and warm amber accents, cinematic narrative composition, modern Indonesian setting`
 }
 
 function getArkaraImageProfileDirection(profile: AIContentProfile): string {
   switch (profile) {
     case 'panduan':
       return `Untuk panduan teknis Arkara:
-- Pertahankan signature style Arkara, tetapi komposisi harus lebih informatif dan terbaca jelas
+- Gunakan signature style Arkara sebagai dasar visual, tetapi tone adegan harus mengikuti isi artikel
+- Komposisi harus lebih informatif dan terbaca jelas
 - Utamakan medium shot, overhead, close-up proses, atau scene setup yang membantu pembaca memahami alat dan tindakan
 - Fokus pada prosedur, alat, tangan yang sedang bekerja, hubungan antarobjek, dan situasi lapangan/rumah yang realistis
 - Hindari adegan yang terlalu heroik jika mengurangi kejelasan instruksional`
     case 'post':
       return `Untuk blog post Arkara:
-- Pertahankan signature style Arkara dengan pendekatan lebih naratif dan editorial
+- Gunakan signature style Arkara sebagai dasar visual, tetapi tone adegan harus mengikuti isi artikel
+- Pendekatan boleh lebih naratif dan editorial
 - Utamakan storytelling visual, momen manusiawi, dan komposisi cover yang kuat
 - Fokus pada rasa kompeten, tenang, siap, dan mandiri dalam konteks survival perkotaan maupun rumah tangga Indonesia
 - Boleh lebih atmosferik selama tetap grounded dan relevan dengan isi artikel`
     default:
       return `Untuk workspace Arkara:
-- Pertahankan signature style Arkara secara konsisten
+- Gunakan signature style Arkara secara konsisten, tetapi tone visual tetap harus mengikuti isi artikel
 - Jaga keseimbangan antara kejelasan informasi dan kekuatan storytelling visual`
   }
+}
+
+function getArkaraImageToneDirection(): string {
+  return `Tone visual harus diturunkan dari artikel, bukan dipilih sembarangan:
+- Jika artikelnya serius, kritis, atau membahas krisis: gunakan mood serius, tenang, terkendali, grounded, tanpa dramatisasi berlebihan
+- Jika artikelnya teknis dan instruksional: gunakan mood fokus, teliti, kompeten, jelas, dan praktis
+- Jika artikelnya ringan, rumah tangga, atau lebih casual: gunakan mood hangat, natural, approachable, lived-in, dan sehari-hari
+- Jika artikelnya optimistis atau solutif: boleh terasa empowering, tetapi tetap realistis dan tidak bombastis
+- Ekspresi wajah, lighting, color emphasis, gesture, dan framing harus selaras dengan tone artikel`
+}
+
+function getGeminiSafeImageDirection(): string {
+  return `Guardrail agar prompt lebih aman lolos seleksi Gemini:
+- Hindari gore, luka terbuka, mayat, tubuh rusak, darah, atau detail cedera eksplisit
+- Hindari kekerasan eksplisit, ancaman langsung, eksekusi, penyiksaan, atau adegan konflik yang konfrontatif
+- Hindari sexualized content, nudity, fetish framing, atau eksploitasi tubuh
+- Hindari kebencian, simbol ekstrem, propaganda, atau dehumanisasi kelompok tertentu
+- Hindari tokoh publik nyata, selebritas, dan wajah yang diminta menyerupai orang sungguhan yang dikenali publik
+- Hindari logo brand yang jelas, tulisan signage yang mudah dibaca, watermark, atau teks besar di dalam gambar
+- Hindari adegan bencana yang terlalu chaos, kerumunan panik, atau situasi yang terasa seperti berita tragedi eksplisit kecuali benar-benar penting, dan tetap tampilkan secara non-graphic
+- Jika topik menyentuh risiko, senjata, kebakaran, medis, atau keamanan, tampilkan secara aman, non-graphic, dan tidak mengagungkan bahaya`
 }
 
 export function buildSlugPrompt(
@@ -288,6 +311,8 @@ export function buildImagePromptsPrompt(
 
   const arkaraStyleAnchor = getArkaraImageStyleAnchor()
   const imageDirection = getArkaraImageProfileDirection(profile)
+  const toneDirection = getArkaraImageToneDirection()
+  const geminiSafeDirection = getGeminiSafeImageDirection()
 
   return [
     { role: 'system', content: buildSystemPrompt(profile) },
@@ -304,6 +329,10 @@ Signature visual Arkara yang WAJIB menjadi dasar setiap prompt:
 ${arkaraStyleAnchor}
 
 ${imageDirection}
+
+${toneDirection}
+
+${geminiSafeDirection}
 
 Balas dalam JSON format ini:
 {
@@ -327,9 +356,9 @@ Balas dalam JSON format ini:
 Aturan prompt:
 - Setiap prompt harus panjang, kaya detail, dan siap langsung dipakai
 - Gunakan bahasa Inggris untuk isi prompt agar kualitas text-to-image lebih stabil
-- Setiap prompt harus secara eksplisit mengikuti signature style Arkara di atas
+- Setiap prompt harus secara eksplisit mengikuti signature style Arkara di atas, tetapi mood dan adegan harus menyesuaikan isi artikel
 - Tulis prompt sebagai satu kalimat/deskripsi panjang yang natural untuk model image generation
-- Sebaiknya buka prompt dengan style anchor Arkara, lalu lanjutkan dengan detail adegan, subjek, lighting, mood, dan komposisi
+- Sebaiknya buka prompt dengan style anchor Arkara, lalu lanjutkan dengan detail adegan, subjek, lighting, mood, komposisi, dan konteks Indonesia
 - Jangan menulis placeholder seperti [subject] atau [style]
 - Hindari teks yang harus muncul di gambar
 - Jangan gunakan istilah yang terlalu abstrak; selalu visual dan konkret
@@ -338,9 +367,12 @@ Aturan prompt:
 - Jangan ulang adegan yang sama hanya dengan sinonim kecil
 - Pastikan detail gambar tetap setia pada isi artikel; jangan menambahkan klaim, alat, atau situasi yang tidak didukung artikel
 - Jika artikel menyebut daftar alat atau langkah spesifik, gunakan hanya alat dan tindakan itu sebagai dasar visual utama
+- Jika artikel bernada serius, jangan ubah menjadi terlalu cozy, playful, atau inspirational
+- Jika artikel bernada casual atau rumah tangga, jangan buat jadi terlalu gelap, apokaliptik, atau militaristik
 - Prioritaskan wajah, pakaian, arsitektur, peralatan dapur, rumah, jalan, atau lingkungan yang terasa Indonesia modern bila relevan
 - Hindari photorealism generik, glossy 3D render, flat vector style, anime look, dan sci-fi aesthetics
-- Hindari logo merek, signage yang terbaca jelas, atau teks besar di dalam gambar kecuali artikel memang menuntutnya
+- Hindari logo merek, signage yang terbaca jelas, teks besar di dalam gambar, atau detail yang berpotensi memicu penolakan moderation
+- Gunakan kata-kata yang aman dan deskriptif; jangan gunakan phrasing yang terdengar eksplisit, sensasional, atau shock-value
 - Hasil akhir harus terasa premium, relevan, dan kuat untuk visual cover`,
     },
   ]
