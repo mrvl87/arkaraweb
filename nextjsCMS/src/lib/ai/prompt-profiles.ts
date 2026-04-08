@@ -3,6 +3,7 @@
  */
 
 import type { AIMessage } from './client'
+import type { ClaimExtractionResult } from './claim-extractor'
 import type {
   GenerateSlugInput,
   GenerateSEOPackInput,
@@ -13,9 +14,11 @@ import type {
   RewriteSectionInput,
   ExpandSectionInput,
   GenerateFAQInput,
+  ResearchWithWebInput,
+  VerifyLatestFactsInput,
 } from './schemas'
 
-export const PROMPT_VERSION = 'v5'
+export const PROMPT_VERSION = 'v6'
 
 export type AIContentProfile = 'post' | 'panduan' | 'workspace'
 
@@ -532,6 +535,189 @@ Aturan:
 - Jawaban ringkas tapi informatif (2-4 kalimat)
 - Fokus pada aspek praktis
 ${faqDirection}`,
+    },
+  ]
+}
+
+export function buildResearchWithWebPrompt(
+  input: ResearchWithWebInput,
+  profile: AIContentProfile = 'workspace',
+  extraction?: ClaimExtractionResult
+): AIMessage[] {
+  const contentContext = input.content
+    ? `\n\nRingkasan draft atau bahan awal:\n"${input.content.substring(0, 3000)}"`
+    : ''
+  const questionContext = input.question
+    ? `\nPertanyaan utama dari editor: ${input.question}`
+    : ''
+  const audienceContext = input.audience
+    ? `\nAudiens target: ${input.audience}`
+    : ''
+  const notesContext = input.notes
+    ? `\nCatatan editor: ${input.notes}`
+    : ''
+
+  const profileDirection =
+    profile === 'panduan'
+      ? `- Prioritaskan query tentang prosedur, standar, risiko, alat, regulasi, dan langkah teknis
+- Hindari agenda riset yang terlalu editorial jika tidak membantu akurasi panduan`
+      : `- Prioritaskan query tentang statistik, perkembangan terbaru, konteks publik, tren, regulasi, dan data pendukung
+- Sisakan ruang untuk angle editorial selama tetap berfungsi sebagai riset faktual`
+
+  const extractionContext = extraction
+    ? `\n\nKlaim prioritas hasil ekstraksi awal:
+${extraction.prioritizedClaims.length > 0
+  ? extraction.prioritizedClaims
+      .map(
+        (claim, index) =>
+          `${index + 1}. [${claim.category}] ${claim.claim} (sinyal: ${claim.signals.join(', ')})`
+      )
+      .join('\n')
+  : '- Tidak ada klaim prioritas yang sangat kuat; fokuskan riset pada bagian artikel yang paling rawan basi.'}
+
+Ringkasan ekstraksi:
+- Total kalimat dianalisis: ${extraction.summary.totalSentences}
+- Klaim prioritas: ${extraction.summary.prioritizedCount}
+- Time-sensitive: ${extraction.summary.timeSensitiveCount}
+- High-risk: ${extraction.summary.highRiskCount}`
+    : ''
+
+  return [
+    {
+      role: 'system',
+      content: `${buildSystemPrompt(profile)}
+
+Anda sedang menyiapkan brief riset web, BUKAN mengarang hasil browsing.
+Jangan berpura-pura telah membuka situs web atau mengetahui fakta terbaru jika belum diberikan sumber.
+Tugas Anda adalah mengidentifikasi apa saja yang perlu dicari, pertanyaan apa yang perlu dijawab, dan query apa yang paling efektif untuk pencarian web lanjutan.`,
+    },
+    {
+      role: 'user',
+      content: `Siapkan brief "research with web" untuk artikel atau topik berikut.
+
+Judul: "${input.title}"${questionContext}${audienceContext}${notesContext}${contentContext}${extractionContext}
+
+Balas dalam JSON format ini:
+{
+  "research_goal": "tujuan riset ringkas dan jelas",
+  "recommended_queries": [
+    "query 1",
+    "query 2",
+    "query 3"
+  ],
+  "research_agenda": [
+    {
+      "question": "pertanyaan yang perlu dijawab lewat web",
+      "reason": "kenapa ini penting untuk akurasi atau aktualitas artikel",
+      "suggested_query": "query pencarian yang disarankan",
+      "priority": "high"
+    }
+  ],
+  "watchouts": ["hal yang rawan basi, salah, atau perlu sumber primer"]
+}
+
+Aturan:
+- Fokus pada hal yang benar-benar perlu dibrowse agar artikel lebih akurat dan aktual
+- Prioritaskan klaim sensitif waktu: regulasi, statistik, harga, produk, standar, kebijakan, risiko keselamatan, kesehatan, dan berita terbaru
+- Jangan mengklaim hasil pencarian atau menyebut sumber tertentu jika belum diberikan
+- Gunakan query pencarian yang realistis dan siap dipakai editor atau agent verifier
+- Minimal 3 recommended queries dan 3 research agenda items
+${profileDirection}`,
+    },
+  ]
+}
+
+export function buildVerifyLatestFactsPrompt(
+  input: VerifyLatestFactsInput,
+  profile: AIContentProfile = 'workspace',
+  extraction?: ClaimExtractionResult,
+  contentOverride?: string
+): AIMessage[] {
+  const excerptContext = input.excerpt
+    ? `\nExcerpt:\n"${input.excerpt}"`
+    : ''
+  const focusAreaContext = input.focus_area
+    ? `\nFokus pengecekan editor: ${input.focus_area}`
+    : ''
+  const contentForReview = contentOverride ?? input.content.substring(0, 7000)
+
+  const profileDirection =
+    profile === 'panduan'
+      ? `- Utamakan klaim tentang prosedur, keamanan, alat, spesifikasi, standar, regulasi, dan langkah teknis
+- Jika ada langkah yang berpotensi berisiko, tandai dengan lebih ketat`
+      : `- Utamakan klaim tentang statistik, tren, kebijakan, produk, tanggal, harga, angka, dan konteks publik terbaru
+- Bedakan klaim opini/editorial dari klaim faktual yang harus diverifikasi`
+
+  const prioritizedClaimsContext = extraction
+    ? `\n\nKlaim prioritas hasil ekstraksi awal:
+${extraction.prioritizedClaims.length > 0
+  ? extraction.prioritizedClaims
+      .map(
+        (claim, index) =>
+          `${index + 1}. [${claim.category}] ${claim.claim} (sinyal: ${claim.signals.join(', ')})`
+      )
+      .join('\n')
+  : '- Tidak ada klaim prioritas yang dominan. Cari klaim faktual paling signifikan dari draft.'}
+
+Klaim evergreen pendukung:
+${extraction.evergreenClaims.length > 0
+  ? extraction.evergreenClaims
+      .map((claim, index) => `${index + 1}. ${claim.claim}`)
+      .join('\n')
+  : '- Tidak ada klaim evergreen pendukung yang perlu ditonjolkan.'}
+
+Ringkasan ekstraksi:
+- Total kalimat dianalisis: ${extraction.summary.totalSentences}
+- Klaim prioritas: ${extraction.summary.prioritizedCount}
+- Time-sensitive: ${extraction.summary.timeSensitiveCount}
+- High-risk: ${extraction.summary.highRiskCount}`
+    : ''
+
+  return [
+    {
+      role: 'system',
+      content: `${buildSystemPrompt(profile)}
+
+Anda sedang melakukan preflight fact-check review tanpa browsing web langsung.
+Jangan pernah berpura-pura telah memverifikasi ke internet.
+Jika sebuah klaim membutuhkan data terbaru atau sumber eksternal, tandai sebagai "needs_web_verification".
+Jika sebuah klaim tampak terlalu absolut, meragukan, atau tidak didukung naskah, Anda boleh menandainya sebagai "needs_update", "unsupported", atau "uncertain".`,
+    },
+    {
+      role: 'user',
+      content: `Tinjau draft berikut dan buat laporan verifikasi fakta awal.
+
+Judul: "${input.title}"${focusAreaContext}${excerptContext}${prioritizedClaimsContext}
+
+Isi draft:
+"${contentForReview}"
+
+Balas dalam JSON format ini:
+{
+  "summary": "ringkasan singkat kondisi faktual draft",
+  "checked_at": "",
+  "claims": [
+    {
+      "claim": "klaim faktual yang perlu perhatian",
+      "status": "needs_web_verification",
+      "reason": "alasan status ini dipilih",
+      "suggested_revision": "opsional, revisi yang lebih aman atau lebih jujur",
+      "sources": []
+    }
+  ]
+}
+
+Aturan:
+- Fokus terutama pada klaim prioritas hasil ekstraksi di atas, lalu tambahkan klaim lain hanya jika benar-benar penting
+- Abaikan opini, gaya bahasa, dan pernyataan yang jelas subjektif
+- Maksimal 8 klaim paling penting
+- Jika klaim sensitif terhadap waktu atau bergantung data eksternal terbaru, gunakan "needs_web_verification"
+- Gunakan "needs_update" jika phrasing tampak terlalu pasti, berisiko basi, atau perlu pelembutan
+- Gunakan "unsupported" jika klaim tampak dibuat-buat, terlalu spesifik tanpa dasar, atau tidak didukung konteks draft
+- Gunakan "uncertain" jika ada sinyal masalah tetapi belum cukup jelas
+- Jangan mengarang URL sumber; biarkan "sources" kosong jika belum ada
+- Biarkan "checked_at" sebagai string kosong
+${profileDirection}`,
     },
   ]
 }

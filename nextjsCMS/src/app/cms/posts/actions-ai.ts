@@ -16,6 +16,8 @@ import {
   rewriteSection,
   expandSection,
   generateFAQ,
+  researchWithWeb,
+  verifyLatestFacts,
 } from '@/lib/ai/operations'
 import type {
   GenerateSlugInput,
@@ -26,6 +28,8 @@ import type {
   RewriteSectionInput,
   ExpandSectionInput,
   GenerateFAQInput,
+  ResearchWithWebInput,
+  VerifyLatestFactsInput,
 } from '@/lib/ai/schemas'
 
 interface PostContext {
@@ -83,6 +87,20 @@ export async function postAIExpandSection(input: ExpandSectionInput, ctx?: PostC
 
 export async function postAIGenerateFAQ(input: GenerateFAQInput, ctx?: PostContext) {
   return generateFAQ(input, {
+    targetType: 'post',
+    targetId: ctx?.postId,
+  })
+}
+
+export async function postAIResearchWithWeb(input: ResearchWithWebInput, ctx?: PostContext) {
+  return researchWithWeb(input, {
+    targetType: 'post',
+    targetId: ctx?.postId,
+  })
+}
+
+export async function postAIVerifyLatestFacts(input: VerifyLatestFactsInput, ctx?: PostContext) {
+  return verifyLatestFacts(input, {
     targetType: 'post',
     targetId: ctx?.postId,
   })

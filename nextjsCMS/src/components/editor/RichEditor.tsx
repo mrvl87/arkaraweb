@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { 
   EditorRoot, 
   EditorContent, 
@@ -47,25 +47,18 @@ import {
   Link as LinkIcon,
   AlertTriangle,
   Code2,
+  ChevronLeft,
   Layout,
   Table as TableIcon,
   Sparkles,
-  Wand2,
-  ArrowDownToLine,
-  MessageSquareQuote,
-  Copy,
-  Replace,
+  Search,
   Loader2
 } from 'lucide-react'
 import { MediaPicker } from '../media/media-picker'
 import MarkdownIt from 'markdown-it'
 import type {
-  RewriteSectionInput,
-  RewriteSectionOutput,
-  ExpandSectionInput,
-  ExpandSectionOutput,
-  GenerateFAQInput,
-  GenerateFAQOutput,
+  VerifyLatestFactsInput,
+  VerifyLatestFactsOutput,
 } from '@/lib/ai/schemas'
 import "./editor.css"
 
@@ -156,16 +149,14 @@ const markdownRenderer = new MarkdownIt({
   linkify: true,
 })
 
-type AIResponse<T> = Promise<
-  | { success: true; data: T; model: string }
-  | { success: false; error: string }
->
-
 export interface RichEditorAIConfig {
   title: string
-  rewriteSection: (input: RewriteSectionInput) => AIResponse<RewriteSectionOutput>
-  expandSection: (input: ExpandSectionInput) => AIResponse<ExpandSectionOutput>
-  generateFAQ: (input: GenerateFAQInput) => AIResponse<GenerateFAQOutput>
+  verifyLatestFacts: (
+    input: VerifyLatestFactsInput
+  ) => Promise<
+    | { success: true; data: VerifyLatestFactsOutput; model: string }
+    | { success: false; error: string }
+  >
 }
 
 interface RichEditorProps {
@@ -354,67 +345,6 @@ export function RichEditor({ value, onChange, placeholder, onEditorReady, aiConf
               </EditorCommandList>
             </EditorCommand>
 
-            {/* BUBBLE MENU */}
-            <EditorBubble className='flex w-fit max-w-[90vw] overflow-hidden rounded-md border border-gray-200 bg-white shadow-xl'>
-              <EditorBubbleItem
-                onSelect={(editor) => editor.chain().focus().toggleBold().run()}
-                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
-              >
-                <Bold className='h-4 w-4' />
-              </EditorBubbleItem>
-              <EditorBubbleItem
-                onSelect={(editor) => editor.chain().focus().toggleItalic().run()}
-                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
-              >
-                <Italic className='h-4 w-4' />
-              </EditorBubbleItem>
-              <EditorBubbleItem
-                onSelect={(editor) => editor.chain().focus().toggleUnderline().run()}
-                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
-              >
-                <Underline className='h-4 w-4' />
-              </EditorBubbleItem>
-              <EditorBubbleItem
-                onSelect={(editor) => editor.chain().focus().toggleCode().run()}
-                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
-              >
-                <Code className='h-4 w-4' />
-              </EditorBubbleItem>
-              <EditorBubbleItem
-                onSelect={(editor) => {
-                  const previousUrl = editor.getAttributes('link').href;
-                  const url = window.prompt('URL Tautan:', previousUrl || '');
-                  if (url === null) return;
-                  if (url === '') {
-                    editor.chain().focus().extendMarkRange('link').unsetLink().run();
-                    return;
-                  }
-                  editor.chain().focus().extendMarkRange('link').setLink({ href: url, target: '_blank' }).run();
-                }}
-                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
-              >
-                <LinkIcon className='h-4 w-4' />
-              </EditorBubbleItem>
-              <EditorBubbleItem
-                onSelect={(editor) => {
-                  const isHighlighted = editor.isActive('highlight', { color: '#FDEAEA' });
-                  if (isHighlighted) {
-                    editor.chain().focus().unsetHighlight().unsetColor().run();
-                  } else {
-                    editor.chain().focus().setHighlight({ color: '#FDEAEA' }).setColor('#B85C5C').run();
-                  }
-                }}
-                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-red-50 aria-selected:text-red-600'
-              >
-                <AlertTriangle className='h-4 w-4' />
-              </EditorBubbleItem>
-              <EditorBubbleItem
-                onSelect={(editor) => editor.chain().focus().deleteSelection().run()}
-                className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-red-50 aria-selected:text-red-600'
-              >
-                <Trash2 className='h-4 w-4' />
-              </EditorBubbleItem>
-            </EditorBubble>
           </EditorContent>
         </EditorRoot>
       )}
@@ -434,17 +364,31 @@ function EditorToolbar({
   aiConfig?: RichEditorAIConfig
 }) {
   const { editor } = useEditor();
-  const [activeTool, setActiveTool] = useState<'rewrite' | 'expand' | 'faq' | null>(null)
-  const [instruction, setInstruction] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [preview, setPreview] = useState<{
-    operation: 'rewrite' | 'expand' | 'faq'
-    selection: { from: number; to: number }
-    originalText: string
-    resultMarkdown: string
-  } | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [selectionAIState, setSelectionAIState] = useState<{
+    open: boolean
+    stage: 'menu' | 'loading' | 'results'
+    mode: 'hallucination' | 'fact_check' | null
+    query: string
+    selection: { from: number; to: number; text: string } | null
+    suggestions: Array<{
+      id: string
+      label: string
+      reason: string
+      replacement: string
+      status: VerifyLatestFactsOutput['claims'][number]['status']
+    }>
+    summary: string | null
+    error: string | null
+  }>({
+    open: false,
+    stage: 'menu',
+    mode: null,
+    query: '',
+    selection: null,
+    suggestions: [],
+    summary: null,
+    error: null,
+  })
 
   useEffect(() => {
     if (!onEditorReady) return
@@ -495,150 +439,179 @@ function EditorToolbar({
     }
   }, [editor, onContentChange, onEditorReady])
 
-  if (!editor) return null;
-
-  const selection = editor.state.selection
-  const hasSelection = !selection.empty
-  const selectedText = hasSelection
+  const selection = editor?.state.selection
+  const hasSelection = Boolean(selection && !selection.empty)
+  const selectedText = hasSelection && selection
     ? editor.state.doc.textBetween(selection.from, selection.to, '\n\n').trim()
     : ''
 
-  const closeAIPanel = () => {
-    setActiveTool(null)
-    setInstruction('')
-    setError(null)
-    setPreview(null)
-    setCopied(false)
-    setIsLoading(false)
+  useEffect(() => {
+    if (!hasSelection && selectionAIState.open) {
+      setSelectionAIState((current) => ({
+        ...current,
+        open: false,
+        stage: 'menu',
+        mode: null,
+        query: '',
+        selection: null,
+        suggestions: [],
+        summary: null,
+        error: null,
+      }))
+    }
+  }, [hasSelection, selectionAIState.open])
+
+  if (!editor || !selection) return null;
+
+  const filteredModes = useMemo(() => {
+    const options = [
+      {
+        id: 'hallucination' as const,
+        label: 'Hallucination Check',
+        description: 'Cari overclaim, unsupported phrasing, dan bagian yang terasa ngarang.',
+        icon: AlertTriangle,
+      },
+      {
+        id: 'fact_check' as const,
+        label: 'Fact Check',
+        description: 'Cek klaim yang sensitif waktu, angka, regulasi, atau data terbaru.',
+        icon: Search,
+      },
+    ]
+
+    const query = selectionAIState.query.trim().toLowerCase()
+    if (!query) {
+      return options
+    }
+
+    return options.filter((option) =>
+      `${option.label} ${option.description}`.toLowerCase().includes(query)
+    )
+  }, [selectionAIState.query])
+
+  const resetSelectionAI = () => {
+    setSelectionAIState({
+      open: false,
+      stage: 'menu',
+      mode: null,
+      query: '',
+      selection: null,
+      suggestions: [],
+      summary: null,
+      error: null,
+    })
   }
 
-  const openAITool = (operation: 'rewrite' | 'expand' | 'faq') => {
-    setActiveTool(operation)
-    setError(null)
-    setPreview(null)
-    setCopied(false)
+  const openSelectionAI = () => {
+    if (!hasSelection || !selectedText) {
+      return
+    }
+
+    setSelectionAIState({
+      open: true,
+      stage: 'menu',
+      mode: null,
+      query: '',
+      selection: {
+        from: selection.from,
+        to: selection.to,
+        text: selectedText,
+      },
+      suggestions: [],
+      summary: null,
+      error: null,
+    })
   }
 
-  const runAITool = async (operation: 'rewrite' | 'expand' | 'faq') => {
-    if (!aiConfig || !selectedText) return
+  const runSelectionAICheck = async (mode: 'hallucination' | 'fact_check') => {
+    if (!aiConfig || !selectionAIState.selection?.text) {
+      return
+    }
 
-    setActiveTool(operation)
-    setIsLoading(true)
-    setError(null)
-    setPreview(null)
-    setCopied(false)
-
-    const currentSelection = { from: selection.from, to: selection.to }
+    setSelectionAIState((current) => ({
+      ...current,
+      stage: 'loading',
+      mode,
+      error: null,
+      suggestions: [],
+      summary: null,
+    }))
 
     try {
-      if (operation === 'rewrite') {
-        const response = await aiConfig.rewriteSection({
-          section_text: selectedText,
-          instruction: instruction || undefined,
-        })
-
-        if (!response.success) {
-          setError(response.error)
-          return
-        }
-
-        setPreview({
-          operation,
-          selection: currentSelection,
-          originalText: selectedText,
-          resultMarkdown: response.data.rewritten_text,
-        })
-        return
-      }
-
-      if (operation === 'expand') {
-        const response = await aiConfig.expandSection({
-          section_text: selectedText,
-          direction: instruction || undefined,
-        })
-
-        if (!response.success) {
-          setError(response.error)
-          return
-        }
-
-        setPreview({
-          operation,
-          selection: currentSelection,
-          originalText: selectedText,
-          resultMarkdown: response.data.expanded_text,
-        })
-        return
-      }
-
-      const response = await aiConfig.generateFAQ({
+      const response = await aiConfig.verifyLatestFacts({
         title: aiConfig.title,
-        content: selectedText,
+        content: selectionAIState.selection.text,
+        focus_area:
+          mode === 'hallucination'
+            ? 'Hallucination check: prioritaskan unsupported, uncertain, overclaim, absolute phrasing, internal inconsistency, dan revisi yang lebih jujur.'
+            : 'Fact check: prioritaskan klaim yang sensitif waktu, angka, tanggal, regulasi, safety, dan revisi yang lebih aman secara faktual.',
       })
 
       if (!response.success) {
-        setError(response.error)
+        setSelectionAIState((current) => ({
+          ...current,
+          stage: 'results',
+          mode,
+          error: response.error,
+        }))
         return
       }
 
-      setPreview({
-        operation,
-        selection: currentSelection,
-        originalText: selectedText,
-        resultMarkdown: formatFAQMarkdown(response.data),
-      })
+      const prioritizedStatuses =
+        mode === 'hallucination'
+          ? ['unsupported', 'uncertain', 'needs_update', 'needs_web_verification']
+          : ['needs_web_verification', 'needs_update', 'unsupported', 'uncertain']
+
+      const suggestions = response.data.claims
+        .filter((claim) => claim.suggested_revision?.trim())
+        .sort(
+          (a, b) =>
+            prioritizedStatuses.indexOf(a.status) - prioritizedStatuses.indexOf(b.status)
+        )
+        .slice(0, 4)
+        .map((claim, index) => ({
+          id: `${claim.status}-${index}`,
+          label:
+            mode === 'hallucination'
+              ? `Perhalus klaim ${index + 1}`
+              : `Perbaiki fakta ${index + 1}`,
+          reason: claim.reason,
+          replacement: claim.suggested_revision!.trim(),
+          status: claim.status,
+        }))
+
+      setSelectionAIState((current) => ({
+        ...current,
+        stage: 'results',
+        mode,
+        summary: response.data.summary,
+        error: null,
+        suggestions,
+      }))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'AI tool gagal dijalankan.')
-    } finally {
-      setIsLoading(false)
+      setSelectionAIState((current) => ({
+        ...current,
+        stage: 'results',
+        mode,
+        error: err instanceof Error ? err.message : 'AI check gagal dijalankan.',
+      }))
     }
   }
 
-  const replaceSelectionWithPreview = () => {
-    if (!preview) return
+  const applySelectionSuggestion = (replacement: string) => {
+    if (!selectionAIState.selection) {
+      return
+    }
 
-    editor
-      .chain()
-      .focus()
-      .insertContentAt(preview.selection, markdownRenderer.render(preview.resultMarkdown))
-      .run()
+    editor.chain().focus().insertContentAt(
+      {
+        from: selectionAIState.selection.from,
+        to: selectionAIState.selection.to,
+      },
+      replacement
+    ).run()
     onContentChange(editor.getHTML())
-
-    closeAIPanel()
-  }
-
-  const insertPreviewBelowSelection = () => {
-    if (!preview) return
-
-    editor
-      .chain()
-      .focus()
-      .insertContentAt(preview.selection.to, `<p></p>${markdownRenderer.render(preview.resultMarkdown)}`)
-      .run()
-    onContentChange(editor.getHTML())
-
-    closeAIPanel()
-  }
-
-  const appendPreviewToEnd = () => {
-    if (!preview) return
-
-    const currentHTML = editor.getHTML()
-    const nextHTML = currentHTML && currentHTML !== '<p></p>'
-      ? `${currentHTML}<p></p>${markdownRenderer.render(preview.resultMarkdown)}`
-      : markdownRenderer.render(preview.resultMarkdown)
-
-    editor.commands.setContent(nextHTML, true)
-    onContentChange(editor.getHTML())
-    closeAIPanel()
-  }
-
-  const copyPreview = async () => {
-    if (!preview) return
-
-    await navigator.clipboard.writeText(preview.resultMarkdown)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    resetSelectionAI()
   }
 
   return (
@@ -663,42 +636,6 @@ function EditorToolbar({
           <Trash2 className="w-4 h-4" />
         </button>
 
-        {aiConfig && (
-          <>
-            <div className="w-[1px] h-4 bg-gray-200 mx-1" />
-            <button
-              type="button"
-              onClick={() => openAITool('rewrite')}
-              disabled={!hasSelection || isLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all border border-transparent hover:border-blue-200 disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Tulis ulang teks yang dipilih"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-              Rewrite
-            </button>
-            <button
-              type="button"
-              onClick={() => openAITool('expand')}
-              disabled={!hasSelection || isLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all border border-transparent hover:border-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Perluas teks yang dipilih"
-            >
-              <Wand2 className="w-3.5 h-3.5 text-emerald-500" />
-              Expand
-            </button>
-            <button
-              type="button"
-              onClick={() => openAITool('faq')}
-              disabled={!hasSelection || isLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all border border-transparent hover:border-amber-200 disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Buat FAQ dari teks yang dipilih"
-            >
-              <MessageSquareQuote className="w-3.5 h-3.5 text-amber-500" />
-              FAQ
-            </button>
-          </>
-        )}
-
         <div className="flex-1" />
 
         <button
@@ -711,152 +648,231 @@ function EditorToolbar({
         </button>
       </div>
 
-      {aiConfig && activeTool && (
-        <div className="border-t border-gray-100 bg-white px-4 py-4 space-y-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-bold text-arkara-green">
-                {activeTool === 'rewrite' && 'AI Rewrite Selection'}
-                {activeTool === 'expand' && 'AI Expand Selection'}
-                {activeTool === 'faq' && 'AI Generate FAQ'}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Hasil AI selalu ditinjau dulu sebelum mengganti atau menambahkan konten ke editor.
-              </p>
+      <EditorBubble
+        className={
+          selectionAIState.open
+            ? 'w-[420px] max-w-[92vw] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl'
+            : 'flex w-fit max-w-[90vw] overflow-hidden rounded-md border border-gray-200 bg-white shadow-xl'
+        }
+      >
+        {selectionAIState.open ? (
+          <div className="w-full">
+            <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 bg-gray-50/80">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-900">AI Selection Check</p>
+                <p className="text-xs text-gray-500 truncate">
+                  {selectionAIState.selection?.text || 'Pilih teks untuk memulai'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectionAIState.stage !== 'menu' && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectionAIState((current) => ({
+                        ...current,
+                        stage: 'menu',
+                        mode: null,
+                        query: '',
+                        suggestions: [],
+                        summary: null,
+                        error: null,
+                      }))
+                    }
+                    className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] font-bold text-gray-600 hover:bg-gray-100 transition-all"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                    Kembali
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={resetSelectionAI}
+                  className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] font-bold text-gray-600 hover:bg-gray-100 transition-all"
+                >
+                  Tutup
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={closeAIPanel}
-              className="px-2.5 py-1 rounded-lg bg-gray-100 text-xs font-bold text-gray-500 hover:bg-gray-200 transition-all"
-            >
-              Tutup
-            </button>
-          </div>
 
-          {(activeTool === 'rewrite' || activeTool === 'expand') && (
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                Instruksi Tambahan
-              </label>
-              <input
-                type="text"
-                value={instruction}
-                onChange={(event) => setInstruction(event.target.value)}
-                placeholder={
-                  activeTool === 'rewrite'
-                    ? 'Contoh: buat lebih ringkas, lebih persuasif, atau lebih formal'
-                    : 'Contoh: tambahkan contoh praktis atau langkah yang lebih detail'
-                }
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none text-sm"
-              />
-            </div>
-          )}
+            {selectionAIState.stage === 'menu' && (
+              <div className="p-3 space-y-3">
+                <div className="rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
+                  <input
+                    type="text"
+                    value={selectionAIState.query}
+                    onChange={(event) =>
+                      setSelectionAIState((current) => ({
+                        ...current,
+                        query: event.target.value,
+                      }))
+                    }
+                    placeholder="Cari command..."
+                    className="w-full bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none"
+                  />
+                </div>
 
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-2">
-              Teks Terpilih
-            </span>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
-              {selectedText || 'Pilih teks di editor untuk memakai AI tools ini.'}
-            </p>
-          </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
+                  {filteredModes.length > 0 ? (
+                    filteredModes.map((option) => {
+                      const Icon = option.icon
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => runSelectionAICheck(option.id)}
+                          className="flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100">
+                            <Icon className="h-4 w-4 text-gray-700" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900">{option.label}</p>
+                            <p className="text-xs leading-relaxed text-gray-500">{option.description}</p>
+                          </div>
+                        </button>
+                      )
+                    })
+                  ) : (
+                    <div className="px-3 py-6 text-center text-sm text-gray-400">
+                      Command tidak ditemukan.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-          {!preview && (
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => runAITool(activeTool)}
-                disabled={!hasSelection || isLoading}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-arkara-amber text-arkara-green text-sm font-bold hover:bg-arkara-amber/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                Jalankan AI
-              </button>
-              {!hasSelection && (
-                <span className="text-xs text-red-500">
-                  Pilih teks dulu agar tool AI bisa dijalankan.
-                </span>
-              )}
-            </div>
-          )}
-
-          {error && (
-            <div className="p-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          {preview && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
-                    Sebelum
-                  </span>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
-                    {preview.originalText}
+            {selectionAIState.stage === 'loading' && (
+              <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 px-6 py-8 text-center">
+                <Loader2 className="h-6 w-6 animate-spin text-arkara-amber" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {selectionAIState.mode === 'hallucination' ? 'Menjalankan Hallucination Check' : 'Menjalankan Fact Check'}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Mengolah teks terpilih dan menyiapkan beberapa saran revisi yang bisa langsung dipakai.
                   </p>
                 </div>
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 block">
-                    Saran AI
-                  </span>
-                  <pre className="text-sm text-gray-800 whitespace-pre-wrap break-words font-sans leading-relaxed">
-                    {preview.resultMarkdown}
-                  </pre>
-                </div>
               </div>
+            )}
 
-              <div className="flex flex-wrap items-center gap-3">
-                {(preview.operation === 'rewrite' || preview.operation === 'expand') && (
-                  <button
-                    type="button"
-                    onClick={replaceSelectionWithPreview}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-arkara-amber text-arkara-green text-sm font-bold hover:bg-arkara-amber/90 transition-all"
-                  >
-                    <Replace className="w-4 h-4" />
-                    Replace Selection
-                  </button>
+            {selectionAIState.stage === 'results' && (
+              <div className="p-3 space-y-3">
+                {selectionAIState.summary && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">
+                      Ringkasan
+                    </p>
+                    <p className="mt-1 text-sm text-amber-950">{selectionAIState.summary}</p>
+                  </div>
                 )}
-                <button
-                  type="button"
-                  onClick={insertPreviewBelowSelection}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover:border-emerald-300 hover:bg-emerald-50 transition-all"
-                >
-                  <ArrowDownToLine className="w-4 h-4 text-emerald-600" />
-                  Insert di Bawah
-                </button>
-                {preview.operation === 'faq' && (
-                  <button
-                    type="button"
-                    onClick={appendPreviewToEnd}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover:border-amber-300 hover:bg-amber-50 transition-all"
-                  >
-                    <ArrowDownToLine className="w-4 h-4 text-amber-600" />
-                    Append ke Akhir
-                  </button>
+
+                {selectionAIState.error && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700">
+                    {selectionAIState.error}
+                  </div>
                 )}
-                <button
-                  type="button"
-                  onClick={copyPreview}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all"
-                >
-                  {copied ? <Sparkles className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-gray-500" />}
-                  {copied ? 'Tersalin' : 'Copy Hasil'}
-                </button>
+
+                {!selectionAIState.error && selectionAIState.suggestions.length === 0 && (
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-6 text-center text-sm text-gray-500">
+                    Tidak ada saran revisi yang cukup kuat untuk mengganti teks ini.
+                  </div>
+                )}
+
+                {selectionAIState.suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion.id}
+                    type="button"
+                    onClick={() => applySelectionSuggestion(suggestion.replacement)}
+                    className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm hover:border-arkara-amber/50 hover:bg-amber-50/40 transition-all"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-gray-900">{suggestion.label}</p>
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                        {suggestion.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-gray-500">{suggestion.reason}</p>
+                    <div className="mt-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                      <p className="line-clamp-4 text-sm leading-relaxed text-gray-800">
+                        {suggestion.replacement}
+                      </p>
+                    </div>
+                    <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-arkara-green">
+                      Klik untuk replace selection
+                    </p>
+                  </button>
+                ))}
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        ) : (
+          <>
+            <EditorBubbleItem
+              onSelect={(editor) => editor.chain().focus().toggleBold().run()}
+              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
+            >
+              <Bold className='h-4 w-4' />
+            </EditorBubbleItem>
+            <EditorBubbleItem
+              onSelect={(editor) => editor.chain().focus().toggleItalic().run()}
+              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
+            >
+              <Italic className='h-4 w-4' />
+            </EditorBubbleItem>
+            <EditorBubbleItem
+              onSelect={(editor) => editor.chain().focus().toggleUnderline().run()}
+              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
+            >
+              <Underline className='h-4 w-4' />
+            </EditorBubbleItem>
+            <EditorBubbleItem
+              onSelect={(editor) => editor.chain().focus().toggleCode().run()}
+              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
+            >
+              <Code className='h-4 w-4' />
+            </EditorBubbleItem>
+            <EditorBubbleItem
+              onSelect={(editor) => {
+                const previousUrl = editor.getAttributes('link').href;
+                const url = window.prompt('URL Tautan:', previousUrl || '');
+                if (url === null) return;
+                if (url === '') {
+                  editor.chain().focus().extendMarkRange('link').unsetLink().run();
+                  return;
+                }
+                editor.chain().focus().extendMarkRange('link').setLink({ href: url, target: '_blank' }).run();
+              }}
+              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-amber-50 aria-selected:text-amber-600'
+            >
+              <LinkIcon className='h-4 w-4' />
+            </EditorBubbleItem>
+            <EditorBubbleItem
+              onSelect={(editor) => {
+                const isHighlighted = editor.isActive('highlight', { color: '#FDEAEA' });
+                if (isHighlighted) {
+                  editor.chain().focus().unsetHighlight().unsetColor().run();
+                } else {
+                  editor.chain().focus().setHighlight({ color: '#FDEAEA' }).setColor('#B85C5C').run();
+                }
+              }}
+              className='flex h-10 w-10 items-center justify-center text-gray-600 hover:bg-red-50 aria-selected:text-red-600'
+            >
+              <AlertTriangle className='h-4 w-4' />
+            </EditorBubbleItem>
+            <button
+              type="button"
+              onClick={openSelectionAI}
+              disabled={!aiConfig || !hasSelection}
+              className='flex h-10 items-center justify-center gap-1.5 border-l border-gray-200 px-3 text-xs font-bold text-arkara-green hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40'
+            >
+              <Sparkles className='h-4 w-4 text-arkara-amber' />
+              AI
+            </button>
+          </>
+        )}
+      </EditorBubble>
+
     </div>
   )
-}
-
-function formatFAQMarkdown(data: GenerateFAQOutput): string {
-  return [
-    '## FAQ',
-    '',
-    ...data.faqs.flatMap((item) => [`### ${item.question}`, '', item.answer, '']),
-  ].join('\n').trim()
 }

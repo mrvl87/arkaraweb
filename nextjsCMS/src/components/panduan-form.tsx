@@ -17,9 +17,7 @@ import {
   panduanAIGenerateSeoPack,
   panduanAIGenerateFullDraft,
   panduanAIGenerateImagePrompts,
-  panduanAIRewriteSection,
-  panduanAIExpandSection,
-  panduanAIGenerateFAQ,
+  panduanAIVerifyLatestFacts,
 } from '@/app/cms/panduan/actions-ai'
 import type {
   GenerateSlugOutput,
@@ -312,9 +310,7 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
                 onEditorReady={handleEditorReady}
                 aiConfig={{
                   title: titleValue,
-                  rewriteSection: (input) => panduanAIRewriteSection(input, { panduanId: recordId }),
-                  expandSection: (input) => panduanAIExpandSection(input, { panduanId: recordId }),
-                  generateFAQ: (input) => panduanAIGenerateFAQ(input, { panduanId: recordId }),
+                  verifyLatestFacts: (input) => panduanAIVerifyLatestFacts(input, { panduanId: recordId }),
                 }}
                 onChange={(val: string) => setValue('content', val, { shouldValidate: true, shouldDirty: true })}
               />
