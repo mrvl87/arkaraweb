@@ -17,6 +17,8 @@ import {
   rewriteSection,
   expandSection,
   generateFAQ,
+  researchWithWeb,
+  verifyLatestFacts,
 } from '@/lib/ai/operations'
 import type {
   GenerateSlugInput,
@@ -28,6 +30,8 @@ import type {
   RewriteSectionInput,
   ExpandSectionInput,
   GenerateFAQInput,
+  ResearchWithWebInput,
+  VerifyLatestFactsInput,
 } from '@/lib/ai/schemas'
 
 // ─── Workspace context (no specific target) ──────────────────────
@@ -67,4 +71,12 @@ export async function actionExpandSection(input: ExpandSectionInput) {
 
 export async function actionGenerateFAQ(input: GenerateFAQInput) {
   return generateFAQ(input, workspaceCtx)
+}
+
+export async function actionResearchWithWeb(input: ResearchWithWebInput) {
+  return researchWithWeb(input, workspaceCtx)
+}
+
+export async function actionVerifyLatestFacts(input: VerifyLatestFactsInput) {
+  return verifyLatestFacts(input, workspaceCtx)
 }

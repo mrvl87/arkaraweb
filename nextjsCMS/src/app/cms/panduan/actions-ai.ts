@@ -8,6 +8,8 @@ import {
   rewriteSection,
   expandSection,
   generateFAQ,
+  researchWithWeb,
+  verifyLatestFacts,
 } from '@/lib/ai/operations'
 import type {
   GenerateSlugInput,
@@ -17,6 +19,8 @@ import type {
   RewriteSectionInput,
   ExpandSectionInput,
   GenerateFAQInput,
+  ResearchWithWebInput,
+  VerifyLatestFactsInput,
 } from '@/lib/ai/schemas'
 
 interface PanduanContext {
@@ -67,6 +71,20 @@ export async function panduanAIExpandSection(input: ExpandSectionInput, ctx?: Pa
 
 export async function panduanAIGenerateFAQ(input: GenerateFAQInput, ctx?: PanduanContext) {
   return generateFAQ(input, {
+    targetType: 'panduan',
+    targetId: ctx?.panduanId,
+  })
+}
+
+export async function panduanAIResearchWithWeb(input: ResearchWithWebInput, ctx?: PanduanContext) {
+  return researchWithWeb(input, {
+    targetType: 'panduan',
+    targetId: ctx?.panduanId,
+  })
+}
+
+export async function panduanAIVerifyLatestFacts(input: VerifyLatestFactsInput, ctx?: PanduanContext) {
+  return verifyLatestFacts(input, {
     targetType: 'panduan',
     targetId: ctx?.panduanId,
   })

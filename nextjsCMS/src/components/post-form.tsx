@@ -16,9 +16,7 @@ import {
   postAIGenerateSeoPack,
   postAIGenerateFullDraft,
   postAIGenerateImagePrompts,
-  postAIRewriteSection,
-  postAIExpandSection,
-  postAIGenerateFAQ,
+  postAIVerifyLatestFacts,
 } from '@/app/cms/posts/actions-ai'
 import type { FormAIHistoryState } from '@/lib/ai/history'
 import type { GenerateSlugOutput, GenerateSEOPackOutput } from '@/lib/ai/schemas'
@@ -324,9 +322,7 @@ export function PostForm({ initialData, initialAIState, onSubmit, title }: PostF
                 onEditorReady={handleEditorReady}
                 aiConfig={{
                   title: titleValue,
-                  rewriteSection: (input) => postAIRewriteSection(input, { postId: recordId }),
-                  expandSection: (input) => postAIExpandSection(input, { postId: recordId }),
-                  generateFAQ: (input) => postAIGenerateFAQ(input, { postId: recordId }),
+                  verifyLatestFacts: (input) => postAIVerifyLatestFacts(input, { postId: recordId }),
                 }}
                 onChange={(val: string) => {
                   setValue('content', val, { 

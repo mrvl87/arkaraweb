@@ -16,6 +16,8 @@ export const AI_OPERATIONS = [
   'rewrite_section',
   'expand_section',
   'generate_faq',
+  'research_with_web',
+  'verify_latest_facts',
 ] as const
 
 export type AIOperation = (typeof AI_OPERATIONS)[number]
@@ -173,6 +175,147 @@ export const GenerateFAQOutputSchema = z.object({
   faqs: z.array(FAQItemSchema).min(1),
 })
 export type GenerateFAQOutput = z.infer<typeof GenerateFAQOutputSchema>
+
+// —— Research With Web (Core Contract) ————————————————————————————————————————
+export const ResearchPrioritySchema = z.enum(['high', 'medium', 'low'])
+
+export const ResearchWithWebInputSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required').max(180, 'Title is too long'),
+  content: z.string().trim().max(8000, 'Content is too long').optional(),
+  question: z.string().trim().max(300, 'Question is too long').optional(),
+  audience: z.string().trim().max(180, 'Audience is too long').optional(),
+  notes: z.string().trim().max(1000, 'Notes are too long').optional(),
+})
+export type ResearchWithWebInput = z.infer<typeof ResearchWithWebInputSchema>
+
+export const ResearchAgendaItemSchema = z.object({
+  question: z.string().trim().min(1).max(240),
+  reason: z.string().trim().min(1).max(320),
+  suggested_query: z.string().trim().min(1).max(240),
+  priority: ResearchPrioritySchema,
+})
+
+export const ResearchWithWebOutputSchema = z.object({
+  research_goal: z.string().trim().min(1).max(320),
+  recommended_queries: z.array(z.string().trim().min(1).max(240)).min(3).max(6),
+  research_agenda: z.array(ResearchAgendaItemSchema).min(3).max(6),
+  watchouts: z.array(z.string().trim().min(1).max(240)).max(5).default([]),
+})
+export type ResearchWithWebOutput = z.infer<typeof ResearchWithWebOutputSchema>
+
+export const ResearchWithWebResponseJsonSchema = {
+  type: 'object',
+  properties: {
+    research_goal: { type: 'string' },
+    recommended_queries: {
+      type: 'array',
+      items: { type: 'string' },
+      minItems: 3,
+      maxItems: 6,
+    },
+    research_agenda: {
+      type: 'array',
+      minItems: 3,
+      maxItems: 6,
+      items: {
+        type: 'object',
+        properties: {
+          question: { type: 'string' },
+          reason: { type: 'string' },
+          suggested_query: { type: 'string' },
+          priority: {
+            type: 'string',
+            enum: ['high', 'medium', 'low'],
+          },
+        },
+        required: ['question', 'reason', 'suggested_query', 'priority'],
+      },
+    },
+    watchouts: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+  },
+  required: ['research_goal', 'recommended_queries', 'research_agenda', 'watchouts'],
+} as const
+
+// —— Verify Latest Facts (Core Contract) ———————————————————————————————————————
+export const FactCheckStatusSchema = z.enum([
+  'needs_web_verification',
+  'needs_update',
+  'unsupported',
+  'uncertain',
+])
+
+export const VerificationSourceSchema = z.object({
+  title: z.string().trim().min(1).max(240),
+  url: z.string().trim().url().max(500).optional(),
+  publisher: z.string().trim().max(180).optional(),
+  note: z.string().trim().max(240).optional(),
+})
+
+export const VerifyLatestFactsInputSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required').max(180, 'Title is too long'),
+  content: z.string().trim().min(1, 'Content is required').max(12000, 'Content is too long'),
+  excerpt: z.string().trim().max(320, 'Excerpt is too long').optional(),
+  focus_area: z.string().trim().max(240, 'Focus area is too long').optional(),
+})
+export type VerifyLatestFactsInput = z.infer<typeof VerifyLatestFactsInputSchema>
+
+export const VerifiedClaimSchema = z.object({
+  claim: z.string().trim().min(1).max(500),
+  status: FactCheckStatusSchema,
+  reason: z.string().trim().min(1).max(500),
+  suggested_revision: z.string().trim().max(800).optional(),
+  sources: z.array(VerificationSourceSchema).max(5).default([]),
+})
+
+export const VerifyLatestFactsOutputSchema = z.object({
+  summary: z.string().trim().min(1).max(500),
+  checked_at: z.string().default(''),
+  claims: z.array(VerifiedClaimSchema).min(1).max(8),
+})
+export type VerifyLatestFactsOutput = z.infer<typeof VerifyLatestFactsOutputSchema>
+
+export const VerifyLatestFactsResponseJsonSchema = {
+  type: 'object',
+  properties: {
+    summary: { type: 'string' },
+    checked_at: { type: 'string' },
+    claims: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 8,
+      items: {
+        type: 'object',
+        properties: {
+          claim: { type: 'string' },
+          status: {
+            type: 'string',
+            enum: ['needs_web_verification', 'needs_update', 'unsupported', 'uncertain'],
+          },
+          reason: { type: 'string' },
+          suggested_revision: { type: 'string' },
+          sources: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                title: { type: 'string' },
+                url: { type: 'string' },
+                publisher: { type: 'string' },
+                note: { type: 'string' },
+              },
+              required: ['title'],
+            },
+          },
+        },
+        required: ['claim', 'status', 'reason', 'sources'],
+      },
+    },
+  },
+  required: ['summary', 'checked_at', 'claims'],
+} as const
 
 // ─── Logger Schema ───────────────────────────────────────────────
 export const AIGenerationLogSchema = z.object({

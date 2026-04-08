@@ -14,9 +14,11 @@
 
 import { z } from 'zod'
 import { callAI } from './client'
-import { parseWithRetry } from './parser'
+import { parseAIResponse, parseWithRetry } from './parser'
 import { logGeneration } from './logger'
 import { getInternalLinksContext } from './context'
+import { extractClaimsForVerification } from './claim-extractor'
+import { callGroundedJSON, extractGroundedSources } from './verifier-client'
 import { PROMPT_VERSION, type AIContentProfile } from './prompt-profiles'
 import * as prompts from './prompt-profiles'
 import {
@@ -38,6 +40,10 @@ import {
   ExpandSectionOutputSchema,
   GenerateFAQInputSchema,
   GenerateFAQOutputSchema,
+  ResearchWithWebInputSchema,
+  ResearchWithWebOutputSchema,
+  VerifyLatestFactsInputSchema,
+  VerifyLatestFactsOutputSchema,
   type GenerateSlugInput,
   type GenerateSlugOutput,
   type GenerateSEOPackInput,
@@ -56,6 +62,10 @@ import {
   type ExpandSectionOutput,
   type GenerateFAQInput,
   type GenerateFAQOutput,
+  type ResearchWithWebInput,
+  type ResearchWithWebOutput,
+  type VerifyLatestFactsInput,
+  type VerifyLatestFactsOutput,
   type AIOperation,
 } from './schemas'
 
@@ -139,6 +149,115 @@ function normalizeImagePromptsOutput(output: GenerateImagePromptsOutput): Genera
     art_direction: normalizeSingleLine(output.art_direction),
     hero_prompts: heroPrompts,
   }
+}
+
+function normalizeFactCheckOutput(output: VerifyLatestFactsOutput): VerifyLatestFactsOutput {
+  return {
+    summary: normalizeSingleLine(output.summary),
+    checked_at: new Date().toISOString(),
+    claims: output.claims.map((claim) => ({
+      ...claim,
+      claim: normalizeSingleLine(claim.claim),
+      reason: normalizeSingleLine(claim.reason),
+      suggested_revision: claim.suggested_revision
+        ? claim.suggested_revision.replace(/\r\n/g, '\n').trim()
+        : undefined,
+      sources: claim.sources.map((source) => ({
+        ...source,
+        title: normalizeSingleLine(source.title),
+        publisher: source.publisher ? normalizeSingleLine(source.publisher) : undefined,
+        note: source.note ? normalizeSingleLine(source.note) : undefined,
+      })),
+    })),
+  }
+}
+
+function coerceSourceEntry(value: unknown): Record<string, unknown> | null {
+  if (!value) {
+    return null
+  }
+
+  if (typeof value === 'string') {
+    const markdownLinkMatch = value.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/i)
+    if (markdownLinkMatch) {
+      const [, title, url] = markdownLinkMatch
+      return { title, url, note: value }
+    }
+
+    if (/^https?:\/\//i.test(value.trim())) {
+      return { title: value.trim(), url: value.trim() }
+    }
+
+    return { title: value.trim(), note: value.trim() }
+  }
+
+  if (typeof value === 'object') {
+    return value as Record<string, unknown>
+  }
+
+  return null
+}
+
+function coerceGroundedFactCheckOutput(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object') {
+    return raw
+  }
+
+  const data = raw as Record<string, unknown>
+  const claims = Array.isArray(data.claims) ? data.claims : []
+
+  return {
+    ...data,
+    claims: claims.map((claim) => {
+      if (!claim || typeof claim !== 'object') {
+        return claim
+      }
+
+      const typedClaim = claim as Record<string, unknown>
+      const rawSources = Array.isArray(typedClaim.sources) ? typedClaim.sources : []
+
+      return {
+        ...typedClaim,
+        sources: rawSources
+          .map((source) => coerceSourceEntry(source))
+          .filter((source): source is Record<string, unknown> => Boolean(source)),
+      }
+    }),
+  }
+}
+
+function mergeGroundedSourcesIntoFactCheck(
+  output: VerifyLatestFactsOutput,
+  groundedSources: ReturnType<typeof extractGroundedSources>
+): VerifyLatestFactsOutput {
+  if (groundedSources.length === 0) {
+    return output
+  }
+
+  return {
+    ...output,
+    claims: output.claims.map((claim) => ({
+      ...claim,
+      sources: claim.sources.length > 0 ? claim.sources : groundedSources.slice(0, 3),
+    })),
+  }
+}
+
+function buildResearchContentWindow(input: ResearchWithWebInput): string | undefined {
+  return input.content?.substring(0, 5000)
+}
+
+function buildVerificationContentWindow(
+  input: VerifyLatestFactsInput,
+  extraction: ReturnType<typeof extractClaimsForVerification>
+): string {
+  const prioritizedBlock = extraction.prioritizedClaims.map((claim) => claim.claim).join('\n\n')
+
+  if (prioritizedBlock) {
+    return prioritizedBlock
+  }
+
+  return input.content.substring(0, 7000)
 }
 
 function resolveProfile(targetType?: OperationContext['targetType']): AIContentProfile {
@@ -241,6 +360,121 @@ export async function generateFAQ(
 ): Promise<OperationResponse<GenerateFAQOutput>> {
   const profile = resolveProfile(ctx?.targetType)
   return runOperation('generate_faq', rawInput, GenerateFAQInputSchema, GenerateFAQOutputSchema, (input) => prompts.buildFAQPrompt(input, profile), undefined, ctx)
+}
+
+// —— Research With Web (core contract) ———————————————————————————————————————
+export async function researchWithWeb(
+  rawInput: ResearchWithWebInput,
+  ctx?: OperationContext
+): Promise<OperationResponse<ResearchWithWebOutput>> {
+  const profile = resolveProfile(ctx?.targetType)
+  const extraction = rawInput.content
+    ? extractClaimsForVerification({
+        title: rawInput.title,
+        content: buildResearchContentWindow(rawInput) ?? '',
+        focusArea: rawInput.question,
+        maxPrioritized: 6,
+        maxEvergreen: 2,
+      })
+    : undefined
+
+  return runOperation(
+    'research_with_web',
+    rawInput,
+    ResearchWithWebInputSchema,
+    ResearchWithWebOutputSchema,
+    (input) => prompts.buildResearchWithWebPrompt(input, profile, extraction),
+    undefined,
+    ctx
+  )
+}
+
+export async function verifyLatestFacts(
+  rawInput: VerifyLatestFactsInput,
+  ctx?: OperationContext
+): Promise<OperationResponse<VerifyLatestFactsOutput>> {
+  const inputResult = VerifyLatestFactsInputSchema.safeParse(rawInput)
+  if (!inputResult.success) {
+    const issues = inputResult.error.issues
+      .map((issue) => `${(issue.path as unknown[]).join('.')}: ${issue.message}`)
+      .join('; ')
+    return { success: false, error: `Input validation failed: ${issues}` }
+  }
+
+  const validInput = inputResult.data
+  const profile = resolveProfile(ctx?.targetType)
+  const extraction = extractClaimsForVerification({
+    title: validInput.title,
+    content: validInput.content,
+    focusArea: validInput.focus_area,
+    maxPrioritized: 8,
+    maxEvergreen: 3,
+  })
+
+  try {
+    const messages = prompts.buildVerifyLatestFactsPrompt(
+      validInput,
+      profile,
+      extraction,
+      buildVerificationContentWindow(validInput, extraction)
+    )
+
+    let parsedData: VerifyLatestFactsOutput
+    let model = 'unknown'
+
+    if (process.env.OPENROUTER_API_KEY) {
+      const groundedResponse = await callGroundedJSON(
+        messages
+      )
+      model = groundedResponse.model
+
+      parsedData = mergeGroundedSourcesIntoFactCheck(
+        VerifyLatestFactsOutputSchema.parse(
+          coerceGroundedFactCheckOutput(
+            parseAIResponse(groundedResponse.content, z.unknown())
+          )
+        ),
+        extractGroundedSources(groundedResponse.annotations)
+      )
+    } else {
+      const aiResponse = await callAI(messages)
+      model = aiResponse.model
+      parsedData = await parseWithRetry(aiResponse.content, VerifyLatestFactsOutputSchema)
+    }
+
+    const data = normalizeFactCheckOutput(parsedData)
+
+    await logGeneration({
+      userId: ctx?.userId,
+      targetType: ctx?.targetType,
+      targetId: ctx?.targetId,
+      operation: 'verify_latest_facts',
+      model,
+      status: 'success',
+      inputJson: validInput as Record<string, unknown>,
+      outputJson: data as Record<string, unknown>,
+      promptVersion: PROMPT_VERSION,
+    })
+
+    return { success: true, data, model }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+    await logGeneration({
+      userId: ctx?.userId,
+      targetType: ctx?.targetType,
+      targetId: ctx?.targetId,
+      operation: 'verify_latest_facts',
+      model: process.env.OPENROUTER_API_KEY ? (process.env.OPENROUTER_GROUNDED_MODEL ?? 'openai/gpt-4o-mini-search-preview') : 'unknown',
+      status: 'error',
+      inputJson: validInput as Record<string, unknown>,
+      outputJson: {},
+      promptVersion: PROMPT_VERSION,
+      errorMessage,
+    })
+
+    return { success: false, error: errorMessage }
+  }
 }
 
 // ─── Generic operation runner ────────────────────────────────────
