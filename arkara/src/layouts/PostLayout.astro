@@ -25,10 +25,11 @@ interface Props {
   headings?: any[];
   content?: string;
   currentSlug?: string;
+  canonicalHref?: string;
   contentType?: 'blog' | 'panduan';
 }
 
-const { title, description, publishDate, category, coverImage, headings = [], content = '', currentSlug, contentType } = Astro.props;
+const { title, description, publishDate, category, coverImage, headings = [], content = '', currentSlug, canonicalHref, contentType } = Astro.props;
 const readingTime = calculateReadingTime(content);
 
 function resolveSocialImage(image: any): string | undefined {
@@ -49,7 +50,7 @@ const ogImageAlt = typeof coverImage === 'string'
   : coverImage?.alt_text || title;
 ---
 
-<BaseLayout title={title} description={description} image={ogImageUrl} imageAlt={ogImageAlt} type="article">
+<BaseLayout title={title} description={description} image={ogImageUrl} imageAlt={ogImageAlt} canonicalHref={canonicalHref} type="article">
 
   <!-- ── POST HEADER ───────────────────────────────────── -->
   <header style="

@@ -1,12 +1,20 @@
 ---
-import { getPostBySlug } from '../../lib/content';
+import { resolvePublishedPostRoute } from '../../lib/content';
 import { renderMarkdown, extractHeadings } from '../../lib/markdown';
 import PostLayout from '../../layouts/PostLayout.astro';
 import NotFoundPage from '../../components/system/NotFoundPage.astro';
 
 const { slug } = Astro.params;
-const post = slug ? await getPostBySlug(slug) : null;
-const postNotFound = !post;
+const resolvedRoute = slug ? await resolvePublishedPostRoute(slug) : { kind: 'not_found' as const };
+
+if (resolvedRoute.kind === 'redirect') {
+  Astro.response.status = 301;
+  Astro.response.statusText = 'Moved Permanently';
+  Astro.response.headers.set('Location', resolvedRoute.location);
+}
+
+const post = resolvedRoute.kind === 'post' ? resolvedRoute.post : null;
+const postNotFound = resolvedRoute.kind === 'not_found';
 
 if (postNotFound) {
   Astro.response.status = 404;
@@ -17,7 +25,7 @@ const htmlContent = renderMarkdown(post?.content || '');
 const headings = extractHeadings(htmlContent);
 ---
 
-{postNotFound ? (
+{resolvedRoute.kind === 'redirect' ? null : postNotFound ? (
   <NotFoundPage
     pageTitle="Artikel Tidak Ditemukan"
     pageDescription="Artikel yang Anda cari tidak tersedia atau sudah dipindahkan."
@@ -34,6 +42,7 @@ const headings = extractHeadings(htmlContent);
     publishDate={post.published_at}
     category="ARKARA JURNAL"
     coverImage={post.banner_image || post.cover_image}
+    canonicalHref={`/blog/${post.slug}`}
     headings={headings}
     content={post.content || ''}
     currentSlug={post.slug}

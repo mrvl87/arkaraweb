@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { normalizeSlug } from '@/lib/slugs'
 
 interface SlugInputProps {
   titleValue: string
@@ -12,16 +13,6 @@ interface SlugInputProps {
   label?: string
   error?: string
   disabled?: boolean
-}
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .trim()
 }
 
 export function SlugInput({
@@ -52,7 +43,7 @@ export function SlugInput({
   // Auto-generate slug from title only while auto mode is active.
   useEffect(() => {
     if (isAutoMode && titleValue && titleValue.trim() !== '') {
-      const generated = slugify(titleValue)
+      const generated = normalizeSlug(titleValue)
 
       if (generated !== value) {
         onChange(generated)
@@ -68,7 +59,7 @@ export function SlugInput({
 
     updateMode(true)
 
-    const generated = slugify(titleValue)
+    const generated = normalizeSlug(titleValue)
     if (generated && generated !== value) {
       onChange(generated)
     }
@@ -92,7 +83,7 @@ export function SlugInput({
         <input
           type="text"
           value={value}
-          onChange={(e) => onChange(slugify(e.target.value))}
+          onChange={(e) => onChange(normalizeSlug(e.target.value))}
           disabled={disabled || isAutoMode}
           className={`w-full px-4 py-2.5 rounded-lg border transition-all ${
             error 

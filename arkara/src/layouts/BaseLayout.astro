@@ -16,6 +16,7 @@ interface Props {
   description?: string;
   image?: string;
   imageAlt?: string;
+  canonicalHref?: string;
   siteName?: string;
   type?: 'website' | 'article';
   robots?: string;
@@ -26,13 +27,14 @@ const {
   description = 'Platform pengetahuan survival Indonesia. Pelajari teknik survival praktis untuk menghadapi krisis.',
   image,
   imageAlt,
+  canonicalHref,
   siteName = 'Arkara',
   type = 'website',
   robots = 'index, follow'
 } = Astro.props;
 const siteTitle = title ? `${title} — ${siteName}` : `${siteName} — Survive with Knowledge`;
 const siteUrl = 'https://arkaraweb.com';
-const canonicalUrl = new URL(Astro.url.pathname, siteUrl);
+const canonicalUrl = new URL(canonicalHref || Astro.url.pathname, siteUrl);
 const footerData = await getFooterData();
 
 const navLinks = [
