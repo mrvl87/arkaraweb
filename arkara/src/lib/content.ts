@@ -25,6 +25,20 @@ export interface Post {
   meta_desc?: string
 }
 
+interface PostSlugRedirect {
+  post_id: string
+  source_slug: string
+  source_path: string
+  target_slug: string
+  target_path: string
+  is_active: boolean
+}
+
+export type ResolvedPostRoute =
+  | { kind: 'post'; post: Post }
+  | { kind: 'redirect'; location: string; targetSlug: string }
+  | { kind: 'not_found' }
+
 export interface Panduan {
   id: string
   title: string
@@ -65,19 +79,74 @@ export async function getPublishedPosts(options?: {
   return data ?? []
 }
 
-export async function getPostBySlug(slug: string): Promise<Post | null> {
+async function fetchPublishedPostBySlug(slug: string): Promise<Post | null> {
   const { data, error } = await supabase
     .from('posts')
     .select('*')
     .eq('slug', slug)
     .eq('status', 'published')
-    .single()
+    .maybeSingle()
 
   if (error) {
     console.error('Error fetching post by slug:', error)
     return null
   }
   return data
+}
+
+async function fetchPublishedPostById(id: string): Promise<Post | null> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*')
+    .eq('id', id)
+    .eq('status', 'published')
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching post by id:', error)
+    return null
+  }
+
+  return data
+}
+
+export async function resolvePublishedPostRoute(slug: string): Promise<ResolvedPostRoute> {
+  const directPost = await fetchPublishedPostBySlug(slug)
+  if (directPost) {
+    return { kind: 'post', post: directPost }
+  }
+
+  const { data: redirect, error: redirectError } = await supabase
+    .from('post_slug_redirects')
+    .select('post_id, source_slug, source_path, target_slug, target_path, is_active')
+    .eq('source_slug', slug)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (redirectError || !redirect) {
+    if (redirectError) {
+      console.error('Error resolving post redirect:', redirectError)
+    }
+    return { kind: 'not_found' }
+  }
+
+  const redirectRow = redirect as PostSlugRedirect
+  const targetPost = await fetchPublishedPostById(redirectRow.post_id)
+
+  if (!targetPost || targetPost.id !== redirectRow.post_id) {
+    return { kind: 'not_found' }
+  }
+
+  return {
+    kind: 'redirect',
+    location: `/blog/${targetPost.slug}`,
+    targetSlug: targetPost.slug,
+  }
+}
+
+export async function getPostBySlug(slug: string): Promise<Post | null> {
+  const resolved = await resolvePublishedPostRoute(slug)
+  return resolved.kind === 'post' ? resolved.post : null
 }
 
 export async function getRecentPosts(count: number): Promise<Post[]> {
