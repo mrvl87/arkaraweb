@@ -10,4 +10,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://arkaraweb.com/sitemap-index.xml
+Sitemap: https://arkaraweb.com/sitemap.xml
