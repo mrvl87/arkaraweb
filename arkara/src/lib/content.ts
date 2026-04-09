@@ -39,6 +39,20 @@ export type ResolvedPostRoute =
   | { kind: 'redirect'; location: string; targetSlug: string }
   | { kind: 'not_found' }
 
+interface PanduanSlugRedirect {
+  panduan_id: string
+  source_slug: string
+  source_path: string
+  target_slug: string
+  target_path: string
+  is_active: boolean
+}
+
+export type ResolvedPanduanRoute =
+  | { kind: 'panduan'; panduan: Panduan }
+  | { kind: 'redirect'; location: string; targetSlug: string }
+  | { kind: 'not_found' }
+
 export interface Panduan {
   id: string
   title: string
@@ -208,19 +222,74 @@ export async function getPublishedPanduan(options?: { category?: string }): Prom
   return data ?? []
 }
 
-export async function getPanduanBySlug(slug: string): Promise<Panduan | null> {
+async function fetchPublishedPanduanBySlug(slug: string): Promise<Panduan | null> {
   const { data, error } = await supabase
     .from('panduan')
     .select('*')
     .eq('slug', slug)
     .eq('status', 'published')
-    .single()
+    .maybeSingle()
 
   if (error) {
     console.error('Error fetching panduan by slug:', error)
     return null
   }
   return data
+}
+
+async function fetchPublishedPanduanById(id: string): Promise<Panduan | null> {
+  const { data, error } = await supabase
+    .from('panduan')
+    .select('*')
+    .eq('id', id)
+    .eq('status', 'published')
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching panduan by id:', error)
+    return null
+  }
+
+  return data
+}
+
+export async function resolvePublishedPanduanRoute(slug: string): Promise<ResolvedPanduanRoute> {
+  const directPanduan = await fetchPublishedPanduanBySlug(slug)
+  if (directPanduan) {
+    return { kind: 'panduan', panduan: directPanduan }
+  }
+
+  const { data: redirect, error: redirectError } = await supabase
+    .from('panduan_slug_redirects')
+    .select('panduan_id, source_slug, source_path, target_slug, target_path, is_active')
+    .eq('source_slug', slug)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (redirectError || !redirect) {
+    if (redirectError) {
+      console.error('Error resolving panduan redirect:', redirectError)
+    }
+    return { kind: 'not_found' }
+  }
+
+  const redirectRow = redirect as PanduanSlugRedirect
+  const targetPanduan = await fetchPublishedPanduanById(redirectRow.panduan_id)
+
+  if (!targetPanduan || targetPanduan.id !== redirectRow.panduan_id) {
+    return { kind: 'not_found' }
+  }
+
+  return {
+    kind: 'redirect',
+    location: `/panduan/${targetPanduan.slug}`,
+    targetSlug: targetPanduan.slug,
+  }
+}
+
+export async function getPanduanBySlug(slug: string): Promise<Panduan | null> {
+  const resolved = await resolvePublishedPanduanRoute(slug)
+  return resolved.kind === 'panduan' ? resolved.panduan : null
 }
 
 export async function getRelatedPanduan(currentSlug: string, category: string | undefined, limit: number = 3): Promise<Panduan[]> {

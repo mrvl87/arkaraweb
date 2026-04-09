@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -19,11 +19,13 @@ import {
   panduanAIGenerateImagePrompts,
   panduanAIVerifyLatestFacts,
 } from '@/app/cms/panduan/actions-ai'
+import { getPanduanSlugRoutingState } from '@/app/cms/panduan/actions'
 import type {
   GenerateSlugOutput,
   GenerateSEOPackOutput,
 } from '@/lib/ai/schemas'
 import type { FormAIHistoryState } from '@/lib/ai/history'
+import type { PanduanSlugRoutingState } from '@/app/cms/panduan/actions'
 import dynamic from 'next/dynamic'
 import type { RichEditorHandle } from './editor/RichEditor'
 
@@ -62,6 +64,8 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
   const [error, setError] = useState<string | null>(null)
   const [slugMode, setSlugMode] = useState<'auto' | 'manual'>(initialData ? 'manual' : 'auto')
   const [isEditorReady, setIsEditorReady] = useState(false)
+  const [slugRouting, setSlugRouting] = useState<PanduanSlugRoutingState | null>(null)
+  const [isCheckingSlug, setIsCheckingSlug] = useState(false)
   const editorApiRef = useRef<RichEditorHandle | null>(null)
 
   const {
@@ -69,6 +73,7 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
     handleSubmit,
     watch,
     setValue,
+    clearErrors,
     formState: { errors }
   } = useForm<PanduanFormValues>({
     resolver: zodResolver(panduanSchema),
@@ -89,9 +94,49 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
 
   const titleValue = watch('title')
   const slugValue = watch('slug')
+  const statusValue = watch('status')
   const contentValue = watch('content')
   const metaDescValue = watch('meta_desc')
   const categoryValue = watch('category')
+  const effectiveSlugError = errors.slug?.message || slugRouting?.exactConflict?.message
+  const submitBlocked = isSubmitting || Boolean(slugRouting?.exactConflict)
+
+  useEffect(() => {
+    let isActive = true
+    const timer = window.setTimeout(async () => {
+      if (!isActive) return
+
+      setIsCheckingSlug(true)
+
+      try {
+        const nextState = await getPanduanSlugRoutingState({
+          slug: slugValue,
+          panduanId: initialData?.id,
+          currentSlug: initialData?.slug,
+        })
+
+        if (!isActive) return
+        setSlugRouting(nextState)
+
+        if (!nextState.exactConflict && !errors.slug?.message) {
+          clearErrors('slug')
+        }
+      } catch {
+        if (isActive) {
+          setSlugRouting(null)
+        }
+      } finally {
+        if (isActive) {
+          setIsCheckingSlug(false)
+        }
+      }
+    }, 250)
+
+    return () => {
+      isActive = false
+      window.clearTimeout(timer)
+    }
+  }, [slugValue, initialData?.id, initialData?.slug, errors.slug?.message, clearErrors])
 
   const handleEditorReady = (api: RichEditorHandle | null) => {
     editorApiRef.current = api
@@ -165,7 +210,7 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
           </select>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={submitBlocked}
             className="flex items-center gap-2 px-6 py-2 rounded-lg font-medium shadow-sm transition-all hover:opacity-90 disabled:opacity-50"
             style={{ backgroundColor: '#d4a017', color: '#1a2e1a' }}
           >
@@ -214,7 +259,7 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
                     shouldTouch: true,
                     shouldValidate: true,
                   })}
-                  error={errors.slug?.message}
+                  error={effectiveSlugError}
                 />
               </div>
               <div className="pt-6">
@@ -254,6 +299,129 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
                     </div>
                   )}
                 />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-5 space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-gray-400">Routing SEO</p>
+                  <h3 className="text-sm font-bold text-gray-900">Canonical, redirect, dan historical path</h3>
+                </div>
+                <div className="text-[11px] font-medium text-gray-500">
+                  {isCheckingSlug ? 'Memeriksa slug...' : 'Pemeriksaan real-time aktif'}
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl border border-white bg-white p-4 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-400">URL Aktif Saat Ini</p>
+                  <p className="mt-2 font-mono text-sm text-gray-700">
+                    {slugRouting?.currentPath || '/panduan/(baru)'}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white bg-white p-4 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-gray-400">URL Canonical Setelah Simpan</p>
+                  <p className="mt-2 font-mono text-sm text-arkara-green">
+                    {slugRouting?.requestedPath || '/panduan/(isi-slug-dulu)'}
+                  </p>
+                </div>
+              </div>
+
+              {slugRouting?.willCreateRedirect ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  <p className="font-bold">Perubahan slug ini akan membuat redirect permanen otomatis.</p>
+                  <p className="mt-1 font-mono text-xs">
+                    {slugRouting.currentPath} {'->'} {slugRouting.requestedPath}
+                  </p>
+                  <p className="mt-2 text-xs">
+                    {statusValue === 'published'
+                      ? 'Karena panduan akan tayang publik, redirect 301 akan aktif saat penyimpanan selesai.'
+                      : 'Karena panduan masih draft, historical path akan disimpan dulu sebagai redirect nonaktif sampai panduan dipublish.'}
+                  </p>
+                </div>
+              ) : null}
+
+              {slugRouting?.restoringHistoricalSlug ? (
+                <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+                  <p className="font-bold">Slug lama panduan ini sedang dipulihkan sebagai URL aktif.</p>
+                  <p className="mt-1 text-xs">
+                    Redirect lama untuk path ini akan dimatikan, lalu semua historical path lain akan diarahkan ke canonical yang baru.
+                  </p>
+                </div>
+              ) : null}
+
+              {slugRouting?.exactConflict ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                  <p className="font-bold">Slug bentrok dan tidak bisa disimpan.</p>
+                  <p className="mt-1">{slugRouting.exactConflict.message}</p>
+                  <p className="mt-2 font-mono text-xs">{slugRouting.exactConflict.path}</p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-red-500">{slugRouting.exactConflict.statusLabel}</p>
+                </div>
+              ) : null}
+
+              {slugRouting?.similarMatches?.length ? (
+                <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+                  <p className="text-sm font-bold text-yellow-900">Slug ini cukup mirip dengan URL yang sudah ada.</p>
+                  <div className="mt-3 space-y-2">
+                    {slugRouting.similarMatches.map((match) => (
+                      <div
+                        key={`${match.source}-${match.slug}`}
+                        className="rounded-lg border border-yellow-100 bg-white px-3 py-2 text-xs text-gray-700"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-mono text-gray-800">{match.path}</span>
+                          <span className="rounded-full bg-yellow-100 px-2 py-0.5 font-bold text-yellow-900">
+                            mirip {Math.round(match.score * 100)}%
+                          </span>
+                        </div>
+                        <p className="mt-1 uppercase tracking-[0.18em] text-[10px] text-yellow-700">
+                          {match.statusLabel}{match.title ? ` • ${match.title}` : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-gray-800">Daftar Redirect Tersimpan</p>
+                  <span className="text-[11px] font-medium text-gray-500">
+                    {slugRouting?.redirects?.length ?? 0} historical path
+                  </span>
+                </div>
+
+                {slugRouting?.redirects?.length ? (
+                  <div className="space-y-2">
+                    {slugRouting.redirects.map((redirect) => (
+                      <div
+                        key={redirect.id}
+                        className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm"
+                      >
+                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <p className="font-mono text-xs text-gray-700">{redirect.sourcePath}</p>
+                            <p className="mt-1 font-mono text-xs text-arkara-green">{redirect.targetPath}</p>
+                          </div>
+                          <span
+                            className={`inline-flex h-fit items-center rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${
+                              redirect.isActive
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-500'
+                            }`}
+                          >
+                            {redirect.isActive ? 'aktif' : 'nonaktif'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-gray-200 bg-white px-4 py-4 text-sm text-gray-500">
+                    Belum ada historical path untuk panduan ini. Begitu slug diubah, URL lama akan muncul di sini sebagai redirect permanen.
+                  </div>
+                )}
               </div>
             </div>
 

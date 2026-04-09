@@ -17,6 +17,13 @@ export function PanduanList({ initialPanduan }: PanduanListProps) {
         <div className="flex flex-col text-left">
           <span className="font-medium text-gray-900">{p.title}</span>
           <span className="text-xs text-gray-400 font-mono">{p.slug}</span>
+          {p.redirect_count > 0 ? (
+            <span className="mt-1 text-[11px] font-medium text-amber-700">
+              {p.active_redirect_count > 0
+                ? `${p.active_redirect_count} redirect aktif dari ${p.redirect_count} historical path`
+                : `${p.redirect_count} historical path tersimpan`}
+            </span>
+          ) : null}
         </div>
       ),
     },

@@ -1,12 +1,20 @@
 ---
-import { getPanduanBySlug } from '../../lib/content';
+import { resolvePublishedPanduanRoute } from '../../lib/content';
 import { renderMarkdown, extractHeadings } from '../../lib/markdown';
 import PostLayout from '../../layouts/PostLayout.astro';
 import NotFoundPage from '../../components/system/NotFoundPage.astro';
 
 const { slug } = Astro.params;
-const guide = slug ? await getPanduanBySlug(slug) : null;
-const guideNotFound = !guide;
+const resolvedRoute = slug ? await resolvePublishedPanduanRoute(slug) : { kind: 'not_found' as const };
+
+if (resolvedRoute.kind === 'redirect') {
+  Astro.response.status = 301;
+  Astro.response.statusText = 'Moved Permanently';
+  Astro.response.headers.set('Location', resolvedRoute.location);
+}
+
+const guide = resolvedRoute.kind === 'panduan' ? resolvedRoute.panduan : null;
+const guideNotFound = resolvedRoute.kind === 'not_found';
 
 if (guideNotFound) {
   Astro.response.status = 404;
@@ -26,7 +34,7 @@ const htmlContent = renderMarkdown(guide?.content || '');
 const headings = extractHeadings(htmlContent);
 ---
 
-{guideNotFound ? (
+{resolvedRoute.kind === 'redirect' ? null : guideNotFound ? (
   <NotFoundPage
     pageTitle="Panduan Tidak Ditemukan"
     pageDescription="Panduan yang Anda cari tidak tersedia atau sudah dipindahkan."
@@ -43,6 +51,7 @@ const headings = extractHeadings(htmlContent);
     category={categoryLabels[guide.category] || guide.category || 'PANDUAN'}
     publishDate={new Date().toISOString()} 
     coverImage={guide.banner_image || guide.cover_image}
+    canonicalHref={`/panduan/${guide.slug}`}
     headings={headings}
     content={guide.content || ''}
     currentSlug={guide.slug}

@@ -12,6 +12,10 @@ export function getPostPath(slug: string): string {
   return `/blog/${slug}`
 }
 
+export function getPanduanPath(slug: string): string {
+  return `/panduan/${slug}`
+}
+
 export function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

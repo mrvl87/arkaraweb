@@ -62,6 +62,27 @@ CREATE TABLE IF NOT EXISTS panduan (
   updated_at   TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS panduan_slug_redirects (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  panduan_id     UUID NOT NULL REFERENCES panduan(id) ON DELETE CASCADE,
+  source_slug    TEXT NOT NULL,
+  source_path    TEXT NOT NULL,
+  target_slug    TEXT NOT NULL,
+  target_path    TEXT NOT NULL,
+  redirect_type  TEXT NOT NULL DEFAULT 'permanent'
+                 CHECK (redirect_type IN ('permanent')),
+  is_active      BOOLEAN NOT NULL DEFAULT true,
+  created_at     TIMESTAMPTZ DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ DEFAULT NOW(),
+  deactivated_at TIMESTAMPTZ
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_panduan_slug_redirects_source_path
+  ON panduan_slug_redirects(source_path);
+CREATE INDEX IF NOT EXISTS idx_panduan_slug_redirects_panduan_id
+  ON panduan_slug_redirects(panduan_id);
+CREATE INDEX IF NOT EXISTS idx_panduan_slug_redirects_active
+  ON panduan_slug_redirects(is_active, source_slug);
+
 -- CATEGORIES
 CREATE TABLE IF NOT EXISTS categories (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -153,6 +174,7 @@ CREATE TABLE IF NOT EXISTS media (
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_slug_redirects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE panduan ENABLE ROW LEVEL SECURITY;
+ALTER TABLE panduan_slug_redirects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE navigation ENABLE ROW LEVEL SECURITY;
@@ -164,6 +186,7 @@ ALTER TABLE media ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "public read published posts" ON posts FOR SELECT USING (status = 'published');
 CREATE POLICY "public read active post slug redirects" ON post_slug_redirects FOR SELECT USING (is_active = true);
 CREATE POLICY "public read published panduan" ON panduan FOR SELECT USING (status = 'published');
+CREATE POLICY "public read active panduan slug redirects" ON panduan_slug_redirects FOR SELECT USING (is_active = true);
 CREATE POLICY "public read categories" ON categories FOR SELECT USING (true);
 CREATE POLICY "public read site_settings" ON site_settings FOR SELECT USING (true);
 CREATE POLICY "public read navigation" ON navigation FOR SELECT USING (is_active = true);
@@ -174,6 +197,7 @@ CREATE POLICY "public read footer" ON footer FOR SELECT USING (true);
 CREATE POLICY "auth manage posts" ON posts FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "auth manage post slug redirects" ON post_slug_redirects FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "auth manage panduan" ON panduan FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "auth manage panduan slug redirects" ON panduan_slug_redirects FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "auth manage categories" ON categories FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "auth manage settings" ON site_settings FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "auth manage navigation" ON navigation FOR ALL USING (auth.role() = 'authenticated');
