@@ -48,9 +48,23 @@ const ogImageUrl = resolveSocialImage(coverImage);
 const ogImageAlt = typeof coverImage === 'string'
   ? title
   : coverImage?.alt_text || title;
+const assistantApiBaseUrl = import.meta.env.PUBLIC_ASSISTANT_API_URL ?? 'http://localhost:8787';
+
+const assistantMode = contentType === 'panduan' || contentType === 'blog'
+  ? 'page_context_mode'
+  : 'site_guide_mode';
 ---
 
-<BaseLayout title={title} description={description} image={ogImageUrl} imageAlt={ogImageAlt} canonicalHref={canonicalHref} type="article">
+<BaseLayout
+  title={title}
+  description={description}
+  image={ogImageUrl}
+  imageAlt={ogImageAlt}
+  canonicalHref={canonicalHref}
+  type="article"
+  assistantInitialMode={assistantMode}
+  assistantContext={{ title, pathname: canonicalHref }}
+>
 
   <!-- ── POST HEADER ───────────────────────────────────── -->
   <header style="
@@ -194,6 +208,59 @@ const ogImageAlt = typeof coverImage === 'string'
             >← KEMBALI KE {contentType === 'panduan' ? 'PANDUAN' : 'BLOG'}</a>
           </div>
 
+          <div style="
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--ink);
+            border: 3px solid var(--green-terminal);
+            color: var(--cream);
+            display: grid;
+            gap: 0.8rem;
+          ">
+            <div style="
+              font-family: 'Share Tech Mono', monospace;
+              font-size: 0.58rem;
+              letter-spacing: 0.2em;
+              color: var(--green-terminal);
+              text-transform: uppercase;
+            ">ARKARA AI / CONTEXT READY</div>
+            <p style="margin:0;color:var(--warm-grey);line-height:1.7;">
+              Lanjutkan halaman ini dengan assistant. Arkara AI akan membawa konteks artikel atau
+              panduan ke mode percakapan penuh agar tindak lanjut lebih cepat.
+            </p>
+            <div style="display:flex;flex-wrap:wrap;gap:0.75rem;">
+              <a
+                href="/assistant"
+                data-assistant-cta
+                style="
+                  font-family:'Share Tech Mono', monospace;
+                  font-size:0.7rem;
+                  letter-spacing:0.12em;
+                  text-transform:uppercase;
+                  padding:0.85rem 1.2rem;
+                  border:2px solid var(--green-terminal);
+                  background:var(--green-terminal);
+                  color:var(--ink);
+                  text-decoration:none;
+                  font-weight:700;
+                "
+              >Buka Assistant dengan Konteks Ini</a>
+              <a
+                href="/assistant"
+                style="
+                  font-family:'Share Tech Mono', monospace;
+                  font-size:0.7rem;
+                  letter-spacing:0.12em;
+                  text-transform:uppercase;
+                  padding:0.85rem 1.2rem;
+                  border:2px solid rgba(143,175,143,0.35);
+                  color:var(--cream-dark);
+                  text-decoration:none;
+                "
+              >Rute Assistant</a>
+            </div>
+          </div>
+
           <!-- Related Posts Section -->
           {currentSlug && contentType && (
             <RelatedPosts currentSlug={currentSlug} category={category} contentType={contentType} />
@@ -259,6 +326,43 @@ const ogImageAlt = typeof coverImage === 'string'
             Siap menghadapi segala situasi? Panduan ini bisa kamu praktekkan langsung. Simpan halaman ini untuk referensi offline!
           </div>
         </div>
+
+        <div style="
+          background: var(--paper);
+          border: 3px solid var(--ink);
+          box-shadow: 5px 5px 0 var(--ink);
+          padding: 1.25rem;
+          display: grid;
+          gap: 0.8rem;
+        ">
+          <div style="
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.58rem;
+            letter-spacing: 0.2em;
+            color: var(--green-dark);
+            text-transform: uppercase;
+          ">ARKARA AI FIELD DESK</div>
+          <p style="margin:0;font-size:0.82rem;line-height:1.7;color:var(--warm-grey-dark);">
+            Buka assistant penuh untuk merangkum halaman ini, menyusun checklist, atau menilai skenario
+            yang sedang Anda hadapi.
+          </p>
+          <a
+            href="/assistant"
+            data-assistant-cta
+            style="
+              font-family:'Share Tech Mono', monospace;
+              font-size:0.68rem;
+              letter-spacing:0.12em;
+              text-transform:uppercase;
+              padding:0.8rem 1rem;
+              background:var(--ink);
+              color:var(--green-terminal);
+              border:2px solid var(--green-terminal);
+              text-decoration:none;
+              text-align:center;
+            "
+          >Aktifkan Assistant</a>
+        </div>
       </aside>
 
     </div>
@@ -271,5 +375,35 @@ const ogImageAlt = typeof coverImage === 'string'
       .post-body-padding { padding: 1.5rem !important; }
     }
   </style>
+
+  <script
+    type="module"
+    define:vars={{ assistantApiBaseUrl, title, canonicalHref, assistantMode }}
+  >
+    import { buildAssistantPageUrl } from "../lib/assistant/widget";
+
+    const ctas = document.querySelectorAll("[data-assistant-cta]");
+
+    for (const cta of ctas) {
+      cta.addEventListener("click", async (event) => {
+        event.preventDefault();
+
+        const href = await buildAssistantPageUrl({
+          apiBaseUrl: assistantApiBaseUrl,
+          assistantPageUrl: "/assistant",
+          siteName: "Arkara",
+          locale: "id-ID",
+          initialMode: assistantMode,
+          pageContext: {
+            url: window.location.href,
+            title,
+            pathname: canonicalHref || window.location.pathname,
+          },
+        });
+
+        window.location.href = href;
+      });
+    }
+  </script>
 
 </BaseLayout>

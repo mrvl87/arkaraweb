@@ -10,6 +10,7 @@
  */
 import '../styles/global.css';
 import { getFooterData } from '../lib/content';
+import AssistantWidget from '../components/assistant/AssistantWidget.astro';
 
 interface Props {
   title?: string;
@@ -20,6 +21,13 @@ interface Props {
   siteName?: string;
   type?: 'website' | 'article';
   robots?: string;
+  showAssistantWidget?: boolean;
+  assistantInitialMode?: 'site_guide_mode' | 'page_context_mode' | 'scenario_mode';
+  assistantContext?: {
+    url?: string;
+    title?: string;
+    pathname?: string;
+  };
 }
 
 const {
@@ -30,7 +38,10 @@ const {
   canonicalHref,
   siteName = 'Arkara',
   type = 'website',
-  robots = 'index, follow'
+  robots = 'index, follow',
+  showAssistantWidget = true,
+  assistantInitialMode,
+  assistantContext
 } = Astro.props;
 const siteTitle = title ? `${title} — ${siteName}` : `${siteName} — Survive with Knowledge`;
 const siteUrl = 'https://arkaraweb.com';
@@ -40,6 +51,7 @@ const footerData = await getFooterData();
 const navLinks = [
   { label: 'BLOG',    href: '/blog' },
   { label: 'PANDUAN', href: '/panduan' },
+  { label: 'ASSISTANT', href: '/assistant' },
 ];
 
 const footerTagline = footerData?.tagline?.trim()
@@ -431,5 +443,9 @@ const footerSocialLinks = (footerData?.social_links ?? [])
         if (menu) menu.style.display = open ? 'none' : 'block';
       });
     </script>
+
+    {showAssistantWidget && (
+      <AssistantWidget initialMode={assistantInitialMode} context={assistantContext} />
+    )}
   </body>
 </html>

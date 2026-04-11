@@ -1,0 +1,30 @@
+---
+import type { AssistantMode } from "../../lib/assistant/contracts";
+
+const apiBaseUrl = import.meta.env.PUBLIC_ASSISTANT_API_URL ?? "http://localhost:8787";
+const {
+  initialMode,
+  context
+}: {
+  initialMode?: AssistantMode;
+  context?: {
+    url?: string;
+    title?: string;
+    pathname?: string;
+  };
+} = Astro.props;
+---
+
+<arkara-assistant-widget
+  api-base-url={apiBaseUrl}
+  assistant-page-url="/assistant"
+  site-name="Arkara"
+  initial-mode={initialMode}
+  context-url={context?.url}
+  context-title={context?.title}
+  context-pathname={context?.pathname}
+></arkara-assistant-widget>
+
+<script>
+  import "../../lib/assistant/widget";
+</script>
