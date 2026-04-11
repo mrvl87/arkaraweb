@@ -116,8 +116,15 @@ export function renderAssistantExperience(options: RenderOptions) {
   function appendBubble(role: "user" | "assistant", content: string): BubbleHandle {
     const bubble = document.createElement("article");
     bubble.className = `bubble ${role}`;
+    bubble.dataset.role = role;
+
+    const meta = document.createElement("div");
+    meta.className = "bubble-meta";
+    meta.textContent = role === "assistant" ? "Arkara AI" : "Anda";
+    bubble.appendChild(meta);
 
     const copy = document.createElement("div");
+    copy.className = "bubble-copy";
     copy.textContent = content;
     bubble.appendChild(copy);
 
@@ -434,13 +441,29 @@ function createShellMarkup(input: {
   const isFloating = input.variant === "floating";
   return `
     <section class="assistant-shell assistant-shell--${input.variant}">
-      ${isFloating ? `<div class="launcher-dock" data-launcher-dock><button class="launcher" type="button" data-launcher><span class="launcher__title">ARKARA_AI</span><span class="launcher__meta">field desk active</span><span class="launcher__action">View</span></button><a class="launcher-link" href="${escapeAttribute(input.assistantPageUrl)}">/assistant</a></div>` : ""}
+      ${isFloating ? `
+        <div class="launcher-dock" data-launcher-dock>
+          <button class="launcher" type="button" data-launcher>
+            <span class="launcher__eyebrow">Arkara AI Assistant</span>
+            <span class="launcher__title">Butuh bantuan cepat?</span>
+            <span class="launcher__meta">Buka percakapan singkat tanpa meninggalkan halaman ini.</span>
+          </button>
+          <a class="launcher-link" href="${escapeAttribute(input.assistantPageUrl)}">Buka halaman penuh</a>
+        </div>
+      ` : ""}
       <section class="${isFloating ? "assistant-panel hidden" : "assistant-panel assistant-panel--page"}" data-panel>
         <header class="assistant-header">
-          <div><div class="assistant-kicker">${isFloating ? "quick field support" : "command desk"}</div><h2>${input.siteName} Survival AI</h2><p>${getModeDescription(input.mode)}</p></div>
+          <div class="assistant-header__copy">
+            <div class="assistant-presence">
+              <span class="assistant-presence__dot"></span>
+              <span class="assistant-kicker">${isFloating ? "Siap membantu sekarang" : "Ruang bantu yang lebih fokus"}</span>
+            </div>
+            <h2>${input.siteName} AI Assistant</h2>
+            <p>${getModeDescription(input.mode)}</p>
+          </div>
           <div class="assistant-header__actions">
-            ${isFloating ? `<a class="ghost-link" href="${escapeAttribute(input.assistantPageUrl)}">/assistant</a><button class="utility-button" type="button" data-close>Hide</button>` : `<a class="ghost-link" href="${escapeAttribute(input.assistantPageUrl)}">Rute kanonik</a>`}
-            <a class="solid-button" data-assistant-link href="${escapeAttribute(input.assistantPageUrl)}">${isFloating ? "Buka penuh" : "Bagikan sesi"}</a>
+            ${isFloating ? `<button class="utility-button" type="button" data-close>Sembunyikan</button>` : `<a class="ghost-link" href="${escapeAttribute(input.assistantPageUrl)}">Rute kanonik</a>`}
+            <a class="solid-button" data-assistant-link href="${escapeAttribute(input.assistantPageUrl)}">${isFloating ? "Lanjutkan penuh" : "Bagikan sesi"}</a>
           </div>
         </header>
         ${isFloating ? "" : `<nav class="assistant-tabs" aria-label="Assistant sections"><button type="button" class="assistant-tab" data-tab="chat" data-active="true">Percakapan</button><button type="button" class="assistant-tab" data-tab="analyzer" data-active="false">Scenario Analyzer</button></nav>`}
@@ -448,8 +471,8 @@ function createShellMarkup(input: {
           <section class="assistant-section" data-section="chat">
             <section class="empty-state" data-empty-state>
               <div class="empty-state__eyebrow">${getModeLabel(input.mode)}</div>
-              <h3>${isFloating ? "Buka percakapan dari halaman ini" : "Pilih titik masuk percakapan"}</h3>
-              <p>Assistant mempertahankan sesi lintas halaman dan bisa memakai konteks artikel saat dibutuhkan.</p>
+              <h3>${isFloating ? "Mulai dari pertanyaan yang paling mendesak." : "Mari mulai dari konteks yang paling penting buat Anda."}</h3>
+              <p>Assistant menjaga sesi tetap nyambung lintas halaman dan bisa memakai konteks artikel atau panduan yang sedang Anda baca.</p>
               <div class="prompt-grid">
                 ${input.promptStarters.map((starter) => `<button class="prompt-card" type="button" data-prompt="${escapeAttribute(starter.prompt)}"><strong>${escapeHtml(starter.label)}</strong><span>${escapeHtml(starter.prompt)}</span></button>`).join("")}
               </div>
@@ -457,16 +480,21 @@ function createShellMarkup(input: {
             <div class="messages" data-messages></div>
             <div class="status" data-status data-tone="neutral">Memuat sesi...</div>
             <div class="composer">
-              <label class="sr-only" for="arkara-assistant-composer">Pesan assistant</label>
-              <textarea id="arkara-assistant-composer" data-composer placeholder="Tanyakan kebutuhan survival, konteks artikel, atau kondisi yang sedang Anda hadapi..."></textarea>
-              <button type="button" data-send>Kirim</button>
+              <div class="composer-shell">
+                <label class="sr-only" for="arkara-assistant-composer">Pesan assistant</label>
+                <textarea id="arkara-assistant-composer" data-composer placeholder="Ceritakan situasinya. Misalnya: listrik padam, air terbatas, atau saya butuh langkah pertama yang aman."></textarea>
+                <div class="composer-actions">
+                  <div class="composer-hint">Enter untuk kirim, Shift+Enter untuk baris baru.</div>
+                  <button type="button" data-send>Kirim</button>
+                </div>
+              </div>
             </div>
             <div class="assistant-footer">
-              <span>Saran disusun untuk membantu prioritas tindakan, bukan menggantikan layanan darurat.</span>
-              <button class="utility-button" type="button" data-reset>Reset sesi</button>
+              <span>Fokus pada langkah aman, jelas, dan realistis untuk Anda lakukan sekarang.</span>
+              <button class="utility-button" type="button" data-reset>Mulai sesi baru</button>
             </div>
           </section>
-          ${isFloating ? "" : `<section class="assistant-section hidden" data-section="analyzer"><div class="analyzer-intro"><div class="assistant-kicker">structured assessment</div><h3>Scenario Analyzer</h3><p>Gunakan panel ini untuk kondisi yang lebih konkret. Hasilnya akan masuk sebagai tindak lanjut ke chat.</p></div><form class="analyzer-form" data-analyzer-form><input name="threatType" placeholder="Ancaman utama" required /><input name="locationType" placeholder="Tipe lokasi" required /><input name="electricityStatus" placeholder="Status listrik" required /><input name="waterStatus" placeholder="Status air" required /><input name="householdSize" type="number" min="1" max="50" value="1" required /><input name="availableTools" placeholder="Alat tersedia, pisahkan dengan koma" required /><input name="medicalConstraints" placeholder="Kondisi medis penting, opsional" /><input name="goal" placeholder="Target utama 24 jam" required /><textarea name="freeTextNotes" placeholder="Catatan tambahan"></textarea><button class="solid-button" type="submit">Analisis kondisi</button></form><div class="analyzer-output" data-analyzer-output></div></section>`}
+          ${isFloating ? "" : `<section class="assistant-section hidden" data-section="analyzer"><div class="analyzer-intro"><div class="assistant-kicker">Structured assessment</div><h3>Scenario Analyzer</h3><p>Gunakan panel ini saat situasi Anda sudah cukup spesifik. Hasilnya akan membantu merangkum risiko, prioritas, dan tindak lanjut ke chat.</p></div><form class="analyzer-form" data-analyzer-form><input name="threatType" placeholder="Ancaman utama, mis. banjir atau gempa" required /><input name="locationType" placeholder="Tipe lokasi, mis. permukiman padat" required /><input name="electricityStatus" placeholder="Status listrik saat ini" required /><input name="waterStatus" placeholder="Status air bersih" required /><input name="householdSize" type="number" min="1" max="50" value="1" required /><input name="availableTools" placeholder="Alat tersedia, pisahkan dengan koma" required /><input name="medicalConstraints" placeholder="Kondisi medis penting, opsional" /><input name="goal" placeholder="Target utama 24 jam" required /><textarea name="freeTextNotes" placeholder="Catatan tambahan yang perlu dipertimbangkan"></textarea><button class="solid-button" type="submit">Analisis kondisi</button></form><div class="analyzer-output" data-analyzer-output></div></section>`}
         </div>
       </section>
     </section>
