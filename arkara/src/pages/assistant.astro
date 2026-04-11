@@ -56,16 +56,16 @@ const apiBaseUrl = import.meta.env.PUBLIC_ASSISTANT_API_URL ?? "http://localhost
       border: 3px solid var(--ink);
       box-shadow: 8px 8px 0 var(--ink);
       overflow: hidden;
-    "></div>
+    " data-api-base-url={apiBaseUrl}></div>
   </section>
 
-  <script type="module" define:vars={{ apiBaseUrl }}>
+  <script type="module">
     import { mountAssistantPage } from "../lib/assistant/widget";
 
     const root = document.getElementById("assistant-root");
     if (root) {
       mountAssistantPage(root, {
-        apiBaseUrl,
+        apiBaseUrl: root.getAttribute("data-api-base-url") ?? "http://localhost:8787",
         assistantPageUrl: "/assistant",
         siteName: "Arkara",
         locale: "id-ID",
