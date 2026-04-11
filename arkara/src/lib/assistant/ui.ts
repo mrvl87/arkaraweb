@@ -434,6 +434,14 @@ function getModeDescription(mode: AssistantMode) {
       : "Gunakan untuk pertanyaan survival umum, persiapan rumah, dan orientasi awal Arkara.";
 }
 
+function getCompactModeDescription(mode: AssistantMode) {
+  return mode === "page_context_mode"
+    ? "Ringkas halaman ini atau minta checklist yang paling relevan."
+    : mode === "scenario_mode"
+      ? "Petakan prioritas, risiko, dan keputusan awal yang perlu diambil."
+      : "Untuk ringkasan cepat, checklist, dan langkah awal yang lebih jelas.";
+}
+
 function createShellMarkup(input: {
   variant: AssistantRenderVariant;
   assistantPageUrl: string;
@@ -462,7 +470,7 @@ function createShellMarkup(input: {
               <span class="assistant-kicker">${isFloating ? "Siap membantu sekarang" : "Ruang bantu yang lebih fokus"}</span>
             </div>
             <h2>${input.siteName} AI Assistant</h2>
-            <p>${getModeDescription(input.mode)}</p>
+            <p>${isFloating ? getCompactModeDescription(input.mode) : getModeDescription(input.mode)}</p>
           </div>
           <div class="assistant-header__actions">
             ${isFloating ? `<button class="icon-button" type="button" data-close aria-label="Tutup assistant">×</button>` : `<a class="ghost-link" href="${escapeAttribute(input.assistantPageUrl)}">Rute kanonik</a><a class="solid-button" data-assistant-link href="${escapeAttribute(input.assistantPageUrl)}">Bagikan sesi</a>`}
@@ -486,7 +494,7 @@ function createShellMarkup(input: {
             <div class="composer">
               <div class="composer-shell">
                 <label class="sr-only" for="arkara-assistant-composer">Pesan assistant</label>
-                <textarea id="arkara-assistant-composer" data-composer placeholder="Ceritakan situasinya. Misalnya: listrik padam, air terbatas, atau saya butuh langkah pertama yang aman."></textarea>
+                <textarea id="arkara-assistant-composer" data-composer placeholder="Tulis kebutuhan Anda sekarang."></textarea>
                 <div class="composer-actions">
                   <div class="composer-hint">Enter untuk kirim, Shift+Enter untuk baris baru.</div>
                   <button type="button" data-send>Kirim</button>

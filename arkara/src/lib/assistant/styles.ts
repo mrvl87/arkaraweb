@@ -65,8 +65,8 @@ export const assistantStyles = `
 .launcher {
   display: grid;
   gap: 6px;
-  width: 228px;
-  padding: 14px 16px;
+  width: 208px;
+  padding: 12px 14px;
   border: 2px solid var(--green-dark);
   border-radius: 20px;
   background:
@@ -117,15 +117,15 @@ export const assistantStyles = `
 }
 
 .launcher__title {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   line-height: 1;
   color: #f7f2e0;
 }
 
 .launcher__meta {
   color: rgba(240, 232, 208, 0.78);
-  line-height: 1.45;
-  font-size: 13px;
+  line-height: 1.35;
+  font-size: 12px;
 }
 
 .assistant-panel {
@@ -162,7 +162,7 @@ export const assistantStyles = `
   display: flex;
   justify-content: space-between;
   gap: 18px;
-  padding: 20px 20px 16px;
+  padding: 14px 14px 10px;
   background:
     radial-gradient(circle at top left, rgba(216, 197, 138, 0.22), transparent 36%),
     linear-gradient(160deg, var(--ink), #413628);
@@ -213,14 +213,15 @@ export const assistantStyles = `
 }
 
 .assistant-header h2 {
-  font-size: clamp(1.6rem, 1.35rem + 0.7vw, 2rem);
+  font-size: clamp(1.3rem, 1.1rem + 0.45vw, 1.6rem);
   line-height: 1.02;
 }
 
 .assistant-header p {
   color: rgba(240, 232, 208, 0.84);
-  line-height: 1.55;
-  max-width: 34ch;
+  line-height: 1.4;
+  max-width: 30ch;
+  font-size: 13px;
 }
 
 .assistant-header__actions,
@@ -236,7 +237,7 @@ export const assistantStyles = `
 }
 
 .assistant-tabs {
-  padding: 14px 16px 0;
+  padding: 10px 14px 0;
 }
 
 .assistant-tab,
@@ -282,6 +283,12 @@ export const assistantStyles = `
   width: 40px;
   min-width: 40px;
   padding: 0;
+  font-size: 0;
+  line-height: 1;
+}
+
+.icon-button::before {
+  content: "×";
   font-size: 22px;
   line-height: 1;
 }
@@ -305,11 +312,11 @@ export const assistantStyles = `
   display: grid;
   align-content: start;
   gap: 8px;
-  padding: 16px;
+  padding: 10px 14px 8px;
 }
 
 .empty-state {
-  padding: 18px;
+  padding: 12px 14px;
   border: 1px solid rgba(61, 92, 61, 0.18);
   border-radius: 18px;
   background:
@@ -318,19 +325,20 @@ export const assistantStyles = `
 }
 
 .empty-state h3 {
-  font-size: 1.45rem;
+  font-size: 1.16rem;
   line-height: 1.08;
 }
 
 .empty-state p {
   color: #554a3f;
-  line-height: 1.6;
+  line-height: 1.45;
+  font-size: 13px;
 }
 
 .messages {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .messages.is-empty {
@@ -372,7 +380,7 @@ export const assistantStyles = `
 }
 
 .bubble-copy {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .source-card,
@@ -415,11 +423,11 @@ export const assistantStyles = `
 }
 
 .composer {
-  padding: 0 16px 16px;
+  padding: 0 14px 10px;
 }
 
 .composer-shell {
-  padding: 12px;
+  padding: 10px 12px;
   border: 1px solid rgba(42, 34, 24, 0.08);
   border-radius: 18px;
   background: rgba(255, 250, 243, 0.96);
@@ -439,13 +447,15 @@ export const assistantStyles = `
 
 .composer textarea {
   resize: none;
-  min-height: 96px;
-  max-height: 168px;
+  min-height: 28px;
+  max-height: 84px;
   border: none;
   padding: 0;
   outline: none;
   background: transparent;
-  line-height: 1.6;
+  line-height: 1.45;
+  font-size: 14px;
+  overflow-y: auto;
 }
 
 .composer textarea::placeholder {
@@ -455,20 +465,20 @@ export const assistantStyles = `
 .composer-actions {
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  padding-top: 6px;
+  flex-wrap: nowrap;
+  padding-top: 8px;
   border-top: 1px solid rgba(42, 34, 24, 0.08);
 }
 
 .composer-hint {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .composer button,
 .analyzer-form button[type="submit"] {
-  min-width: 108px;
-  min-height: 42px;
+  min-width: 92px;
+  min-height: 40px;
   border: 1px solid var(--ink);
   border-radius: 999px;
   background: var(--ink);
@@ -477,8 +487,8 @@ export const assistantStyles = `
 }
 
 .status {
-  margin: 0 16px 10px;
-  padding: 10px 12px;
+  margin: 0 14px 8px;
+  padding: 8px 10px;
   border: 1px solid rgba(42, 34, 24, 0.08);
   border-radius: 14px;
   background: rgba(255, 249, 240, 0.84);
@@ -501,9 +511,9 @@ export const assistantStyles = `
 .assistant-footer {
   justify-content: space-between;
   align-items: center;
-  padding: 0 16px 18px;
+  padding: 0 14px 12px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.45;
 }
 
