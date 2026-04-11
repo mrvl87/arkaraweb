@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   AssistantClientOptions,
   AssistantMode,
   AssistantPageContext,
@@ -473,7 +473,16 @@ function createShellMarkup(input: {
             <p>${isFloating ? getCompactModeDescription(input.mode) : getModeDescription(input.mode)}</p>
           </div>
           <div class="assistant-header__actions">
-            ${isFloating ? `<button class="icon-button" type="button" data-close aria-label="Tutup assistant">×</button>` : `<a class="ghost-link" href="${escapeAttribute(input.assistantPageUrl)}">Rute kanonik</a><a class="solid-button" data-assistant-link href="${escapeAttribute(input.assistantPageUrl)}">Bagikan sesi</a>`}
+            ${isFloating
+              ? `<a class="handoff-button" data-assistant-link href="${escapeAttribute(input.assistantPageUrl)}" aria-label="Lanjutkan percakapan di halaman assistant">
+                  <span class="sr-only">Lanjutkan ke halaman assistant</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                  </svg>
+                </a>
+                <button class="icon-button" type="button" data-close aria-label="Tutup assistant">×</button>`
+              : `<a class="ghost-link" href="${escapeAttribute(input.assistantPageUrl)}">Rute kanonik</a><a class="solid-button" data-assistant-link href="${escapeAttribute(input.assistantPageUrl)}">Bagikan sesi</a>`}
           </div>
         </header>
         ${isFloating ? "" : `<nav class="assistant-tabs" aria-label="Assistant sections"><button type="button" class="assistant-tab" data-tab="chat" data-active="true">Percakapan</button><button type="button" class="assistant-tab" data-tab="analyzer" data-active="false">Scenario Analyzer</button></nav>`}
@@ -517,3 +526,4 @@ function createShellMarkup(input: {
     </section>
   `;
 }
+

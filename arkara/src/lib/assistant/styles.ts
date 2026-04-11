@@ -1,4 +1,4 @@
-export const assistantStyles = `
+﻿export const assistantStyles = `
 :host {
   font-family: "Barlow", system-ui, sans-serif;
   color: #2a2218;
@@ -245,6 +245,7 @@ export const assistantStyles = `
 .assistant-tab,
 .utility-button,
 .icon-button,
+.handoff-button,
 .ghost-link,
 .solid-button {
   display: inline-flex;
@@ -268,6 +269,7 @@ export const assistantStyles = `
 .assistant-tab,
 .utility-button,
 .icon-button,
+.handoff-button,
 .ghost-link {
   background: rgba(255, 251, 244, 0.78);
   border-color: rgba(42, 34, 24, 0.12);
@@ -294,6 +296,23 @@ export const assistantStyles = `
   content: "×";
   font-size: 18px;
   line-height: 1;
+}
+
+.handoff-button {
+  min-width: 64px;
+  min-height: 34px;
+  padding: 0 16px;
+  border-color: rgba(240, 232, 208, 0.28);
+  background: rgba(255, 248, 236, 0.08);
+  color: var(--paper);
+}
+
+.handoff-button svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  fill: none;
 }
 
 .assistant-stage {
@@ -604,7 +623,6 @@ export const assistantStyles = `
     align-items: stretch;
   }
 
-  .assistant-header__actions,
   .assistant-tabs,
   .composer-actions {
     flex-direction: column;
@@ -643,6 +661,19 @@ export const assistantStyles = `
     top: 10px;
     right: 10px;
     margin-left: 0;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .handoff-button {
+    min-width: 54px;
+    min-height: 28px;
+    padding: 0 12px;
+  }
+
+  .handoff-button svg {
+    width: 16px;
+    height: 16px;
   }
 
   .icon-button {
@@ -724,3 +755,4 @@ export const assistantStyles = `
   }
 }
 `;
+
