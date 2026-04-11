@@ -159,6 +159,7 @@ export const assistantStyles = `
 }
 
 .assistant-header {
+  position: relative;
   display: flex;
   justify-content: space-between;
   gap: 18px;
@@ -213,15 +214,15 @@ export const assistantStyles = `
 }
 
 .assistant-header h2 {
-  font-size: clamp(1.3rem, 1.1rem + 0.45vw, 1.6rem);
+  font-size: clamp(1.15rem, 1rem + 0.3vw, 1.4rem);
   line-height: 1.02;
 }
 
 .assistant-header p {
   color: rgba(240, 232, 208, 0.84);
-  line-height: 1.4;
-  max-width: 30ch;
-  font-size: 13px;
+  line-height: 1.32;
+  max-width: 28ch;
+  font-size: 12px;
 }
 
 .assistant-header__actions,
@@ -234,6 +235,7 @@ export const assistantStyles = `
 
 .assistant-header__actions {
   align-items: flex-start;
+  margin-left: auto;
 }
 
 .assistant-tabs {
@@ -280,8 +282,9 @@ export const assistantStyles = `
 }
 
 .icon-button {
-  width: 40px;
-  min-width: 40px;
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
   padding: 0;
   font-size: 0;
   line-height: 1;
@@ -289,7 +292,7 @@ export const assistantStyles = `
 
 .icon-button::before {
   content: "×";
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1;
 }
 
@@ -312,11 +315,11 @@ export const assistantStyles = `
   display: grid;
   align-content: start;
   gap: 8px;
-  padding: 10px 14px 8px;
+  padding: 8px 14px 4px;
 }
 
 .empty-state {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 1px solid rgba(61, 92, 61, 0.18);
   border-radius: 18px;
   background:
@@ -325,20 +328,20 @@ export const assistantStyles = `
 }
 
 .empty-state h3 {
-  font-size: 1.16rem;
+  font-size: 1rem;
   line-height: 1.08;
 }
 
 .empty-state p {
   color: #554a3f;
-  line-height: 1.45;
-  font-size: 13px;
+  line-height: 1.35;
+  font-size: 12px;
 }
 
 .messages {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .messages.is-empty {
@@ -423,13 +426,17 @@ export const assistantStyles = `
 }
 
 .composer {
-  padding: 0 14px 10px;
+  padding: 0 14px 6px;
 }
 
 .composer-shell {
-  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
   border: 1px solid rgba(42, 34, 24, 0.08);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 250, 243, 0.96);
   box-shadow: 0 10px 24px rgba(42, 34, 24, 0.06);
 }
@@ -447,15 +454,16 @@ export const assistantStyles = `
 
 .composer textarea {
   resize: none;
-  min-height: 28px;
-  max-height: 84px;
+  min-height: 22px;
+  max-height: 64px;
   border: none;
   padding: 0;
   outline: none;
   background: transparent;
-  line-height: 1.45;
-  font-size: 14px;
+  line-height: 1.35;
+  font-size: 13px;
   overflow-y: auto;
+  align-self: center;
 }
 
 .composer textarea::placeholder {
@@ -463,22 +471,40 @@ export const assistantStyles = `
 }
 
 .composer-actions {
+  display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: nowrap;
-  padding-top: 8px;
-  border-top: 1px solid rgba(42, 34, 24, 0.08);
+  justify-content: flex-end;
+  padding: 0;
+  border-top: none;
 }
 
-.composer-hint {
-  color: var(--muted);
-  font-size: 11px;
+.composer button {
+  min-width: 42px;
+  width: 42px;
+  height: 42px;
+  min-height: 42px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+  padding: 0;
 }
 
-.composer button,
+.composer button svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  fill: none;
+}
+
 .analyzer-form button[type="submit"] {
-  min-width: 92px;
-  min-height: 40px;
+  min-width: 120px;
+  width: auto;
+  height: auto;
+  min-height: 42px;
+  padding: 0 16px;
   border: 1px solid var(--ink);
   border-radius: 999px;
   background: var(--ink);
@@ -488,11 +514,11 @@ export const assistantStyles = `
 
 .status {
   margin: 0 14px 8px;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border: 1px solid rgba(42, 34, 24, 0.08);
   border-radius: 14px;
   background: rgba(255, 249, 240, 0.84);
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
 }
 
@@ -511,10 +537,16 @@ export const assistantStyles = `
 .assistant-footer {
   justify-content: space-between;
   align-items: center;
-  padding: 0 14px 12px;
+  padding: 0 14px 8px;
   color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.assistant-footer .utility-button {
+  min-height: 34px;
+  padding: 8px 12px;
   font-size: 11px;
-  line-height: 1.45;
 }
 
 .analyzer-intro,
@@ -579,23 +611,116 @@ export const assistantStyles = `
     align-items: stretch;
   }
 
+  .assistant-header {
+    padding: 10px 10px 8px;
+    gap: 10px;
+  }
+
+  .assistant-header__copy {
+    gap: 8px;
+  }
+
+  .assistant-header h2 {
+    font-size: 1rem;
+  }
+
+  .assistant-header p {
+    font-size: 11px;
+    max-width: none;
+  }
+
+  .assistant-kicker,
+  .empty-state__eyebrow,
+  .sources-label,
+  .analyzer-card__eyebrow,
+  .source-card__type,
+  .bubble-meta {
+    font-size: 10px;
+  }
+
+  .assistant-header__actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    margin-left: 0;
+  }
+
+  .icon-button {
+    width: 30px !important;
+    min-width: 30px;
+    min-height: 30px;
+    height: 30px;
+  }
+
+  .icon-button::before {
+    font-size: 16px;
+  }
+
   .launcher-dock {
     justify-items: stretch;
   }
 
-  .composer button,
   .assistant-header__actions > *,
   .launcher {
     width: 100%;
   }
 
-  .icon-button {
-    width: 40px !important;
-    min-width: 40px;
-  }
-
   .bubble {
     max-width: 96%;
+  }
+
+  .conversation-scroll {
+    padding: 6px 10px 2px;
+  }
+
+  .composer {
+    padding: 0 10px 4px;
+  }
+
+  .composer-shell {
+    padding: 6px 8px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .composer textarea {
+    min-height: 20px;
+    max-height: 56px;
+    font-size: 12px;
+  }
+
+  .composer-actions {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .composer button {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+  }
+
+  .composer button svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .status {
+    margin: 0 10px 6px;
+    padding: 6px 8px;
+    font-size: 10px;
+  }
+
+  .assistant-footer {
+    padding: 0 10px 6px;
+    font-size: 10px;
+  }
+
+  .assistant-footer .utility-button {
+    min-height: 30px;
+    padding: 6px 10px;
+    font-size: 10px;
   }
 }
 `;

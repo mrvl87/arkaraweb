@@ -496,8 +496,13 @@ function createShellMarkup(input: {
                 <label class="sr-only" for="arkara-assistant-composer">Pesan assistant</label>
                 <textarea id="arkara-assistant-composer" data-composer placeholder="Tulis kebutuhan Anda sekarang."></textarea>
                 <div class="composer-actions">
-                  <div class="composer-hint">Enter untuk kirim, Shift+Enter untuk baris baru.</div>
-                  <button type="button" data-send>Kirim</button>
+                  <button type="button" data-send aria-label="Kirim pesan">
+                    <span class="sr-only">Kirim</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11.5L20 4l-4.5 16-4.2-6.1L3 11.5Z"></path>
+                      <path d="M11.1 13.9L20 4"></path>
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
