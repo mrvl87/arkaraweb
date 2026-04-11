@@ -38,24 +38,37 @@ export const assistantStyles = `
 
 .assistant-shell--floating {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
+  inset: 0;
   z-index: 9999;
+  pointer-events: none;
+}
+
+.assistant-shell--floating > * {
+  pointer-events: auto;
+}
+
+.assistant-backdrop {
+  position: fixed;
+  inset: 0;
+  border: none;
+  background: rgba(42, 34, 24, 0.28);
+  backdrop-filter: blur(3px);
+  cursor: pointer;
 }
 
 .launcher-dock {
-  display: grid;
-  gap: 12px;
-  justify-items: end;
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
 }
 
 .launcher {
   display: grid;
   gap: 6px;
-  min-width: 238px;
-  padding: 16px 18px;
+  width: 228px;
+  padding: 14px 16px;
   border: 2px solid var(--green-dark);
-  border-radius: 18px;
+  border-radius: 20px;
   background:
     radial-gradient(circle at top left, rgba(216, 197, 138, 0.28), transparent 42%),
     linear-gradient(135deg, rgba(42, 34, 24, 0.98), rgba(61, 49, 36, 0.96));
@@ -104,7 +117,7 @@ export const assistantStyles = `
 }
 
 .launcher__title {
-  font-size: 1.55rem;
+  font-size: 1.25rem;
   line-height: 1;
   color: #f7f2e0;
 }
@@ -115,24 +128,9 @@ export const assistantStyles = `
   font-size: 13px;
 }
 
-.launcher-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 38px;
-  padding: 9px 14px;
-  border: 1px solid rgba(61, 92, 61, 0.32);
-  border-radius: 999px;
-  background: rgba(240, 232, 208, 0.82);
-  color: var(--ink);
-  text-decoration: none;
-  font-size: 12px;
-  font-weight: 600;
-}
-
 .assistant-panel {
-  width: min(420px, calc(100vw - 24px));
-  max-height: min(80vh, 760px);
+  width: min(440px, calc(100vw - 24px));
+  height: min(100dvh - 24px, 100%);
   background:
     radial-gradient(circle at top left, rgba(216, 197, 138, 0.24), transparent 34%),
     linear-gradient(180deg, rgba(250, 244, 231, 0.98), rgba(240, 232, 208, 0.98));
@@ -140,11 +138,24 @@ export const assistantStyles = `
   border-radius: 24px;
   box-shadow: 0 26px 54px rgba(42, 34, 24, 0.22);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.assistant-shell--floating .assistant-panel {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: min(440px, calc(100vw - 24px));
+  height: auto;
+  border-radius: 24px 0 0 24px;
 }
 
 .assistant-panel--page {
   width: 100%;
   max-height: none;
+  height: auto;
 }
 
 .assistant-header {
@@ -220,12 +231,17 @@ export const assistantStyles = `
   gap: 10px;
 }
 
+.assistant-header__actions {
+  align-items: flex-start;
+}
+
 .assistant-tabs {
   padding: 14px 16px 0;
 }
 
 .assistant-tab,
 .utility-button,
+.icon-button,
 .ghost-link,
 .solid-button {
   display: inline-flex;
@@ -248,6 +264,7 @@ export const assistantStyles = `
 
 .assistant-tab,
 .utility-button,
+.icon-button,
 .ghost-link {
   background: rgba(255, 251, 244, 0.78);
   border-color: rgba(42, 34, 24, 0.12);
@@ -261,8 +278,37 @@ export const assistantStyles = `
   color: var(--paper);
 }
 
+.icon-button {
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.assistant-stage {
+  flex: 1;
+  min-height: 0;
+}
+
+.assistant-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.conversation-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+}
+
 .empty-state {
-  margin: 16px 16px 6px;
   padding: 18px;
   border: 1px solid rgba(61, 92, 61, 0.18);
   border-radius: 18px;
@@ -282,23 +328,13 @@ export const assistantStyles = `
 }
 
 .messages {
-  min-height: 260px;
-  max-height: 440px;
-  overflow: auto;
-  padding: 10px 16px 12px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(240, 231, 214, 0.92)),
-    radial-gradient(circle at top, rgba(255, 245, 228, 0.55), transparent 40%);
 }
 
 .messages.is-empty {
-  min-height: 0;
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
+  display: none;
 }
 
 .bubble {
@@ -441,7 +477,7 @@ export const assistantStyles = `
 }
 
 .status {
-  margin: 0 16px 12px;
+  margin: 0 16px 10px;
   padding: 10px 12px;
   border: 1px solid rgba(42, 34, 24, 0.08);
   border-radius: 14px;
@@ -508,13 +544,16 @@ export const assistantStyles = `
 
 @media (max-width: 768px) {
   .assistant-shell--floating {
-    right: 12px;
-    left: 12px;
-    bottom: 12px;
+    inset: 0;
   }
 
-  .assistant-panel {
-    width: 100%;
+  .assistant-shell--floating .assistant-panel {
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    border-radius: 20px;
   }
 
   .assistant-header,
@@ -536,9 +575,13 @@ export const assistantStyles = `
 
   .composer button,
   .assistant-header__actions > *,
-  .launcher,
-  .launcher-link {
+  .launcher {
     width: 100%;
+  }
+
+  .icon-button {
+    width: 40px !important;
+    min-width: 40px;
   }
 
   .bubble {

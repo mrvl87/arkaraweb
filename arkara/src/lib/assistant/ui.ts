@@ -48,6 +48,7 @@ export function renderAssistantExperience(options: RenderOptions) {
 
   const launcherDock = mount.querySelector<HTMLElement>("[data-launcher-dock]");
   const launcher = mount.querySelector<HTMLButtonElement>("[data-launcher]");
+  const backdrop = mount.querySelector<HTMLButtonElement>("[data-backdrop]");
   const closeButton = mount.querySelector<HTMLButtonElement>("[data-close]");
   const panel = query<HTMLElement>(mount, "[data-panel]");
   const messagesContainer = query<HTMLElement>(mount, "[data-messages]");
@@ -55,7 +56,7 @@ export function renderAssistantExperience(options: RenderOptions) {
   const sendButton = query<HTMLButtonElement>(mount, "[data-send]");
   const resetButton = query<HTMLButtonElement>(mount, "[data-reset]");
   const status = query<HTMLElement>(mount, "[data-status]");
-  const assistantLink = query<HTMLAnchorElement>(mount, "[data-assistant-link]");
+  const assistantLink = mount.querySelector<HTMLAnchorElement>("[data-assistant-link]");
   const emptyState = query<HTMLElement>(mount, "[data-empty-state]");
   const promptButtons = Array.from(mount.querySelectorAll<HTMLButtonElement>("[data-prompt]"));
   const analyzerForm = mount.querySelector<HTMLFormElement>("[data-analyzer-form]");
@@ -91,6 +92,7 @@ export function renderAssistantExperience(options: RenderOptions) {
 
     isOpen = nextOpen;
     panel.classList.toggle("hidden", !isOpen);
+    backdrop?.classList.toggle("hidden", !isOpen);
     launcherDock?.classList.toggle("hidden", isOpen);
   }
 
@@ -280,6 +282,7 @@ export function renderAssistantExperience(options: RenderOptions) {
   }
 
   launcher?.addEventListener("click", () => setPanelState(true));
+  backdrop?.addEventListener("click", () => setPanelState(false));
   closeButton?.addEventListener("click", () => setPanelState(false));
   sendButton.addEventListener("click", () => void handleSend());
   composer.addEventListener("keydown", (event) => {
@@ -301,7 +304,7 @@ export function renderAssistantExperience(options: RenderOptions) {
     button.addEventListener("click", () => setActiveTab(button.dataset.tab ?? "chat"));
   }
 
-  assistantLink.addEventListener("click", async (event) => {
+  assistantLink?.addEventListener("click", async (event) => {
     event.preventDefault();
     try {
       const href = await buildAssistantPageUrl({ ...options, initialMode: mode, pageContext });
@@ -441,14 +444,14 @@ function createShellMarkup(input: {
   const isFloating = input.variant === "floating";
   return `
     <section class="assistant-shell assistant-shell--${input.variant}">
+      ${isFloating ? `<button class="assistant-backdrop hidden" type="button" data-backdrop aria-label="Tutup assistant"></button>` : ""}
       ${isFloating ? `
         <div class="launcher-dock" data-launcher-dock>
           <button class="launcher" type="button" data-launcher>
             <span class="launcher__eyebrow">Arkara AI Assistant</span>
-            <span class="launcher__title">Butuh bantuan cepat?</span>
-            <span class="launcher__meta">Buka percakapan singkat tanpa meninggalkan halaman ini.</span>
+            <span class="launcher__title">Buka assistant</span>
+            <span class="launcher__meta">Checklist, ringkasan, dan langkah cepat dari halaman ini.</span>
           </button>
-          <a class="launcher-link" href="${escapeAttribute(input.assistantPageUrl)}">Buka halaman penuh</a>
         </div>
       ` : ""}
       <section class="${isFloating ? "assistant-panel hidden" : "assistant-panel assistant-panel--page"}" data-panel>
@@ -462,22 +465,23 @@ function createShellMarkup(input: {
             <p>${getModeDescription(input.mode)}</p>
           </div>
           <div class="assistant-header__actions">
-            ${isFloating ? `<button class="utility-button" type="button" data-close>Sembunyikan</button>` : `<a class="ghost-link" href="${escapeAttribute(input.assistantPageUrl)}">Rute kanonik</a>`}
-            <a class="solid-button" data-assistant-link href="${escapeAttribute(input.assistantPageUrl)}">${isFloating ? "Lanjutkan penuh" : "Bagikan sesi"}</a>
+            ${isFloating ? `<button class="icon-button" type="button" data-close aria-label="Tutup assistant">×</button>` : `<a class="ghost-link" href="${escapeAttribute(input.assistantPageUrl)}">Rute kanonik</a><a class="solid-button" data-assistant-link href="${escapeAttribute(input.assistantPageUrl)}">Bagikan sesi</a>`}
           </div>
         </header>
         ${isFloating ? "" : `<nav class="assistant-tabs" aria-label="Assistant sections"><button type="button" class="assistant-tab" data-tab="chat" data-active="true">Percakapan</button><button type="button" class="assistant-tab" data-tab="analyzer" data-active="false">Scenario Analyzer</button></nav>`}
         <div class="assistant-stage">
           <section class="assistant-section" data-section="chat">
-            <section class="empty-state" data-empty-state>
-              <div class="empty-state__eyebrow">${getModeLabel(input.mode)}</div>
-              <h3>${isFloating ? "Mulai dari pertanyaan yang paling mendesak." : "Mari mulai dari konteks yang paling penting buat Anda."}</h3>
-              <p>Assistant menjaga sesi tetap nyambung lintas halaman dan bisa memakai konteks artikel atau panduan yang sedang Anda baca.</p>
-              <div class="prompt-grid">
-                ${input.promptStarters.map((starter) => `<button class="prompt-card" type="button" data-prompt="${escapeAttribute(starter.prompt)}"><strong>${escapeHtml(starter.label)}</strong><span>${escapeHtml(starter.prompt)}</span></button>`).join("")}
-              </div>
-            </section>
-            <div class="messages" data-messages></div>
+            <div class="conversation-scroll" data-conversation-scroll>
+              <section class="empty-state" data-empty-state>
+                <div class="empty-state__eyebrow">${getModeLabel(input.mode)}</div>
+                <h3>${isFloating ? "Mulai dari pertanyaan yang paling mendesak." : "Mari mulai dari konteks yang paling penting buat Anda."}</h3>
+                <p>Assistant menjaga sesi tetap nyambung lintas halaman dan bisa memakai konteks artikel atau panduan yang sedang Anda baca.</p>
+                <div class="prompt-grid">
+                  ${input.promptStarters.map((starter) => `<button class="prompt-card" type="button" data-prompt="${escapeAttribute(starter.prompt)}"><strong>${escapeHtml(starter.label)}</strong><span>${escapeHtml(starter.prompt)}</span></button>`).join("")}
+                </div>
+              </section>
+              <div class="messages" data-messages></div>
+            </div>
             <div class="status" data-status data-tone="neutral">Memuat sesi...</div>
             <div class="composer">
               <div class="composer-shell">
