@@ -46,6 +46,7 @@ export function renderAssistantExperience(options: RenderOptions) {
   options.root.innerHTML = "";
   options.root.append(style, mount);
 
+  const launcherDock = mount.querySelector<HTMLElement>("[data-launcher-dock]");
   const launcher = mount.querySelector<HTMLButtonElement>("[data-launcher]");
   const closeButton = mount.querySelector<HTMLButtonElement>("[data-close]");
   const panel = query<HTMLElement>(mount, "[data-panel]");
@@ -90,7 +91,7 @@ export function renderAssistantExperience(options: RenderOptions) {
 
     isOpen = nextOpen;
     panel.classList.toggle("hidden", !isOpen);
-    launcher?.classList.toggle("hidden", isOpen);
+    launcherDock?.classList.toggle("hidden", isOpen);
   }
 
   function setActiveTab(nextTab: string) {
@@ -433,12 +434,12 @@ function createShellMarkup(input: {
   const isFloating = input.variant === "floating";
   return `
     <section class="assistant-shell assistant-shell--${input.variant}">
-      ${isFloating ? `<button class="launcher" type="button" data-launcher><span class="launcher__title">ARKARA_AI</span><span class="launcher__meta">field desk active</span></button>` : ""}
+      ${isFloating ? `<div class="launcher-dock" data-launcher-dock><button class="launcher" type="button" data-launcher><span class="launcher__title">ARKARA_AI</span><span class="launcher__meta">field desk active</span><span class="launcher__action">View</span></button><a class="launcher-link" href="${escapeAttribute(input.assistantPageUrl)}">/assistant</a></div>` : ""}
       <section class="${isFloating ? "assistant-panel hidden" : "assistant-panel assistant-panel--page"}" data-panel>
         <header class="assistant-header">
           <div><div class="assistant-kicker">${isFloating ? "quick field support" : "command desk"}</div><h2>${input.siteName} Survival AI</h2><p>${getModeDescription(input.mode)}</p></div>
           <div class="assistant-header__actions">
-            ${isFloating ? `<button class="utility-button" type="button" data-close>Tutup</button>` : `<a class="ghost-link" href="${escapeAttribute(input.assistantPageUrl)}">Rute kanonik</a>`}
+            ${isFloating ? `<a class="ghost-link" href="${escapeAttribute(input.assistantPageUrl)}">/assistant</a><button class="utility-button" type="button" data-close>Hide</button>` : `<a class="ghost-link" href="${escapeAttribute(input.assistantPageUrl)}">Rute kanonik</a>`}
             <a class="solid-button" data-assistant-link href="${escapeAttribute(input.assistantPageUrl)}">${isFloating ? "Buka penuh" : "Bagikan sesi"}</a>
           </div>
         </header>

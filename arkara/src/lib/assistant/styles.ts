@@ -38,6 +38,12 @@ export const assistantStyles = `
   z-index: 9999;
 }
 
+.launcher-dock {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
 .launcher {
   display: grid;
   gap: 2px;
@@ -48,6 +54,31 @@ export const assistantStyles = `
   box-shadow: 5px 5px 0 var(--green-dark);
   color: var(--paper);
   cursor: pointer;
+}
+
+.launcher__action {
+  margin-top: 6px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+
+.launcher-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 8px 12px;
+  border: 2px solid var(--green-dark);
+  background: rgba(42, 34, 24, 0.92);
+  color: var(--paper);
+  text-decoration: none;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .launcher__title,
@@ -343,12 +374,18 @@ export const assistantStyles = `
     flex-direction: column;
   }
 
+  .launcher-dock {
+    justify-items: stretch;
+  }
+
   .composer {
     grid-template-columns: 1fr;
   }
 
   .composer button,
-  .assistant-header__actions > * {
+  .assistant-header__actions > *,
+  .launcher,
+  .launcher-link {
     width: 100%;
   }
 }
