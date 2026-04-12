@@ -1,5 +1,6 @@
-import type {
+﻿import type {
   AssistantClientOptions,
+  AssistantPageContext,
   ChatStreamEvent,
   ClientMessage,
   RuntimeSession,
@@ -7,6 +8,8 @@ import type {
   StartChatInput
 } from "./contracts";
 import { clearStoredSession, readStoredSession, writeStoredSession } from "./storage";
+
+const PAGE_CONTEXT_HANDOFF_KEY = "arkara-assistant-page-context";
 
 export function createAssistantClient(options: AssistantClientOptions) {
   const apiBaseUrl = options.apiBaseUrl.replace(/\/$/, "");
@@ -143,7 +146,17 @@ export function createAssistantClient(options: AssistantClientOptions) {
 export async function buildAssistantPageUrl(options: AssistantClientOptions): Promise<string> {
   const assistantPageUrl = options.assistantPageUrl ?? "/assistant";
   const session = await createAssistantClient(options).ensureSession();
+  storePageContextHandoff(session.sessionId, options.pageContext);
   return appendSessionToUrl(assistantPageUrl, session.sessionId);
+}
+
+export function readAssistantPageContextHandoff(): AssistantPageContext | undefined {
+  const requestedSessionId = resolveRequestedSessionId();
+  if (!requestedSessionId) {
+    return undefined;
+  }
+
+  return readStoredPageContext(requestedSessionId);
 }
 
 function parseSseEvent(part: string): ChatStreamEvent | null {
@@ -190,6 +203,54 @@ function appendSessionToUrl(url: string, sessionId: string) {
   const resolved = new URL(url, window.location.origin);
   resolved.searchParams.set("session", sessionId);
   return resolved.pathname + resolved.search + resolved.hash;
+}
+
+function storePageContextHandoff(sessionId: string, pageContext?: AssistantPageContext) {
+  if (typeof window === "undefined" || !pageContext) {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(getPageContextStorageKey(sessionId), JSON.stringify(pageContext));
+  } catch {
+    // Ignore storage failures and continue with the session handoff only.
+  }
+}
+
+function readStoredPageContext(sessionId: string): AssistantPageContext | undefined {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(getPageContextStorageKey(sessionId));
+    if (!raw) {
+      return undefined;
+    }
+
+    const parsed = JSON.parse(raw) as Partial<AssistantPageContext>;
+    if (
+      typeof parsed.url === "string" &&
+      typeof parsed.title === "string" &&
+      typeof parsed.pathname === "string"
+    ) {
+      return {
+        url: parsed.url,
+        title: parsed.title,
+        pathname: parsed.pathname,
+        description: typeof parsed.description === "string" ? parsed.description : undefined,
+        bodyText: typeof parsed.bodyText === "string" ? parsed.bodyText : undefined
+      };
+    }
+  } catch {
+    // Ignore malformed handoff payloads.
+  }
+
+  return undefined;
+}
+
+function getPageContextStorageKey(sessionId: string) {
+  return `${PAGE_CONTEXT_HANDOFF_KEY}:${sessionId}`;
 }
 
 function isUuid(value: string) {

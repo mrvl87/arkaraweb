@@ -1,6 +1,6 @@
----
+﻿---
 /**
- * BaseLayout.astro — Arkara Retro Survival Manual 2.0
+ * BaseLayout.astro â€” Arkara Retro Survival Manual 2.0
  * Replaces: old Playfair/sand/forest modern layout
  * Changes:
  *   - Nav: ink background, terminal cursor blink, mono font, sharp borders
@@ -27,6 +27,8 @@ interface Props {
     url?: string;
     title?: string;
     pathname?: string;
+    description?: string;
+    bodyText?: string;
   };
 }
 
@@ -43,7 +45,7 @@ const {
   assistantInitialMode,
   assistantContext
 } = Astro.props;
-const siteTitle = title ? `${title} — ${siteName}` : `${siteName} — Survive with Knowledge`;
+const siteTitle = title ? `${title} â€” ${siteName}` : `${siteName} â€” Survive with Knowledge`;
 const siteUrl = 'https://arkaraweb.com';
 const canonicalUrl = new URL(canonicalHref || Astro.url.pathname, siteUrl);
 const footerData = await getFooterData();
@@ -57,7 +59,7 @@ const navLinks = [
 const footerTagline = footerData?.tagline?.trim()
   || 'Membangun ketangguhan bangsa melalui pengetahuan yang bisa diakses dan dipraktekkan siapa saja.';
 const footerCopyright = footerData?.copyright_text?.trim()
-  || '© 2026 ARKARA — SURVIVE WITH KNOWLEDGE';
+  || 'Â© 2026 ARKARA â€” SURVIVE WITH KNOWLEDGE';
 
 function normalizePlatform(platform?: string) {
   return platform === 'twitter' ? 'x' : platform;
@@ -162,7 +164,7 @@ const footerSocialLinks = (footerData?.social_links ?? [])
     <div class="vfx-grid"   aria-hidden="true"></div>
     <div class="vfx-bg"     aria-hidden="true"></div>
 
-    <!-- ── NAVIGATION ─────────────────────────────────── -->
+    <!-- â”€â”€ NAVIGATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <nav id="main-nav" style="
       position: sticky; top: 0; z-index: 100;
       background: var(--ink);
@@ -181,7 +183,7 @@ const footerSocialLinks = (footerData?.social_links ?? [])
         display: flex; align-items: center; gap: 0.75rem;
       ">
         <span class="nav-cursor" aria-hidden="true"></span>
-        ARKARA_OS — SURVIVAL MANUAL
+        ARKARA_OS â€” SURVIVAL MANUAL
       </a>
 
       <!-- Desktop links -->
@@ -218,7 +220,7 @@ const footerSocialLinks = (footerData?.social_links ?? [])
         color: var(--yellow-manual);
         letter-spacing: 0.1em;
       " class="nav-status-desktop">
-        ◉ SISTEM AKTIF
+        â—‰ SISTEM AKTIF
       </div>
 
       <!-- Mobile hamburger -->
@@ -255,12 +257,12 @@ const footerSocialLinks = (footerData?.social_links ?? [])
       ))}
     </div>
 
-    <!-- ── MAIN CONTENT ────────────────────────────────── -->
+    <!-- â”€â”€ MAIN CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <main>
       <slot />
     </main>
 
-    <!-- ── FOOTER ──────────────────────────────────────── -->
+    <!-- â”€â”€ FOOTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <footer style="
       background: var(--ink);
       border-top: 3px solid var(--green-terminal);
@@ -408,10 +410,10 @@ const footerSocialLinks = (footerData?.social_links ?? [])
             {footerCopyright}
           </p>
           <p aria-hidden="true" style="display:none;font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:var(--warm-grey-dark);">
-            © 2026 ARKARA — SURVIVE WITH KNOWLEDGE
+            Â© 2026 ARKARA â€” SURVIVE WITH KNOWLEDGE
           </p>
           <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:var(--warm-grey-dark);">
-            BUILD: 2026.01 — RAILWAY DEPLOY
+            BUILD: 2026.01 â€” RAILWAY DEPLOY
           </p>
         </div>
       </div>
@@ -449,3 +451,4 @@ const footerSocialLinks = (footerData?.social_links ?? [])
     )}
   </body>
 </html>
+

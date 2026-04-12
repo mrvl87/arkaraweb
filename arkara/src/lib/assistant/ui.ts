@@ -7,7 +7,7 @@
   KnowledgeSource,
   ScenarioAnalyzerResponse
 } from "./contracts";
-import { buildAssistantPageUrl, createAssistantClient } from "./client";
+import { buildAssistantPageUrl, createAssistantClient, readAssistantPageContextHandoff } from "./client";
 import { assistantStyles } from "./styles";
 
 export type AssistantRenderVariant = "floating" | "page";
@@ -345,7 +345,7 @@ export function resolvePageContext(
     pathname: window.location.pathname
   }
 ) {
-  return options.pageContext ?? fallback;
+  return options.pageContext ?? readAssistantPageContextHandoff() ?? fallback;
 }
 
 function getPromptStarters(mode: AssistantMode): PromptStarter[] {
@@ -526,4 +526,5 @@ function createShellMarkup(input: {
     </section>
   `;
 }
+
 

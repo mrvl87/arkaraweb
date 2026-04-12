@@ -1,4 +1,4 @@
----
+﻿---
 import type { AssistantMode } from "../../lib/assistant/contracts";
 
 const apiBaseUrl = import.meta.env.PUBLIC_ASSISTANT_API_URL ?? "http://localhost:8787";
@@ -11,6 +11,8 @@ const {
     url?: string;
     title?: string;
     pathname?: string;
+    description?: string;
+    bodyText?: string;
   };
 } = Astro.props;
 ---
@@ -23,6 +25,8 @@ const {
   context-url={context?.url}
   context-title={context?.title}
   context-pathname={context?.pathname}
+  context-description={context?.description}
+  context-body-text={context?.bodyText}
 ></arkara-assistant-widget>
 
 <script>

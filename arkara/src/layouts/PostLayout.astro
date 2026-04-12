@@ -1,6 +1,6 @@
----
+﻿---
 /**
- * PostLayout.astro — Retro Survival Manual 2.0
+ * PostLayout.astro â€” Retro Survival Manual 2.0
  * Props: unchanged (backward compatible with blog/[slug] and panduan/[slug])
  * Changes:
  *   - Removed rounded-3xl/shadow-2xl/gradient-br modern aesthetics
@@ -32,6 +32,20 @@ interface Props {
 const { title, description, publishDate, category, coverImage, headings = [], content = '', currentSlug, canonicalHref, contentType } = Astro.props;
 const readingTime = calculateReadingTime(content);
 
+function buildAssistantBodyText(value: string): string | undefined {
+  const plainText = value
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1 ')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1 ')
+    .replace(/[`*_>#-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return plainText ? plainText.slice(0, 6000) : undefined;
+}
+
 function resolveSocialImage(image: any): string | undefined {
   if (!image) return undefined;
   if (typeof image === 'string') return image;
@@ -53,6 +67,8 @@ const assistantApiBaseUrl = import.meta.env.PUBLIC_ASSISTANT_API_URL ?? 'http://
 const assistantMode = contentType === 'panduan' || contentType === 'blog'
   ? 'page_context_mode'
   : 'site_guide_mode';
+const assistantDescription = description?.trim() || undefined;
+const assistantBodyText = buildAssistantBodyText(content);
 ---
 
 <BaseLayout
@@ -63,10 +79,10 @@ const assistantMode = contentType === 'panduan' || contentType === 'blog'
   canonicalHref={canonicalHref}
   type="article"
   assistantInitialMode={assistantMode}
-  assistantContext={{ title, pathname: canonicalHref }}
+  assistantContext={{ title, pathname: canonicalHref, description: assistantDescription, bodyText: assistantBodyText }}
 >
 
-  <!-- ── POST HEADER ───────────────────────────────────── -->
+  <!-- â”€â”€ POST HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
   <header style="
     background: var(--ink);
     border-bottom: 3px solid var(--green-terminal);
@@ -100,11 +116,11 @@ const assistantMode = contentType === 'panduan' || contentType === 'blog'
         {category ? `KATEGORI: ${category.toUpperCase()}` : 'ARTIKEL'}
         {publishDate && (
           <span style="color: var(--warm-grey);">
-            — {new Date(publishDate).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' })}
+            â€” {new Date(publishDate).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' })}
           </span>
         )}
         {readingTime > 0 && (
-          <span style="color: var(--warm-grey);">— {readingTime} MIN</span>
+          <span style="color: var(--warm-grey);">â€” {readingTime} MIN</span>
         )}
       </div>
 
@@ -135,7 +151,7 @@ const assistantMode = contentType === 'panduan' || contentType === 'blog'
     </div>
   </header>
 
-  <!-- ── ARTICLE BODY ───────────────────────────────────── -->
+  <!-- â”€â”€ ARTICLE BODY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
   <div style="max-width: 1200px; margin: 0 auto; padding: 0 2rem 5rem; margin-top: -2rem; position: relative; z-index: 10;">
     <div style="display: grid; grid-template-columns: 1fr 300px; gap: 2rem; align-items: start;" class="post-grid">
 
@@ -205,7 +221,7 @@ const assistantMode = contentType === 'panduan' || contentType === 'blog'
             "
             onmouseover="this.style.background='var(--green-dark)'"
             onmouseout="this.style.background=''"
-            >← KEMBALI KE {contentType === 'panduan' ? 'PANDUAN' : 'BLOG'}</a>
+            >â† KEMBALI KE {contentType === 'panduan' ? 'PANDUAN' : 'BLOG'}</a>
           </div>
 
           <div style="
@@ -378,7 +394,7 @@ const assistantMode = contentType === 'panduan' || contentType === 'blog'
 
   <script
     type="module"
-    define:vars={{ assistantApiBaseUrl, title, canonicalHref, assistantMode }}
+    define:vars={{ assistantApiBaseUrl, title, canonicalHref, assistantMode, assistantDescription, assistantBodyText }}
   >
     import { buildAssistantPageUrl } from "../lib/assistant/widget";
 
@@ -398,6 +414,8 @@ const assistantMode = contentType === 'panduan' || contentType === 'blog'
             url: window.location.href,
             title,
             pathname: canonicalHref || window.location.pathname,
+            description: assistantDescription,
+            bodyText: assistantBodyText,
           },
         });
 
@@ -407,3 +425,4 @@ const assistantMode = contentType === 'panduan' || contentType === 'blog'
   </script>
 
 </BaseLayout>
+

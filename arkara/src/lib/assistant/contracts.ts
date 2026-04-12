@@ -1,9 +1,11 @@
-export type AssistantMode = "site_guide_mode" | "page_context_mode" | "scenario_mode";
+﻿export type AssistantMode = "site_guide_mode" | "page_context_mode" | "scenario_mode";
 
 export type AssistantPageContext = {
   url: string;
   title: string;
   pathname: string;
+  description?: string;
+  bodyText?: string;
 };
 
 export type SessionResponse = {

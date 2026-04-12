@@ -1,4 +1,4 @@
-import type { AssistantMode, AssistantClientOptions } from "./contracts";
+﻿import type { AssistantMode, AssistantClientOptions } from "./contracts";
 import { buildAssistantPageUrl } from "./client";
 import { renderAssistantExperience } from "./ui";
 
@@ -41,7 +41,9 @@ function resolvePageContextFromAttributes(element: HTMLElement) {
   const hasExplicitContext =
     element.hasAttribute("context-url") ||
     element.hasAttribute("context-title") ||
-    element.hasAttribute("context-pathname");
+    element.hasAttribute("context-pathname") ||
+    element.hasAttribute("context-description") ||
+    element.hasAttribute("context-body-text");
 
   if (!hasExplicitContext) {
     return undefined;
@@ -50,7 +52,9 @@ function resolvePageContextFromAttributes(element: HTMLElement) {
   return {
     url: element.getAttribute("context-url") ?? window.location.href,
     title: element.getAttribute("context-title") ?? document.title,
-    pathname: element.getAttribute("context-pathname") ?? window.location.pathname
+    pathname: element.getAttribute("context-pathname") ?? window.location.pathname,
+    description: element.getAttribute("context-description") ?? undefined,
+    bodyText: element.getAttribute("context-body-text") ?? undefined
   };
 }
 
