@@ -20,8 +20,8 @@ export interface AIResponse {
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
 const DEFAULT_MODEL = 'deepseek/deepseek-v3.2'
-const LOW_LATENCY_DEEPSEEK_PROVIDER = {
-  order: ['alibaba'],
+const STABLE_DEEPSEEK_PROVIDER = {
+  order: ['deepinfra'],
   allow_fallbacks: true,
   require_parameters: true,
 } as const
@@ -58,7 +58,7 @@ export async function callAI(
       messages,
       temperature: options?.temperature ?? 0.7,
       ...((options?.model ?? DEFAULT_MODEL) === DEFAULT_MODEL
-        ? { provider: LOW_LATENCY_DEEPSEEK_PROVIDER }
+        ? { provider: STABLE_DEEPSEEK_PROVIDER }
         : {}),
       ...(options?.maxTokens && { max_tokens: options.maxTokens }),
     }),
