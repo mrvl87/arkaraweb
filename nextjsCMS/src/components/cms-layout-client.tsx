@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -31,11 +31,61 @@ interface CMSLayoutClientProps {
   children: React.ReactNode
 }
 
+function isRefreshTokenError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /refresh token/i.test(error.message)
+  )
+}
+
 export function CMSLayoutClient({ user, children }: CMSLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [supabase] = useState(() => createClient())
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = createClient()
+
+  useEffect(() => {
+    let mounted = true
+
+    const recoverSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession()
+
+        if (error && isRefreshTokenError(error)) {
+          await supabase.auth.signOut({ scope: 'local' })
+          if (mounted) router.replace('/login')
+          return
+        }
+
+        if (!data.session && mounted) {
+          router.replace('/login')
+        }
+      } catch (error) {
+        if (isRefreshTokenError(error)) {
+          await supabase.auth.signOut({ scope: 'local' })
+        }
+
+        if (mounted) {
+          router.replace('/login')
+        }
+      }
+    }
+
+    recoverSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT' && mounted) {
+        router.replace('/login')
+      }
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [router, supabase])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()

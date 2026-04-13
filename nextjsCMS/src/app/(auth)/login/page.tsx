@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -14,11 +14,47 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>
 
+function isRefreshTokenError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /refresh token/i.test(error.message)
+  )
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
+
+  useEffect(() => {
+    let mounted = true
+
+    const prepareLogin = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession()
+
+        if (error && isRefreshTokenError(error)) {
+          await supabase.auth.signOut({ scope: 'local' })
+          return
+        }
+
+        if (data.session && mounted) {
+          router.replace('/cms/dashboard')
+        }
+      } catch (error) {
+        if (isRefreshTokenError(error)) {
+          await supabase.auth.signOut({ scope: 'local' })
+        }
+      }
+    }
+
+    prepareLogin()
+
+    return () => {
+      mounted = false
+    }
+  }, [router, supabase])
 
   const {
     register,
@@ -33,6 +69,8 @@ export default function LoginPage() {
     setError(null)
 
     try {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
+
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
