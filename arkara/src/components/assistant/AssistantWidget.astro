@@ -1,7 +1,8 @@
 ﻿---
 import type { AssistantMode } from "../../lib/assistant/contracts";
+import { getAssistantApiBaseUrl } from "../../lib/assistant/env";
 
-const apiBaseUrl = import.meta.env.PUBLIC_ASSISTANT_API_URL ?? "https://arkaraaiassistant-production.up.railway.app";
+const apiBaseUrl = getAssistantApiBaseUrl();
 const {
   initialMode,
   context

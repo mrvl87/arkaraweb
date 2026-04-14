@@ -1,7 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { getAssistantApiBaseUrl } from "../lib/assistant/env";
 
-const apiBaseUrl = import.meta.env.PUBLIC_ASSISTANT_API_URL ?? "https://arkaraaiassistant-production.up.railway.app";
+const apiBaseUrl = getAssistantApiBaseUrl();
 ---
 
 <BaseLayout
@@ -65,7 +66,7 @@ const apiBaseUrl = import.meta.env.PUBLIC_ASSISTANT_API_URL ?? "https://arkaraai
     const root = document.getElementById("assistant-root");
     if (root) {
       mountAssistantPage(root, {
-        apiBaseUrl: root.getAttribute("data-api-base-url") ?? "https://arkaraaiassistant-production.up.railway.app",
+        apiBaseUrl: root.getAttribute("data-api-base-url") ?? "",
         assistantPageUrl: "/assistant",
         siteName: "Arkara",
         locale: "id-ID",

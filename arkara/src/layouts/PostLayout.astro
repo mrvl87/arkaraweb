@@ -15,6 +15,7 @@ import ReadingMeta from '../components/blog/ReadingMeta.astro';
 import TableOfContents from '../components/blog/TableOfContents.astro';
 import RelatedPosts from '../components/blog/RelatedPosts.astro';
 import { calculateReadingTime } from '../lib/markdown';
+import { getAssistantApiBaseUrl } from '../lib/assistant/env';
 
 interface Props {
   title: string;
@@ -62,7 +63,7 @@ const ogImageUrl = resolveSocialImage(coverImage);
 const ogImageAlt = typeof coverImage === 'string'
   ? title
   : coverImage?.alt_text || title;
-const assistantApiBaseUrl = import.meta.env.PUBLIC_ASSISTANT_API_URL ?? 'https://arkaraaiassistant-production.up.railway.app';
+const assistantApiBaseUrl = getAssistantApiBaseUrl();
 
 const assistantMode = contentType === 'panduan' || contentType === 'blog'
   ? 'page_context_mode'
