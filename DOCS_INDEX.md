@@ -19,6 +19,7 @@ Panduan navigasi lengkap untuk semua dokumentasi Arkara.
 
 ### Untuk Project Management
 - **[implementation_plan.md](./implementation_plan.md)** - Task checklist & specifications
+- **[APRIL_2026_UPGRADE_AND_DEPLOY_POSTMORTEM.md](./APRIL_2026_UPGRADE_AND_DEPLOY_POSTMORTEM.md)** - Upgrade Astro 6, deploy Railway, Docker, dan dependency CMS
 
 ---
 

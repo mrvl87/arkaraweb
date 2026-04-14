@@ -77,6 +77,7 @@ npm run dev
 | [**PROJECT_SUMMARY.md**](./PROJECT_SUMMARY.md)| **Handover: Penjelasan paling lengkap untuk AI/Editor baru.** |
 | [**DEVELOPMENT_GUIDE.md**](./DEVELOPMENT_GUIDE.md)| Detail teknis, workflow, dan pedoman koding. |
 | [**WALKTHROUGH.md**](./WALKTHROUGH.md)| Panduan instalasi dan troubleshooting mendalam. |
+| [**APRIL_2026_UPGRADE_AND_DEPLOY_POSTMORTEM.md**](./APRIL_2026_UPGRADE_AND_DEPLOY_POSTMORTEM.md)| Catatan lengkap upgrade Astro 6, deploy Railway, Docker, dan fix dependency CMS. |
 
 ---
 

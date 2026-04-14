@@ -62,7 +62,7 @@ const ogImageUrl = resolveSocialImage(coverImage);
 const ogImageAlt = typeof coverImage === 'string'
   ? title
   : coverImage?.alt_text || title;
-const assistantApiBaseUrl = import.meta.env.PUBLIC_ASSISTANT_API_URL ?? 'http://localhost:8787';
+const assistantApiBaseUrl = import.meta.env.PUBLIC_ASSISTANT_API_URL ?? 'https://arkaraaiassistant-production.up.railway.app';
 
 const assistantMode = contentType === 'panduan' || contentType === 'blog'
   ? 'page_context_mode'
