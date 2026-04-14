@@ -1,9 +1,8 @@
 [build]
-builder = "nixpacks"
-buildCommand = "npm run build"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "HOST=0.0.0.0 node ./dist/server/entry.mjs"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
