@@ -13,4 +13,5 @@ restartPolicyMaxRetries = 3
 # Hapus PORT = "3000" agar Railway menyuntikkan $PORT secara dinamis
 HOST = "0.0.0.0"
 NODE_ENV = "production"
+NIXPACKS_NODE_VERSION = "23"
 NPM_CONFIG_OMIT = "dev"
