@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { 
   EditorRoot, 
   EditorContent, 
@@ -56,10 +56,12 @@ import {
 } from 'lucide-react'
 import { MediaPicker } from '../media/media-picker'
 import MarkdownIt from 'markdown-it'
+import { createPortal } from 'react-dom'
 import type {
   VerifyLatestFactsInput,
   VerifyLatestFactsOutput,
 } from '@/lib/ai/schemas'
+import type { InternalLinkAuditResult } from '@/lib/internal-link-opportunities'
 import "./editor.css"
 
 // Predefined base extensions
@@ -157,6 +159,10 @@ export interface RichEditorAIConfig {
     | { success: true; data: VerifyLatestFactsOutput; model: string }
     | { success: false; error: string }
   >
+  getInternalLinkSuggestions?: (input: {
+    title: string
+    content: string
+  }) => Promise<InternalLinkAuditResult>
 }
 
 interface RichEditorProps {
@@ -170,6 +176,7 @@ interface RichEditorProps {
 export interface RichEditorHandle {
   replaceContent: (content: string, options?: { format?: 'html' | 'markdown' }) => void
   appendContent: (content: string, options?: { format?: 'html' | 'markdown' }) => void
+  insertContent: (content: string, options?: { format?: 'html' | 'markdown' }) => void
   getHTML: () => string
   getMarkdown: () => string
 }
@@ -221,6 +228,7 @@ export function RichEditor({ value, onChange, placeholder, onEditorReady, aiConf
             // @ts-ignore - novel typings expect JSONContent but tiptap handles HTML strings natively
             initialContent={value || undefined} 
             extensions={extensions}
+            immediatelyRender={false}
             className="relative min-h-[500px] w-full bg-white rounded-2xl border border-gray-200 
                        focus-within:border-amber-400 focus-within:ring-4 focus-within:ring-amber-50 
                        transition-all overflow-hidden shadow-sm pt-0"
@@ -389,6 +397,45 @@ function EditorToolbar({
     summary: null,
     error: null,
   })
+  const contextMenuRef = useRef<HTMLDivElement | null>(null)
+  const internalLinksRefreshTimerRef = useRef<number | null>(null)
+  const internalLinksCacheRef = useRef<{
+    requestKey: string
+    status: 'idle' | 'loading' | 'ready' | 'error'
+    suggestions: InternalLinkAuditResult['suggestions']
+    error: string | null
+  }>({
+    requestKey: '',
+    status: 'idle',
+    suggestions: [],
+    error: null,
+  })
+  const [internalLinksMenu, setInternalLinksMenu] = useState<{
+    open: boolean
+    x: number
+    y: number
+    stage: 'loading' | 'results' | 'error'
+    suggestions: InternalLinkAuditResult['suggestions']
+    error: string | null
+  }>({
+    open: false,
+    x: 0,
+    y: 0,
+    stage: 'loading',
+    suggestions: [],
+    error: null,
+  })
+  const [internalLinksCache, setInternalLinksCache] = useState<{
+    requestKey: string
+    status: 'idle' | 'loading' | 'ready' | 'error'
+    suggestions: InternalLinkAuditResult['suggestions']
+    error: string | null
+  }>({
+    requestKey: '',
+    status: 'idle',
+    suggestions: [],
+    error: null,
+  })
 
   useEffect(() => {
     if (!onEditorReady) return
@@ -426,6 +473,17 @@ function EditorToolbar({
           : content
 
         editor.commands.setContent(nextHTML, true)
+        syncContent()
+      },
+      insertContent: (content, options) => {
+        if (options?.format === 'markdown') {
+          const html = markdownRenderer.render(content)
+          editor.chain().focus().insertContent(html).run()
+          syncContent()
+          return
+        }
+
+        editor.chain().focus().insertContent(content).run()
         syncContent()
       },
       getHTML: () => editor.getHTML(),
@@ -501,6 +559,20 @@ function EditorToolbar({
       error: null,
     })
   }
+
+  const closeInternalLinksMenu = () => {
+    setInternalLinksMenu((current) => ({
+      ...current,
+      open: false,
+      suggestions: [],
+      error: null,
+      stage: 'loading',
+    }))
+  }
+
+  useEffect(() => {
+    internalLinksCacheRef.current = internalLinksCache
+  }, [internalLinksCache])
 
   const openSelectionAI = () => {
     if (!hasSelection || !selectedText) {
@@ -614,6 +686,198 @@ function EditorToolbar({
     resetSelectionAI()
   }
 
+  const insertInternalLinkSuggestion = (path: string, anchor: string) => {
+    editor.chain().focus().insertContent(`<a href="${path}">${anchor}</a>`).run()
+    onContentChange(editor.getHTML())
+    closeInternalLinksMenu()
+  }
+
+  useEffect(() => {
+    if (!editor || !aiConfig?.getInternalLinkSuggestions) {
+      return
+    }
+
+    const refreshSuggestions = async (force = false) => {
+      const title = aiConfig.title.trim()
+      const content = editor.storage.markdown?.getMarkdown?.() || ''
+      const requestKey = `${title}::${content}`
+
+      if (!title) {
+        setInternalLinksCache({
+          requestKey,
+          status: 'idle',
+          suggestions: [],
+          error: null,
+        })
+        return
+      }
+
+      if (
+        !force &&
+        internalLinksCacheRef.current.requestKey === requestKey &&
+        (internalLinksCacheRef.current.status === 'loading' ||
+          internalLinksCacheRef.current.status === 'ready')
+      ) {
+        return
+      }
+
+      setInternalLinksCache((current) => ({
+        requestKey,
+        status: 'loading',
+        suggestions: current.requestKey === requestKey ? current.suggestions : current.suggestions,
+        error: null,
+      }))
+
+      try {
+        const result = await aiConfig.getInternalLinkSuggestions({
+          title: aiConfig.title,
+          content,
+        })
+
+        setInternalLinksCache((current) => {
+          if (current.requestKey !== requestKey) {
+            return current
+          }
+
+          return {
+            requestKey,
+            status: 'ready',
+            suggestions: result.suggestions,
+            error: null,
+          }
+        })
+      } catch (error) {
+        console.error('[internal-links] failed to refresh cached suggestions', error)
+
+        setInternalLinksCache((current) => {
+          if (current.requestKey !== requestKey) {
+            return current
+          }
+
+          return {
+            requestKey,
+            status: 'error',
+            suggestions: [],
+            error: error instanceof Error ? error.message : 'Gagal memuat saran internal link.',
+          }
+        })
+      }
+    }
+
+    const scheduleRefresh = () => {
+      if (internalLinksRefreshTimerRef.current) {
+        window.clearTimeout(internalLinksRefreshTimerRef.current)
+      }
+
+      internalLinksRefreshTimerRef.current = window.setTimeout(() => {
+        void refreshSuggestions()
+      }, 800)
+    }
+
+    scheduleRefresh()
+    editor.on('update', scheduleRefresh)
+
+    return () => {
+      if (internalLinksRefreshTimerRef.current) {
+        window.clearTimeout(internalLinksRefreshTimerRef.current)
+      }
+
+      editor.off('update', scheduleRefresh)
+    }
+  }, [aiConfig, editor])
+
+  useEffect(() => {
+    if (!editor || !aiConfig?.getInternalLinkSuggestions) {
+      return
+    }
+
+    const handleContextMenu = (event: MouseEvent) => {
+      event.preventDefault()
+      resetSelectionAI()
+
+      const position = editor.view.posAtCoords({
+        left: event.clientX,
+        top: event.clientY,
+      })
+
+      if (position?.pos != null) {
+        editor.chain().focus().setTextSelection(position.pos).run()
+      } else {
+        editor.chain().focus().run()
+      }
+
+      setInternalLinksMenu({
+        open: true,
+        x: Math.min(event.clientX, window.innerWidth - 340),
+        y: Math.min(event.clientY, window.innerHeight - 260),
+        stage:
+          internalLinksCacheRef.current.status === 'error'
+            ? 'error'
+            : internalLinksCacheRef.current.suggestions.length > 0
+              ? 'results'
+              : 'loading',
+        suggestions: internalLinksCacheRef.current.suggestions,
+        error: internalLinksCacheRef.current.error,
+      })
+
+    }
+
+    const dom = editor.view.dom
+    dom.addEventListener('contextmenu', handleContextMenu, true)
+
+    return () => {
+      dom.removeEventListener('contextmenu', handleContextMenu, true)
+    }
+  }, [aiConfig, editor])
+
+  useEffect(() => {
+    if (!internalLinksMenu.open) return
+
+    setInternalLinksMenu((current) => ({
+      ...current,
+      stage:
+        internalLinksCache.status === 'error'
+          ? 'error'
+          : internalLinksCache.suggestions.length > 0
+            ? 'results'
+            : 'loading',
+      suggestions: internalLinksCache.suggestions,
+      error: internalLinksCache.error,
+    }))
+  }, [internalLinksCache, internalLinksMenu.open])
+
+  useEffect(() => {
+    if (!internalLinksMenu.open) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (event.button !== 0) {
+        return
+      }
+
+      if (contextMenuRef.current?.contains(event.target as Node)) {
+        return
+      }
+
+      closeInternalLinksMenu()
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeInternalLinksMenu()
+      }
+    }
+
+    window.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('resize', closeInternalLinksMenu)
+    window.addEventListener('keydown', handleEscape)
+
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('resize', closeInternalLinksMenu)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [internalLinksMenu.open])
+
   return (
     <div className="sticky top-0 z-40 bg-gray-50/95 backdrop-blur-sm border-b border-gray-100">
       <div className="px-4 py-2 flex items-center gap-2">
@@ -647,6 +911,58 @@ function EditorToolbar({
           Markdown Mode
         </button>
       </div>
+
+      {internalLinksMenu.open && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={contextMenuRef}
+              className="fixed z-[9999] w-[320px] overflow-hidden rounded-2xl border border-red-200 bg-white shadow-2xl"
+              style={{ left: internalLinksMenu.x, top: internalLinksMenu.y }}
+            >
+              <div className="border-b border-red-100 bg-red-50 px-4 py-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-red-500">Internal Links</p>
+                <p className="mt-1 text-sm font-bold text-red-900">Saran link baru untuk naskah ini</p>
+              </div>
+
+              {internalLinksMenu.stage === 'loading' ? (
+                <div className="flex items-center gap-3 px-4 py-4 text-sm text-red-700">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Memeriksa konten baru yang relevan...
+                </div>
+              ) : null}
+
+              {internalLinksMenu.stage === 'error' ? (
+                <div className="px-4 py-4 text-sm text-red-700">{internalLinksMenu.error}</div>
+              ) : null}
+
+              {internalLinksMenu.stage === 'results' ? (
+                internalLinksMenu.suggestions.length > 0 ? (
+                  <div className="max-h-[280px] overflow-y-auto p-2">
+                    {internalLinksMenu.suggestions.map((item) => (
+                      <button
+                        key={`${item.type}-${item.id}`}
+                        type="button"
+                        onClick={() => insertInternalLinkSuggestion(item.path, item.suggestedAnchor)}
+                        className="block w-full rounded-xl px-3 py-3 text-left hover:bg-red-50 transition-colors"
+                      >
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-red-400">
+                          {item.type === 'post' ? 'blog' : 'panduan'}
+                        </p>
+                        <p className="mt-1 text-sm font-bold leading-snug text-red-900">{item.title}</p>
+                        <p className="mt-1 font-mono text-[11px] text-red-500">{item.path}</p>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-4 py-4 text-sm text-red-700">
+                    Belum ada konten baru yang relevan untuk disisipkan.
+                  </div>
+                )
+              ) : null}
+            </div>,
+            document.body
+          )
+        : null}
 
       <EditorBubble
         className={
