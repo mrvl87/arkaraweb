@@ -89,6 +89,12 @@ interface OperationContext {
   targetId?: string | null
 }
 
+interface OperationAIOptions {
+  maxTokens?: number
+}
+
+const FULL_DRAFT_MAX_TOKENS = 8000
+
 function normalizeSingleLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
 }
@@ -307,7 +313,7 @@ export async function generateFullDraft(
   return runOperation('generate_full_draft', rawInput, GenerateFullDraftInputSchema, GenerateFullDraftOutputSchema, async (input) => {
     const internalLinks = await getInternalLinksContext(input)
     return prompts.buildFullDraftPrompt(input, internalLinks, profile)
-  }, undefined, ctx)
+  }, undefined, ctx, { maxTokens: FULL_DRAFT_MAX_TOKENS })
 }
 
 // ─── Generate Cluster Ideas ──────────────────────────────────────
@@ -485,7 +491,8 @@ async function runOperation<TInput extends Record<string, unknown>, TOutput exte
   outputSchema: z.ZodType<TOutput>,
   buildMessages: (input: TInput) => Promise<ReturnType<typeof prompts.buildSlugPrompt>> | ReturnType<typeof prompts.buildSlugPrompt>,
   transformOutput?: (data: TOutput) => TOutput,
-  ctx?: OperationContext
+  ctx?: OperationContext,
+  aiOptions?: OperationAIOptions
 ): Promise<OperationResponse<TOutput>> {
   // 1. Validate input
   const inputResult = inputSchema.safeParse(rawInput)
@@ -502,7 +509,7 @@ async function runOperation<TInput extends Record<string, unknown>, TOutput exte
     const messages = await Promise.resolve(buildMessages(validInput))
 
     // 3. Call AI
-    const aiResponse = await callAI(messages)
+    const aiResponse = await callAI(messages, aiOptions)
 
     // 4. Parse and validate output with retry
     const parsedData = await parseWithRetry(aiResponse.content, outputSchema)
