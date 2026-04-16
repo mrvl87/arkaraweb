@@ -12,6 +12,7 @@ import { MediaPicker } from './media/media-picker'
 import { AIFieldAssist } from './ai/ai-field-assist'
 import { DraftGeneratorPanel } from './ai/draft-generator-panel'
 import { ImagePromptsPanel } from './ai/image-prompts-panel'
+import { InternalLinkOpportunitiesPanel } from './internal-link-opportunities-panel'
 import {
   panduanAIGenerateSlug,
   panduanAIGenerateSeoPack,
@@ -19,7 +20,7 @@ import {
   panduanAIGenerateImagePrompts,
   panduanAIVerifyLatestFacts,
 } from '@/app/cms/panduan/actions-ai'
-import { getPanduanSlugRoutingState } from '@/app/cms/panduan/actions'
+import { getPanduanInternalLinkSuggestions, getPanduanSlugRoutingState } from '@/app/cms/panduan/actions'
 import type {
   GenerateSlugOutput,
   GenerateSEOPackOutput,
@@ -541,6 +542,25 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
               category: initialAIState.imagePrompts.input.category,
             } : null}
             generatePrompts={(input) => panduanAIGenerateImagePrompts(input, { panduanId: recordId })}
+          />
+
+          <InternalLinkOpportunitiesPanel
+            title={titleValue}
+            content={contentValue || ''}
+            category={categoryValue}
+            sourceId={initialData?.id}
+            sourcePublishedAt={initialData?.published_at || initialData?.created_at || null}
+            sourceLabel="panduan"
+            checker={(input) =>
+              getPanduanInternalLinkSuggestions({
+                panduanId: initialData?.id,
+                title: input.title,
+                content: input.content,
+                category: input.category,
+                publishedAt: input.publishedAt,
+              })
+            }
+            idKey="panduanId"
           />
 
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">

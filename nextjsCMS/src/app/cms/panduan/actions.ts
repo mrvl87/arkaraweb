@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { triggerFrontendRevalidate } from '@/lib/revalidate'
 import { notifyGoogleIndexing } from '@/lib/google-indexing'
 import { escapeRegex, getPanduanPath, getSlugSimilarityScore, normalizeSlug } from '@/lib/slugs'
+import { findInternalLinkOpportunities } from '@/lib/internal-link-opportunities'
 
 const SITE_URL = process.env.FRONTEND_SITE_URL || 'https://arkaraweb.com'
 const SLUG_SIMILARITY_THRESHOLD = 0.72
@@ -98,6 +99,14 @@ const panduanSlugRoutingInputSchema = z.object({
   slug: z.string().optional().default(''),
   panduanId: z.string().uuid().optional(),
   currentSlug: z.string().optional(),
+})
+
+const panduanInternalLinkAuditSchema = z.object({
+  panduanId: z.string().uuid().optional(),
+  title: z.string().trim().min(1, 'Judul wajib diisi'),
+  content: z.string().optional().default(''),
+  category: z.string().optional(),
+  publishedAt: z.string().optional().nullable(),
 })
 
 function toStatusLabel(status: PanduanStatus | 'active' | 'inactive'): string {
@@ -500,6 +509,22 @@ export async function getPanduan() {
 export async function getPanduanSlugRoutingState(rawInput: z.infer<typeof panduanSlugRoutingInputSchema>) {
   const supabase = await createClient()
   return buildPanduanSlugRoutingState(supabase, rawInput)
+}
+
+export async function getPanduanInternalLinkSuggestions(
+  rawInput: z.infer<typeof panduanInternalLinkAuditSchema>
+) {
+  const input = panduanInternalLinkAuditSchema.parse(rawInput)
+  const supabase = await createClient()
+
+  return findInternalLinkOpportunities(supabase, {
+    sourceType: 'panduan',
+    sourceId: input.panduanId,
+    sourceTitle: input.title,
+    sourceContent: input.content,
+    sourceCategory: input.category,
+    sourcePublishedAt: input.publishedAt,
+  })
 }
 
 export async function createPanduan(formData: z.infer<typeof panduanSchema>) {

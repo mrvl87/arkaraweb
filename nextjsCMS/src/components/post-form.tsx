@@ -11,6 +11,7 @@ import { MediaPicker } from './media/media-picker'
 import { AIFieldAssist } from './ai/ai-field-assist'
 import { DraftGeneratorPanel } from './ai/draft-generator-panel'
 import { ImagePromptsPanel } from './ai/image-prompts-panel'
+import { InternalLinkOpportunitiesPanel } from './internal-link-opportunities-panel'
 import {
   postAIGenerateSlug,
   postAIGenerateSeoPack,
@@ -18,7 +19,7 @@ import {
   postAIGenerateImagePrompts,
   postAIVerifyLatestFacts,
 } from '@/app/cms/posts/actions-ai'
-import { getPostSlugRoutingState } from '@/app/cms/posts/actions'
+import { getPostInternalLinkSuggestions, getPostSlugRoutingState } from '@/app/cms/posts/actions'
 import type { FormAIHistoryState } from '@/lib/ai/history'
 import type { GenerateSlugOutput, GenerateSEOPackOutput } from '@/lib/ai/schemas'
 import type { PostSlugRoutingState } from '@/app/cms/posts/actions'
@@ -573,6 +574,23 @@ export function PostForm({ initialData, initialAIState, onSubmit, title }: PostF
               category: initialAIState.imagePrompts.input.category,
             } : null}
             generatePrompts={(input) => postAIGenerateImagePrompts(input, { postId: recordId })}
+          />
+
+          <InternalLinkOpportunitiesPanel
+            title={titleValue}
+            content={contentValue || ''}
+            sourceId={initialData?.id}
+            sourcePublishedAt={initialData?.published_at || initialData?.created_at || null}
+            sourceLabel="artikel"
+            checker={(input) =>
+              getPostInternalLinkSuggestions({
+                postId: initialData?.id,
+                title: input.title,
+                content: input.content,
+                publishedAt: input.publishedAt,
+              })
+            }
+            idKey="postId"
           />
 
           {/* META & KATEGORI */}

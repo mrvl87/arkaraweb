@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { triggerFrontendRevalidate } from '@/lib/revalidate'
 import { notifyGoogleIndexing } from '@/lib/google-indexing'
 import { escapeRegex, getPostPath, getSlugSimilarityScore, normalizeSlug } from '@/lib/slugs'
+import { findInternalLinkOpportunities } from '@/lib/internal-link-opportunities'
 
 import type { MediaObject } from '@/types/content'
 
@@ -114,6 +115,14 @@ const postSlugRoutingInputSchema = z.object({
   slug: z.string().optional().default(''),
   postId: z.string().uuid().optional(),
   currentSlug: z.string().optional(),
+})
+
+const postInternalLinkAuditSchema = z.object({
+  postId: z.string().uuid().optional(),
+  title: z.string().trim().min(1, 'Judul wajib diisi'),
+  content: z.string().optional().default(''),
+  category: z.string().optional(),
+  publishedAt: z.string().optional().nullable(),
 })
 
 function toStatusLabel(status: PostStatus | 'active' | 'inactive'): string {
@@ -506,6 +515,22 @@ export async function getPosts() {
 export async function getPostSlugRoutingState(rawInput: z.infer<typeof postSlugRoutingInputSchema>) {
   const supabase = await createClient()
   return buildPostSlugRoutingState(supabase, rawInput)
+}
+
+export async function getPostInternalLinkSuggestions(
+  rawInput: z.infer<typeof postInternalLinkAuditSchema>
+) {
+  const input = postInternalLinkAuditSchema.parse(rawInput)
+  const supabase = await createClient()
+
+  return findInternalLinkOpportunities(supabase, {
+    sourceType: 'post',
+    sourceId: input.postId,
+    sourceTitle: input.title,
+    sourceContent: input.content,
+    sourceCategory: input.category,
+    sourcePublishedAt: input.publishedAt,
+  })
 }
 
 export async function createPost(formData: z.infer<typeof postSchema>) {
