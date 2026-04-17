@@ -110,14 +110,24 @@ function normalizePromptText(value: string): string {
     .trim()
 }
 
-function normalizeImagePromptsOutput(output: GenerateImagePromptsOutput): GenerateImagePromptsOutput {
+function normalizeImagePromptsOutput(
+  output: GenerateImagePromptsOutput,
+  profile: AIContentProfile = 'workspace'
+): GenerateImagePromptsOutput {
   const seenPrompts = new Set<string>()
   const seenLabels = new Map<string, number>()
+  const isPanduan = profile === 'panduan'
+  const panduanLabels = [
+    'Thumbnail Prompt',
+    'Tools and Materials Prompt',
+    'Technical Setup Prompt',
+    'Process Detail Prompt',
+  ]
 
   const heroPrompts = output.hero_prompts
     .map((item, index) => {
       const prompt = normalizePromptText(item.prompt)
-      const baseLabel = normalizeSingleLine(item.label) || `Hero Prompt ${index + 1}`
+      const baseLabel = normalizeSingleLine(item.label) || (isPanduan ? panduanLabels[index] : `Hero Prompt ${index + 1}`)
       return {
         label: baseLabel,
         prompt,
@@ -142,12 +152,12 @@ function normalizeImagePromptsOutput(output: GenerateImagePromptsOutput): Genera
       seenLabels.set(item.label, count)
 
       return {
-        label: count === 1 ? item.label : `${item.label} ${count}`,
+        label: count === 1 ? (isPanduan ? panduanLabels[index] ?? item.label : item.label) : `${item.label} ${count}`,
         prompt: item.prompt,
       }
     })
 
-  if (heroPrompts.length < 3) {
+  if (heroPrompts.length < (isPanduan ? 4 : 3)) {
     throw new Error('AI menghasilkan prompt gambar yang terlalu mirip. Silakan generate ulang.')
   }
 
@@ -328,7 +338,7 @@ export async function generateImagePrompts(
     GenerateImagePromptsInputSchema,
     GenerateImagePromptsOutputSchema,
     (input) => prompts.buildImagePromptsPrompt(input, profile),
-    normalizeImagePromptsOutput,
+    (output) => normalizeImagePromptsOutput(output, profile),
     ctx
   )
 }

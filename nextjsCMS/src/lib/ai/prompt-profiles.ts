@@ -18,7 +18,7 @@ import type {
   VerifyLatestFactsInput,
 } from './schemas'
 
-export const PROMPT_VERSION = 'v6'
+export const PROMPT_VERSION = 'v7'
 
 export type AIContentProfile = 'post' | 'panduan' | 'workspace'
 
@@ -78,9 +78,10 @@ function getArkaraImageProfileDirection(profile: AIContentProfile): string {
     case 'panduan':
       return `Untuk panduan teknis Arkara:
 - Gunakan signature style Arkara sebagai dasar visual, tetapi tone adegan harus mengikuti isi artikel
-- Komposisi harus lebih informatif dan terbaca jelas
-- Utamakan medium shot, overhead, close-up proses, atau scene setup yang membantu pembaca memahami alat dan tindakan
-- Fokus pada prosedur, alat, tangan yang sedang bekerja, hubungan antarobjek, dan situasi lapangan/rumah yang realistis
+- Komposisi harus lebih informatif, teknis, dan terbaca jelas tanpa terasa seperti blueprint yang kaku
+- Utamakan medium shot, overhead, cutaway ringan, close-up proses, atau scene setup yang membantu pembaca memahami alat, hubungan komponen, dan tindakan
+- Fokus pada prosedur, alat, bahan, tangan yang sedang bekerja, hubungan antarobjek, dan situasi lapangan/rumah yang realistis
+- Jika relevan, tampilkan skema visual yang rapi dan mudah dipahami, tetapi tetap hidup, editorial, dan tidak dingin
 - Hindari adegan yang terlalu heroik jika mengurangi kejelasan instruksional`
     case 'post':
       return `Untuk blog post Arkara:
@@ -316,12 +317,61 @@ export function buildImagePromptsPrompt(
   const imageDirection = getArkaraImageProfileDirection(profile)
   const toneDirection = getArkaraImageToneDirection()
   const geminiSafeDirection = getGeminiSafeImageDirection()
+  const isPanduan = profile === 'panduan'
+  const promptCountInstruction = isPanduan
+    ? 'Buatkan tepat 4 prompt text-to-image untuk Nano Banana berdasarkan panduan final yang sudah disetujui berikut.'
+    : 'Buatkan 3 sampai 4 prompt text-to-image untuk Nano Banana berdasarkan artikel final yang sudah disetujui berikut.'
+  const heroPromptExample = isPanduan
+    ? `  "hero_prompts": [
+    {
+      "label": "Thumbnail Prompt",
+      "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
+    },
+    {
+      "label": "Tools and Materials Prompt",
+      "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
+    },
+    {
+      "label": "Technical Setup Prompt",
+      "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
+    },
+    {
+      "label": "Process Detail Prompt",
+      "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
+    }
+  ]`
+    : `  "hero_prompts": [
+    {
+      "label": "Hero Prompt 1",
+      "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
+    },
+    {
+      "label": "Hero Prompt 2",
+      "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
+    },
+    {
+      "label": "Hero Prompt 3",
+      "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
+    }
+  ]`
+  const imagePromptStructure = isPanduan
+    ? `Struktur prompt WAJIB untuk panduan:
+- Prompt 1 harus menjadi thumbnail/cover illustration yang paling kuat, paling mudah dibaca sekilas, dan tetap mempertahankan style ilustrasi Arkara yang lama: editorial, painterly, cinematic, graphic-novel influence, cocok untuk cover panduan
+- Prompt 2 harus menampilkan satu gambar yang merangkum peralatan, alat, bahan, atau komponen yang dibutuhkan sesuai kondisi dan topik artikel; utamakan susunan alat yang jelas, realistis, dan mudah dipahami
+- Prompt 3 harus fokus pada technical setup, skema kerja, hubungan antarobjek, atau konfigurasi alat bila relevan; visual harus terasa informatif, rapi, dan jelas, tetapi tidak sekaku diagram engineering formal
+- Prompt 4 harus fokus pada process detail, langkah kerja penting, potongan adegan instruksional, atau close-up tindakan tangan dan alat yang membantu pembaca memahami eksekusi di lapangan/rumah
+- Prompt 2 sampai 4 harus terasa lebih teknis daripada prompt 1
+- Jika topik tidak memerlukan skema literal, tetap buat komposisi yang menjelaskan sistem, urutan, atau hubungan alat secara visual
+- Jangan menambahkan teks label, caption, angka langkah, atau callout tertulis di dalam gambar`
+    : `Struktur prompt:
+- Variasikan angle visual agar setiap prompt terasa benar-benar berbeda
+- Kombinasikan adegan cover, detail subjek, momen manusiawi, dan variasi komposisi yang relevan dengan artikel`
 
   return [
     { role: 'system', content: buildSystemPrompt(profile) },
     {
       role: 'user',
-      content: `Buatkan 3 sampai 4 prompt text-to-image untuk Nano Banana berdasarkan artikel final yang sudah disetujui berikut.
+      content: `${promptCountInstruction}
 
 Judul: "${input.title}"${excerptContext}${keywordContext}${categoryContext}
 
@@ -340,21 +390,10 @@ ${geminiSafeDirection}
 Balas dalam JSON format ini:
 {
   "art_direction": "ringkasan arah visual umum dalam 1-2 kalimat",
-  "hero_prompts": [
-    {
-      "label": "Hero Prompt 1",
-      "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
-    },
-    {
-      "label": "Hero Prompt 2",
-      "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
-    },
-    {
-      "label": "Hero Prompt 3",
-      "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
-    }
-  ]
+${heroPromptExample}
 }
+
+${imagePromptStructure}
 
 Aturan prompt:
 - Setiap prompt harus panjang, kaya detail, dan siap langsung dipakai
@@ -366,7 +405,7 @@ Aturan prompt:
 - Hindari teks yang harus muncul di gambar
 - Jangan gunakan istilah yang terlalu abstrak; selalu visual dan konkret
 - Pastikan tiap prompt menawarkan angle visual yang berbeda satu sama lain
-- Utamakan 4 prompt. Hanya boleh 3 prompt jika memang artikel terlalu sempit untuk dibuat variasi yang benar-benar berbeda
+- ${isPanduan ? 'Untuk panduan, hasil akhir WAJIB berisi tepat 4 prompt dengan fungsi yang berbeda sesuai struktur di atas' : 'Utamakan 4 prompt. Hanya boleh 3 prompt jika memang artikel terlalu sempit untuk dibuat variasi yang benar-benar berbeda'}
 - Jangan ulang adegan yang sama hanya dengan sinonim kecil
 - Pastikan detail gambar tetap setia pada isi artikel; jangan menambahkan klaim, alat, atau situasi yang tidak didukung artikel
 - Jika artikel menyebut daftar alat atau langkah spesifik, gunakan hanya alat dan tindakan itu sebagai dasar visual utama
