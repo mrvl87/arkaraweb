@@ -181,6 +181,20 @@ export interface RichEditorHandle {
   getMarkdown: () => string
 }
 
+function resolveInternalLinksMenuStage(
+  status: 'idle' | 'loading' | 'ready' | 'error'
+): 'loading' | 'results' | 'error' {
+  if (status === 'error') {
+    return 'error'
+  }
+
+  if (status === 'loading') {
+    return 'loading'
+  }
+
+  return 'results'
+}
+
 export function RichEditor({ value, onChange, placeholder, onEditorReady, aiConfig }: RichEditorProps) {
   const [isMarkdownMode, setIsMarkdownMode] = useState(false)
   const [markdownDraft, setMarkdownDraft] = useState('')
@@ -814,12 +828,7 @@ function EditorToolbar({
         open: true,
         x: Math.min(event.clientX, window.innerWidth - 340),
         y: Math.min(event.clientY, window.innerHeight - 260),
-        stage:
-          internalLinksCacheRef.current.status === 'error'
-            ? 'error'
-            : internalLinksCacheRef.current.suggestions.length > 0
-              ? 'results'
-              : 'loading',
+        stage: resolveInternalLinksMenuStage(internalLinksCacheRef.current.status),
         suggestions: internalLinksCacheRef.current.suggestions,
         error: internalLinksCacheRef.current.error,
       })
@@ -839,12 +848,7 @@ function EditorToolbar({
 
     setInternalLinksMenu((current) => ({
       ...current,
-      stage:
-        internalLinksCache.status === 'error'
-          ? 'error'
-          : internalLinksCache.suggestions.length > 0
-            ? 'results'
-            : 'loading',
+      stage: resolveInternalLinksMenuStage(internalLinksCache.status),
       suggestions: internalLinksCache.suggestions,
       error: internalLinksCache.error,
     }))

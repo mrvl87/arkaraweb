@@ -201,6 +201,16 @@ async function getPublishedCandidates(
       .limit(300),
   ])
 
+  if (postsResult.error) {
+    console.error('[internal-links] failed to load published posts', postsResult.error)
+    throw new Error(`Gagal memuat artikel published untuk internal link: ${postsResult.error.message}`)
+  }
+
+  if (panduanResult.error) {
+    console.error('[internal-links] failed to load published panduan', panduanResult.error)
+    throw new Error(`Gagal memuat panduan published untuk internal link: ${panduanResult.error.message}`)
+  }
+
   const candidates: LinkOpportunityCandidate[] = []
 
   for (const row of postsResult.data ?? []) {
