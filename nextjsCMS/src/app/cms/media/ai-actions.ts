@@ -94,7 +94,7 @@ function buildRequestPayload({ prompt, mode, referenceImage }: Required<Pick<Gen
     modalities: ['image', 'text'],
     image_config: {
       aspect_ratio: technicalMode ? '4:3' : '3:4',
-      image_size: technicalMode ? '1K' : '0.5K',
+      image_size: '1K',
     },
   }
 }
