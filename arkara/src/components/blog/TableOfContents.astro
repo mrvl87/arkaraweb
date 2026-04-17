@@ -15,6 +15,29 @@ const { headings = [], class: className = '' } = Astro.props;
 // Construct an absolute URL using Astro.site for reliable social scraping
 const siteUrl = Astro.site ? Astro.site.origin : 'https://arkaraweb.com';
 const shareUrl = `${siteUrl}${Astro.url.pathname}`;
+
+function buildFacebookShareUrl(url: string) {
+  const shareIntent = new URL('https://www.facebook.com/sharer/sharer.php');
+  shareIntent.searchParams.set('u', url);
+  shareIntent.searchParams.set('src', 'sdkpreparse');
+  return shareIntent.href;
+}
+
+function buildXShareUrl(url: string) {
+  const shareIntent = new URL('https://twitter.com/intent/tweet');
+  shareIntent.searchParams.set('url', url);
+  return shareIntent.href;
+}
+
+function buildRedditShareUrl(url: string) {
+  const shareIntent = new URL('https://reddit.com/submit');
+  shareIntent.searchParams.set('url', url);
+  return shareIntent.href;
+}
+
+const facebookShareUrl = buildFacebookShareUrl(shareUrl);
+const xShareUrl = buildXShareUrl(shareUrl);
+const redditShareUrl = buildRedditShareUrl(shareUrl);
 ---
 
 {headings && headings.length > 0 && (
@@ -88,8 +111,9 @@ const shareUrl = `${siteUrl}${Astro.url.pathname}`;
       <div style="display: flex; gap: 0.5rem;">
         <!-- Facebook -->
         <a 
-          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} 
-          target="_blank" rel="noopener noreferrer"
+          href={facebookShareUrl}
+          target="_blank" rel="noopener"
+          data-share-popup="facebook"
           style="
             width: 32px; height: 32px;
             background: var(--paper-dark);
@@ -107,8 +131,9 @@ const shareUrl = `${siteUrl}${Astro.url.pathname}`;
         
         <!-- X (formerly Twitter) -->
         <a 
-          href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}`} 
-          target="_blank" rel="noopener noreferrer"
+          href={xShareUrl}
+          target="_blank" rel="noopener"
+          data-share-popup="x"
           style="
             width: 32px; height: 32px;
             background: var(--paper-dark);
@@ -129,8 +154,9 @@ const shareUrl = `${siteUrl}${Astro.url.pathname}`;
 
         <!-- Reddit -->
         <a 
-          href={`https://reddit.com/submit?url=${encodeURIComponent(shareUrl)}`} 
-          target="_blank" rel="noopener noreferrer"
+          href={redditShareUrl}
+          target="_blank" rel="noopener"
+          data-share-popup="reddit"
           style="
             width: 32px; height: 32px;
             background: var(--paper-dark);
@@ -156,3 +182,43 @@ const shareUrl = `${siteUrl}${Astro.url.pathname}`;
     </div>
   </div>
 )}
+
+<script>
+  const popupLinks = document.querySelectorAll('[data-share-popup]');
+
+  for (const link of popupLinks) {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+
+      const anchor = event.currentTarget;
+      if (!(anchor instanceof HTMLAnchorElement) || !anchor.href) {
+        return;
+      }
+
+      const width = 720;
+      const height = 720;
+      const left = window.screenX + Math.max(0, (window.outerWidth - width) / 2);
+      const top = window.screenY + Math.max(0, (window.outerHeight - height) / 2);
+      const features = [
+        `width=${width}`,
+        `height=${height}`,
+        `left=${Math.round(left)}`,
+        `top=${Math.round(top)}`,
+        'toolbar=0',
+        'menubar=0',
+        'location=1',
+        'status=0',
+        'scrollbars=1',
+        'resizable=1',
+      ].join(',');
+
+      const popup = window.open(anchor.href, 'arkara-share-popup', features);
+      if (popup) {
+        popup.focus();
+        return;
+      }
+
+      window.location.href = anchor.href;
+    });
+  }
+</script>
