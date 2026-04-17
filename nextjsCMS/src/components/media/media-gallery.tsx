@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { UploadZone } from './upload-zone'
 import { AIGenerator } from './ai-generator'
 import { MediaCard } from './media-card'
-import { Search, Filter, Image as ImageIcon } from 'lucide-react'
+import { Search, Image as ImageIcon, UploadCloud } from 'lucide-react'
 
 interface MediaGalleryProps {
   initialMedia: any[]
@@ -19,50 +19,43 @@ export function MediaGallery({ initialMedia }: MediaGalleryProps) {
 
   return (
     <div className="space-y-8">
-      {/* Search & Upload Header */}
-      <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Cari file media..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 rounded-2xl border border-gray-100 bg-white shadow-sm focus:ring-2 focus:ring-amber-100 focus:border-amber-400 transition-all outline-none"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-12">
-        {/* Top Actions: Upload & AI Generation */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Upload Section */}
-          <div className="bg-white/50 border border-gray-100 rounded-3xl p-6 lg:p-8 shadow-sm">
-             <div className="mb-6 flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
-                   <ImageIcon className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 tracking-tight">Pusat Unggahan</h3>
-                  <p className="text-sm text-gray-500">Mendukung konversi dan optimasi WebP otomatis.</p>
-                </div>
-             </div>
-             <UploadZone />
+      <div className="space-y-6">
+        <div className="rounded-[28px] border border-gray-100 bg-white/70 p-6 shadow-sm lg:p-8">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+              <UploadCloud className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold tracking-tight text-gray-900">Pusat Unggahan</h3>
+              <p className="text-sm text-gray-500">
+                Area utama untuk upload, crop, dan optimasi gambar sebelum masuk ke library.
+              </p>
+            </div>
           </div>
-
-          {/* AI Generator Section */}
-          <AIGenerator />
+          <UploadZone />
         </div>
 
-        {/* Gallery Grid Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-            <h3 className="font-bold text-gray-900 flex items-center gap-3 text-xl" style={{ color: '#1a2e1a' }}>
+        <AIGenerator />
+
+        <div className="space-y-5">
+          <div className="flex flex-col gap-4 border-b border-gray-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
+            <h3 className="flex items-center gap-3 text-xl font-bold text-gray-900" style={{ color: '#1a2e1a' }}>
               Koleksi Media Anda
               <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-bold">
                 {filteredMedia.length} File
               </span>
             </h3>
+
+            <div className="relative w-full lg:w-96">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Cari file media..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-2xl border border-gray-100 bg-white py-2.5 pl-11 pr-4 shadow-sm outline-none transition-all focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              />
+            </div>
           </div>
 
           {filteredMedia.length === 0 ? (

@@ -4,6 +4,9 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import sharp from 'sharp'
 
+const MEDIA_BUCKET = 'media'
+const TEMP_MEDIA_BUCKET = process.env.CMS_TEMP_MEDIA_BUCKET || 'media-ai-temp'
+
 const getAdminClient = () => {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('MISSING_ENV: NEXT_PUBLIC_SUPABASE_URL atau SUPABASE_SERVICE_ROLE_KEY tidak ditemukan di environment. Pastikan Anda telah memasukkannya di panel variabel Railway.')
@@ -86,11 +89,11 @@ export async function processAndUploadImage({
             const sizeBuffer = await image.clone().resize({ width: size.width, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
             const sizePath = `uploads/${fileName}-${size.name}.webp`;
             
-            await supabase.storage.from('media').upload(sizePath, sizeBuffer, { 
+            await supabase.storage.from(MEDIA_BUCKET).upload(sizePath, sizeBuffer, { 
               contentType: 'image/webp',
               cacheControl: '31536000'
             });
-            const { data } = supabase.storage.from('media').getPublicUrl(sizePath);
+            const { data } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(sizePath);
             formatsObj[size.name] = data.publicUrl;
           }
         }
@@ -113,7 +116,7 @@ export async function processAndUploadImage({
   const filePath = `uploads/${fileName}`;
 
   const { error: uploadError } = await supabase.storage
-    .from('media')
+    .from(MEDIA_BUCKET)
     .upload(filePath, finalBuffer, { 
       contentType: mimeType,
       cacheControl: '31536000'
@@ -121,7 +124,7 @@ export async function processAndUploadImage({
 
   if (uploadError) throw new Error(uploadError.message);
   
-  const { data: publicUrlData } = supabase.storage.from('media').getPublicUrl(filePath);
+  const { data: publicUrlData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(filePath);
   
   if (Object.keys(formatsObj).length > 0) {
       formatsObj['original'] = publicUrlData.publicUrl;
@@ -143,8 +146,109 @@ export async function processAndUploadImage({
   });
 
   if (dbError) {
-    await supabase.storage.from('media').remove([filePath]);
+    await supabase.storage.from(MEDIA_BUCKET).remove([filePath]);
     throw new Error(dbError.message);
+  }
+}
+
+async function optimizeTemporaryReferenceImage(buffer: Buffer, mimeType: string) {
+  if (!mimeType.startsWith('image/')) {
+    throw new Error('Reference image harus berupa file gambar.')
+  }
+
+  if (mimeType.includes('svg')) {
+    return {
+      buffer,
+      mimeType,
+      extension: 'svg',
+    }
+  }
+
+  const image = sharp(buffer)
+  const metadata = await image.metadata()
+  const resized = image.resize({
+    width: metadata.width && metadata.width > 1024 ? 1024 : undefined,
+    height: metadata.height && metadata.height > 1024 ? 1024 : undefined,
+    fit: 'inside',
+    withoutEnlargement: true,
+  })
+
+  const hasAlpha = metadata.hasAlpha ?? false
+  if (hasAlpha) {
+    return {
+      buffer: await resized.webp({ quality: 72, alphaQuality: 72 }).toBuffer(),
+      mimeType: 'image/webp',
+      extension: 'webp',
+    }
+  }
+
+  return {
+    buffer: await resized.jpeg({ quality: 78, mozjpeg: true }).toBuffer(),
+    mimeType: 'image/jpeg',
+    extension: 'jpg',
+  }
+}
+
+function sanitizeBaseName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+export async function uploadTemporaryReferenceImage(formData: FormData) {
+  const supabase = getAdminClient()
+  const file = formData.get('file') as File | null
+
+  if (!file) {
+    throw new Error('No reference image provided.')
+  }
+
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Reference image harus berupa file gambar.')
+  }
+
+  const arrayBuffer = await file.arrayBuffer()
+  const originalBuffer = Buffer.from(arrayBuffer)
+  const optimized = await optimizeTemporaryReferenceImage(originalBuffer, file.type)
+  const baseName = sanitizeBaseName(file.name.replace(/\.[^.]+$/, '')) || 'reference'
+  const objectPath = `references/${baseName}-${Date.now()}.${optimized.extension}`
+
+  const { error: uploadError } = await supabase.storage
+    .from(TEMP_MEDIA_BUCKET)
+    .upload(objectPath, optimized.buffer, {
+      contentType: optimized.mimeType,
+      cacheControl: '3600',
+      upsert: false,
+    })
+
+  if (uploadError) {
+    throw new Error(
+      uploadError.message.includes('Bucket not found')
+        ? `Bucket ${TEMP_MEDIA_BUCKET} belum tersedia. Buat bucket ini di Supabase untuk menyimpan reference image sementara.`
+        : uploadError.message
+    )
+  }
+
+  const { data } = supabase.storage.from(TEMP_MEDIA_BUCKET).getPublicUrl(objectPath)
+
+  return {
+    bucket: TEMP_MEDIA_BUCKET,
+    path: objectPath,
+    publicUrl: data.publicUrl,
+    mimeType: optimized.mimeType,
+    size: optimized.buffer.length,
+  }
+}
+
+export async function removeTemporaryReferenceImage(path: string) {
+  if (!path) return
+
+  const supabase = getAdminClient()
+  const { error } = await supabase.storage.from(TEMP_MEDIA_BUCKET).remove([path])
+  if (error) {
+    console.error('Failed to remove temporary reference image:', error.message)
   }
 }
 
@@ -207,7 +311,7 @@ export async function deleteFile(id: string, filePath: string) {
 
   // 3. Delete from Storage
   const { error: storageError } = await supabase.storage
-    .from('media')
+    .from(MEDIA_BUCKET)
     .remove(pathsToDelete)
 
   if (storageError) console.error("Storage delete errors:", storageError.message)

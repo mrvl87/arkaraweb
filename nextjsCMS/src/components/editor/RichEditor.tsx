@@ -698,6 +698,10 @@ function EditorToolbar({
     }
 
     const refreshSuggestions = async (force = false) => {
+      if (!aiConfig.getInternalLinkSuggestions) {
+        return
+      }
+
       const title = aiConfig.title.trim()
       const content = editor.storage.markdown?.getMarkdown?.() || ''
       const requestKey = `${title}::${content}`
