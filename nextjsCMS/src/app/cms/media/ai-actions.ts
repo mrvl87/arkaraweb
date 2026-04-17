@@ -47,21 +47,28 @@ function buildIllustrationPrompt(prompt: string) {
     'Prioritize clean storytelling, readable composition, and strong thumbnail impact.',
     'Keep the scene grounded, practical, and visually premium.',
     'Avoid text labels, watermarks, UI mockups, or unnecessary decorative clutter.',
+    'Do not turn the image into a technical diagram or blueprint.',
     `Subject request: ${prompt.trim()}`,
   ].join(' ')
 }
 
 function buildTechnicalPrompt(prompt: string, hasReferenceImage: boolean) {
   return [
-    'Create one technical visual for Arkara CMS.',
-    'Prioritize accuracy, legibility, component clarity, material realism, and a structured but not stiff composition.',
-    'The image should feel like a practical field guide illustration or a technical editorial drawing, not a cold engineering blueprint.',
-    'Show tools, materials, component relationships, and process setup clearly when relevant.',
-    'Avoid text labels, captions, callout numbers, watermarks, and decorative clutter.',
+    'You are generating one technical diagram image for Arkara CMS.',
+    'Primary goal: transform a rough sketch, layout, or technical instruction into a clean, readable, professional technical drawing.',
+    'Treat the reference image as a structural constraint, not as loose inspiration.',
+    'Preserve the overall layout, relative placement of major components, component count, connection logic, and flow direction.',
+    'Do not add, remove, merge, or reposition major components unless explicitly instructed.',
+    'Do not reinterpret the composition as concept art, cinematic illustration, decorative infographic, or photorealism.',
+    'Use clean black linework on a white or near-white background with minimal visual noise.',
+    'Keep the result readable and disciplined, but not like a cold CAD export.',
+    'Do not add text labels, captions, callout numbers, watermark, branding, gradients, shadows, or decorative background elements unless explicitly requested.',
     hasReferenceImage
-      ? 'Use the reference image only as a grounding aid for structure, proportions, and component fidelity while still producing a polished standalone result.'
-      : 'Infer the most plausible tools, materials, and setup only from the written instruction.',
-    `Technical brief: ${prompt.trim()}`,
+      ? 'A reference image is provided. Preserve major proportions, layout zones, connection paths, directional logic, and visible component hierarchy as faithfully as possible. Only improve cleanliness, consistency, and legibility.'
+      : 'No reference image is provided. Build the diagram only from the written specification and prioritize technical clarity, component logic, and structured layout.',
+    'If the user specifies mandatory components, preserve them exactly.',
+    'If the user specifies elements that must not change, treat those as hard constraints.',
+    `User technical instruction:\n${prompt.trim()}`,
   ].join(' ')
 }
 

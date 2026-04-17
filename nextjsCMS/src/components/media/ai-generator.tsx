@@ -34,7 +34,7 @@ export function AIGenerator() {
     },
     technical: {
       label: 'Technical drawing',
-      helper: 'Lebih ketat untuk alat, bahan, susunan, dan detail proses. Reference image opsional aktif di mode ini.',
+      helper: 'Gunakan instruksi yang ketat: tulis tujuan, komponen wajib, struktur yang harus dipertahankan, dan hal yang tidak boleh berubah. Reference image opsional aktif di mode ini.',
       icon: Wrench,
     },
   }), [])
@@ -174,7 +174,41 @@ export function AIGenerator() {
               onChange={(e) => setPrompt(e.target.value)}
               placeholder={
                 mode === 'technical'
-                  ? 'Contoh: susunan alat pemurni air darurat di meja kerja, botol, pipa, kain saring, arang aktif, potongan proses perakitan yang jelas dan realistis...'
+                  ? `TUJUAN:
+Buat 1 gambar technical drawing yang mengikuti referensi seketat mungkin.
+
+JENIS DIAGRAM:
+skema filter air gravitasi
+
+OBJEK UTAMA:
+sistem filter air 3 tabung dengan jalur inlet, outlet, dan backwash
+
+KOMPONEN WAJIB:
+- 3 tabung filter vertikal
+- pipa penghubung horizontal
+- valve inlet
+- valve outlet
+- jalur backwash
+- arah panah aliran
+
+STRUKTUR YANG WAJIB DIPERTAHANKAN:
+- layout utama seperti referensi
+- jumlah valve tetap
+- posisi tabung kiri ke kanan tetap
+- arah flow tetap
+
+YANG TIDAK BOLEH BERUBAH:
+- jumlah tabung
+- urutan media filter
+- jalur backwash
+
+YANG BOLEH DIPERBAIKI:
+- garis
+- keterbacaan
+- konsistensi simbol
+
+GAYA OUTPUT:
+clean technical drawing, black linework, white background, readable, no decorative effects`
                   : 'Contoh: ilustrasi editorial alat survival di meja kayu, pencahayaan hangat, komposisi bersih, premium, siap jadi thumbnail...'
               }
               className="h-56 w-full resize-none overflow-y-auto rounded-2xl border border-gray-200 px-4 py-3 outline-none transition-all focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
