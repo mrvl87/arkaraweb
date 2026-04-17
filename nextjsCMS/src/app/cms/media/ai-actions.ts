@@ -77,7 +77,7 @@ function buildRequestPayload({ prompt, mode, referenceImage }: Required<Pick<Gen
           role: 'user',
           content: [
             { type: 'text', text: textPrompt },
-            { type: 'image_url', image_url: { url: referenceImage.publicUrl } },
+            { type: 'image_url', imageUrl: { url: referenceImage.publicUrl } },
           ],
         },
       ]
@@ -96,16 +96,6 @@ function buildRequestPayload({ prompt, mode, referenceImage }: Required<Pick<Gen
       aspect_ratio: technicalMode ? '4:3' : '3:4',
       image_size: technicalMode ? '1K' : '0.5K',
     },
-    ...(technicalMode
-      ? {
-          temperature: 0.15,
-          top_p: 0.9,
-          top_k: 30,
-          frequency_penalty: 0.1,
-          presence_penalty: 0.1,
-          max_tokens: 4096,
-        }
-      : {}),
   }
 }
 
