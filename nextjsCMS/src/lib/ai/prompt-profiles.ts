@@ -18,7 +18,7 @@ import type {
   VerifyLatestFactsInput,
 } from './schemas'
 
-export const PROMPT_VERSION = 'v7'
+export const PROMPT_VERSION = 'v10'
 
 export type AIContentProfile = 'post' | 'panduan' | 'workspace'
 
@@ -37,16 +37,16 @@ function getProfileDirective(profile: AIContentProfile): string {
   switch (profile) {
     case 'post':
       return `Karakter output untuk blog post:
-- Gaya lebih editorial, naratif, dan enak dibaca dari awal sampai akhir
-- Fokus pada hook, flow, dan daya tarik klik tanpa terasa murahan
-- Tetap praktis, tetapi boleh lebih atmosferik dan persuasif
-- Cocok untuk artikel publik yang ingin dibaca, dibagikan, dan diindeks SEO`
+- Gaya editorial Arkara harus tenang, tajam, realistis, dan sulit digantikan blog umum
+- Fokus pada skenario, kontrol, ketergantungan, buffer, dan keputusan taktis
+- Artikel harus terasa penting, bukan sekadar menarik
+- Hindari gaya lifestyle blog, edukasi umum, atau motivational prepper content`
     case 'panduan':
       return `Karakter output untuk panduan:
-- Gaya lebih teknis, instruksional, dan langsung ke langkah kerja
-- Prioritaskan kejelasan, urutan, dan tindakan yang bisa diikuti
-- Hindari basa-basi editorial yang terlalu panjang
-- Cocok untuk dokumen rujukan, SOP ringan, checklist, atau penjelasan teknis`
+- Gaya teknis Arkara harus lugas, terukur, realistis, dan mudah dieksekusi di rumah tangga urban Indonesia
+- Prioritaskan kejelasan langkah, urutan, batasan, risiko, dan keputusan praktis
+- Hindari basa-basi editorial, romantisasi survival, atau teori panjang yang tidak bisa dipakai
+- Panduan harus terasa seperti alat kontrol, bukan artikel informasi umum`
     default:
       return `Karakter output untuk workspace:
 - Gaya netral editorial
@@ -55,22 +55,95 @@ function getProfileDirective(profile: AIContentProfile): string {
   }
 }
 
+function getArkaraEditorialFramework(profile: AIContentProfile): string {
+  if (profile === 'panduan') {
+    return `Framework Arkara yang harus terasa di hasil akhir:
+- Mulai dari skenario atau gangguan nyata, bukan definisi umum
+- Lakukan reality check: tunjukkan keterbatasan ruang, waktu, alat, distribusi, atau ekspektasi
+- Reframe target: jelaskan apa yang realistis dan apa yang tidak
+- Beri pilihan taktis yang jelas: prioritas utama vs pendukung, beserta alasannya
+- WAJIB ada elemen simulasi, estimasi, ukuran, kapasitas, frekuensi, atau parameter nyata jika topik memungkinkan
+- Jika simulasi belum tervalidasi penuh, nyatakan secara jujur sebagai estimasi konservatif atau skenario kecil, bukan kepastian palsu
+- WAJIB ada failure mode: kesalahan fatal, batas aman, atau kondisi di mana pendekatan gagal
+- Hubungkan dengan sistem Arkara lain bila relevan: air, energi, logistik, perilaku keluarga
+- Tutup dengan mental shift yang tenang dan tegas, bukan motivasi kosong`
+  }
+
+  if (profile === 'post') {
+    return `Framework Arkara yang harus terasa di hasil akhir:
+- Buka dengan disruption entry: 2-3 kalimat pendek yang membuat pembaca masuk ke skenario
+- Lanjutkan reality check: bongkar asumsi nyaman, ilusi kontrol, atau ketergantungan sistem
+- Lakukan reframe: jelaskan target yang realistis, bukan fantasi kemandirian penuh
+- Beri decision layer: pilihan taktis dan prioritas, bukan daftar opsi tanpa bobot
+- WAJIB ada simulasi konkret: ruang, jumlah alat, output, durasi, frekuensi, biaya, kapasitas, atau angka relevan
+- Jika simulasi belum tervalidasi penuh, nyatakan secara jujur sebagai estimasi konservatif, simulasi rumah tangga, atau skenario kecil; jangan menjual hipotesis sebagai fakta mapan
+- WAJIB ada minimal satu scene konkret rumah tangga yang bisa divisualisasikan pembaca: momen menyiapkan makan, panen kecil, ruang balkon, stok menipis, keputusan keluarga, atau situasi sejenis
+- WAJIB ada failure mode: kesalahan yang paling mungkin membuat pembaca gagal
+- WAJIB ada system integration: hubungkan topik dengan sistem Arkara lain
+- Tutup dengan mental shift yang menanamkan kontrol vs ketergantungan
+- Closing harus terasa sticky: pembaca merasakan konsekuensi dari tidak bertindak, tanpa harus diteriaki atau dimotivasi secara murahan`
+  }
+
+  return `Framework Arkara:
+- Fokus pada skenario nyata, kontrol, dan keputusan praktis
+- Prioritaskan simulasi konkret dibanding penjelasan umum
+- Hindari gaya generik, aman, dan mudah digantikan`
+}
+
+function getArkaraWritingRules(profile: AIContentProfile): string {
+  const common = `Aturan gaya tulis Arkara:
+- Suara: tenang, tegas, realistis, tidak panik, tidak dramatis berlebihan
+- Bangun rasa sadar, waspada, dan ingin punya kontrol; jangan memicu panik
+- Gunakan campuran kalimat pendek untuk tekanan dan kalimat medium untuk penjelasan
+- Gunakan whitespace dan subheading tajam; nyaman dibaca di HP
+- Diksi utama yang boleh sering muncul: sistem, kontrol, ketergantungan, distribusi, buffer, realistis, skenario
+- Hindari frasa generik seperti "mudah sekali", "siapapun bisa", "praktis dan cepat", "tips dan trik"
+- Hindari definisi panjang, sejarah topik, atau edukasi umum kecuali benar-benar perlu untuk keputusan pembaca
+- Sudut pandang default: rumah tangga urban Indonesia, ruang terbatas, sumber daya terbatas, waktu terbatas`
+
+  if (profile === 'panduan') {
+    return `${common}
+- Setiap instruksi utama harus bisa divisualisasikan atau dieksekusi
+- Jika membahas kapasitas, kebutuhan, output, atau durasi, gunakan satuan nyata bila memungkinkan
+- Jangan menulis langkah yang terdengar canggih tetapi tidak operasional
+- Jika memakai simulasi yang belum tervalidasi, gunakan framing yang jujur dan konservatif`
+  }
+
+  if (profile === 'post') {
+    return `${common}
+- Jangan terdengar seperti feature article umum atau blog gaya hidup
+- Setiap artikel harus meninggalkan satu kesimpulan taktis yang keras dan jelas
+- Jika sebuah poin tidak bisa diuji, dihitung, diperkirakan, atau dikaitkan ke skenario nyata, pertimbangkan untuk tidak menuliskannya
+- Bangun visual mental yang kuat melalui scene kecil yang realistis, bukan dramatisasi besar
+- CTA atau penutup harus berbentuk konsekuensi dan pilihan, bukan ajakan generik`
+  }
+
+  return common
+}
+
 function buildSystemPrompt(profile: AIContentProfile): string {
   return `Anda adalah AI editorial copilot untuk Arkara - platform pengetahuan survival Indonesia.
-Anda membantu editor menyusun konten yang akurat, praktis, dan SEO-friendly.
+Anda membantu editor menyusun konten yang akurat, praktis, tajam, dan sulit digantikan blog lain.
 
 Aturan ketat:
 1. Selalu jawab dalam format JSON yang valid dan bersih, tanpa penjelasan tambahan di luar JSON.
-2. Bahasa: Indonesia formal, mudah dimengerti.
-3. Fokus pada kemandirian (self-reliance) dan kesiapsiagaan.
+2. Bahasa: Indonesia yang rapi, mudah dimengerti, tegas, dan tidak terdengar generik.
+3. Fokus pada kontrol, buffer, ketahanan rumah tangga urban, dan kesiapsiagaan yang realistis.
 4. Jangan pernah menambahkan teks di luar struktur JSON yang diminta.
+5. Arkara bukan lifestyle blog, bukan blog motivasi, dan bukan edukasi umum yang aman.
+6. Prioritaskan simulasi nyata, keputusan taktis, dan system thinking dibanding teori panjang.
+7. Jangan menenangkan pembaca dengan basa-basi. Bantu pembaca melihat kondisi dengan jernih.
 
 Jenis konten saat ini: ${getProfileName(profile)}
-${getProfileDirective(profile)}`
+${getProfileDirective(profile)}
+
+${getArkaraEditorialFramework(profile)}
+
+${getArkaraWritingRules(profile)}`
 }
 
 function getArkaraImageStyleAnchor(): string {
-  return `editorial illustration with graphic novel influence, detailed painterly quality, bold clean linework, National Geographic meets contemporary graphic novel style, rich muted palette with deep forest green and warm amber accents, cinematic narrative composition, modern Indonesian setting`
+  return `editorial illustration with graphic novel influence, detailed painterly quality, bold clean linework, cinematic survival realism, high-tension visual storytelling, tactile urban detail, National Geographic meets contemporary graphic novel style, rich muted palette with deep forest green and warm amber accents, modern Indonesian setting`
 }
 
 function getArkaraImageProfileDirection(profile: AIContentProfile): string {
@@ -86,10 +159,11 @@ function getArkaraImageProfileDirection(profile: AIContentProfile): string {
     case 'post':
       return `Untuk blog post Arkara:
 - Gunakan signature style Arkara sebagai dasar visual, tetapi tone adegan harus mengikuti isi artikel
-- Pendekatan boleh lebih naratif dan editorial
-- Utamakan storytelling visual, momen manusiawi, dan komposisi cover yang kuat
-- Fokus pada rasa kompeten, tenang, siap, dan mandiri dalam konteks survival perkotaan maupun rumah tangga Indonesia
-- Boleh lebih atmosferik selama tetap grounded dan relevan dengan isi artikel`
+- Pendekatan harus lebih naratif, lebih tajam, dan lebih menekan rasa penting topik
+- Utamakan storytelling visual yang menunjukkan gangguan, ketergantungan, buffer yang tipis, kontrol yang rapuh, atau keputusan yang harus diambil
+- Komposisi cover harus kuat dalam 1 pandangan: pembaca langsung merasa ada skenario, tekanan, dan taruhan nyata
+- Fokus pada rumah tangga urban Indonesia yang sedang menghadapi keterbatasan, adaptasi, atau transisi dari nyaman ke waspada
+- Boleh atmosferik, tetapi jangan cozy secara generik; visual harus terasa berarti, bukan hanya indah`
     default:
       return `Untuk workspace Arkara:
 - Gunakan signature style Arkara secara konsisten, tetapi tone visual tetap harus mengikuti isi artikel
@@ -97,7 +171,17 @@ function getArkaraImageProfileDirection(profile: AIContentProfile): string {
   }
 }
 
-function getArkaraImageToneDirection(): string {
+function getArkaraImageToneDirection(profile: AIContentProfile): string {
+  if (profile === 'post') {
+    return `Tone visual blog post Arkara harus diturunkan dari artikel, bukan dipilih sembarangan:
+- Jika topiknya tentang krisis, gangguan sistem, lonjakan harga, blackout, distribusi, atau ketergantungan: bangun mood tegang yang tenang, terkendali, dan dekat dengan kehidupan nyata, bukan chaos sinematik
+- Jika topiknya rumah tangga urban: tampilkan rasa ruang terbatas, alat terbatas, waktu terbatas, dan keputusan yang harus diambil sekarang
+- Jika topiknya solutif: tetap beri rasa urgensi dan taruhan nyata; jangan berubah menjadi poster motivasi
+- Bangun emosi sadar, waspada, dan ingin punya kontrol; jangan bangun rasa panik, heroisme kosong, atau feel-good generic
+- Ekspresi wajah, gesture, pencahayaan, objek, dan framing harus menandakan tekanan yang nyata tetapi terukur
+- Visual boleh memainkan emosi, tetapi harus emosional karena skenario dan konsekuensi, bukan karena dramatisasi visual murahan`
+  }
+
   return `Tone visual harus diturunkan dari artikel, bukan dipilih sembarangan:
 - Jika artikelnya serius, kritis, atau membahas krisis: gunakan mood serius, tenang, terkendali, grounded, tanpa dramatisasi berlebihan
 - Jika artikelnya teknis dan instruksional: gunakan mood fokus, teliti, kompeten, jelas, dan praktis
@@ -161,10 +245,13 @@ export function buildSEOPackPrompt(
 
   const seoDirection =
     profile === 'panduan'
-      ? `- Meta title dan description harus terasa teknis, jelas, dan trustworthy
-- Excerpt harus terasa seperti ringkasan panduan praktis, bukan teaser editorial`
-      : `- Meta title dan description boleh lebih click-worthy selama tetap akurat
-- Excerpt harus menarik, enak dibaca, dan terasa editorial`
+      ? `- Meta title dan description harus terasa teknis, jelas, trustworthy, dan berbasis skenario nyata
+- Excerpt harus terasa seperti ringkasan panduan praktis dengan stakes yang jelas
+- Hindari headline generik seperti tutorial umum atau panduan pemula yang hambar`
+      : `- Meta title dan description harus spesifik, kompetitif, dan punya tekanan situasional tanpa clickbait kosong
+- Excerpt harus menciptakan urgensi tenang: pembaca merasa topik ini penting sekarang
+- Hindari judul SEO yang terlalu sopan, terlalu umum, atau terasa bisa dipakai blog mana saja
+- Jika cocok, biarkan judul atau excerpt memuat konsekuensi, batasan, atau perubahan sistem yang langsung terasa`
 
   return [
     { role: 'system', content: buildSystemPrompt(profile) },
@@ -184,7 +271,10 @@ Balas dalam JSON format ini:
 }
 
 Aturan tambahan:
-${seoDirection}`,
+${seoDirection}
+- Jangan gunakan formula generik "Tips/Trik/Cara Mudah" kecuali benar-benar tak terhindarkan
+- Jika memungkinkan, masukkan elemen skenario, durasi, risiko, atau konsekuensi yang membuat artikel terasa penting
+- Fokus keyword harus realistis, tetapi hasil akhir tetap harus punya ciri khas Arkara: tajam, spesifik, dan tidak hambar`,
     },
   ]
 }
@@ -202,10 +292,14 @@ export function buildOutlinePrompt(
 
   const outlineDirection =
     profile === 'panduan'
-      ? `- Prioritaskan urutan langkah, checklist, peringatan, dan bagian praktis
-- Heading harus terasa seperti panduan kerja, bukan feature article`
-      : `- Prioritaskan alur baca yang nyaman, hook, konteks, dan transisi antarbab
-- Heading harus terasa editorial, spesifik, dan menarik dibaca`
+      ? `- Prioritaskan urutan langkah, checklist, peringatan, keputusan praktis, dan batasan nyata
+- Heading harus terasa seperti panduan kerja yang operasional, bukan artikel penjelasan umum
+- Jika relevan, pastikan ada section tentang simulasi, kapasitas, validasi konservatif, dan failure mode`
+      : `- Outline WAJIB mengikuti ritme Arkara: hook gangguan, reality check, reframe, keputusan taktis, simulasi, failure mode, system integration, closing
+- Heading harus spesifik, keras, dan terasa penting, bukan nyaman atau generik
+- Jika topiknya tidak memungkinkan semua section literal, pertahankan logika Arkara semaksimal mungkin
+- Pastikan ada satu section atau note yang memaksa scene konkret rumah tangga/ruang/aktivitas agar artikel tidak melayang terlalu abstrak
+- Closing note harus mengarah ke konsekuensi pilihan, bukan motivasi umum`
 
   const linksContext = internalLinks
     ? `\n\nBerikut adalah daftar artikel yang sudah ada di website. Jika ada topik yang relevan, tandai di catatan bahwa kita bisa menambahkan internal link ke artikel tersebut:\n${internalLinks}`
@@ -237,6 +331,9 @@ Aturan:
 - Minimal 5 bagian (sections)
 - Sertakan Pendahuluan dan Kesimpulan
 - Setiap heading harus spesifik, bukan generik
+- Hindari heading seperti "Apa Itu...", "Pengertian...", atau "Manfaat..." kecuali benar-benar penting
+- Untuk Arkara, outline harus mendorong artikel ke simulasi, keputusan, dan risiko nyata
+- Jika artikel menyentuh kapasitas, produksi, panen, stok, atau durasi, minta note section yang memaksa angka atau estimasi konservatif
 ${outlineDirection}`,
     },
   ]
@@ -256,14 +353,17 @@ export function buildFullDraftPrompt(
 
   const draftDirection =
     profile === 'panduan'
-      ? `- Susun tulisan seperti panduan teknis yang mudah diikuti
-- Gunakan kalimat yang lugas dan langsung ke tindakan
-- Jika relevan, gunakan urutan langkah, checklist, atau subbagian prosedural
-- Hindari pembukaan yang terlalu panjang atau terlalu promosi`
-      : `- Susun tulisan seperti artikel editorial publik yang engaging
-- Gunakan flow yang enak dibaca, transisi halus, dan pembukaan yang kuat
-- Boleh lebih naratif dan persuasif selama tetap akurat
-- Jaga agar tulisan terasa hidup, bukan kaku seperti SOP`
+      ? `- Susun tulisan seperti panduan teknis Arkara: operasional, realistis, dan mudah diikuti dalam keterbatasan rumah tangga urban Indonesia
+- Gunakan kalimat yang lugas, langsung ke tindakan, dan tidak berputar-putar
+- Jika relevan, gunakan urutan langkah, checklist, parameter, kapasitas, durasi, atau peringatan keras
+- Hindari pembukaan panjang, teori umum, atau promosi yang tidak membantu keputusan pembaca
+- Jika memakai simulasi, gunakan framing yang jujur: estimasi konservatif, skenario kecil, atau asumsi operasional yang jelas`
+      : `- Susun tulisan seperti artikel editorial Arkara: tenang, tajam, realistis, dan terasa lebih serius daripada blog umum
+- Gunakan hook yang mendorong pembaca masuk ke skenario, lalu bangun argumen dengan ritme yang kuat
+- Boleh persuasif, tetapi harus terasa seperti koreksi mental model, bukan copywriting manis
+- Artikel harus meninggalkan satu kesimpulan taktis yang jelas dan terasa penting
+- Gunakan sedikit scene rumah tangga atau momen konkret agar pembaca bisa membayangkan hidup di dalam skenario, bukan hanya memahaminya secara abstrak
+- Closing harus membangun konsekuensi yang lengket: jika pembaca tidak bertindak, ia tetap memilih ketergantungan`
 
   const linksContext = internalLinks
     ? `\n\nBerikut adalah daftar artikel yang sudah ada di website Arkara. Sisipkan internal link secara natural menggunakan format Markdown [teks anchor](/blog/slug-artikel) ke artikel yang relevan dengan pembahasan. Jangan paksakan link jika tidak relevan.\n${internalLinks}`
@@ -289,11 +389,22 @@ Balas dalam JSON format ini:
 
 Aturan penulisan:
 - Format Markdown dengan heading H2 dan H3
-- Bahasa Indonesia formal tapi mudah dipahami
+- Bahasa Indonesia yang rapi, tegas, dan mudah dipahami
 - Minimal 1200 kata
 - Sertakan tips praktis dan langkah-langkah yang actionable
 - Sisipkan internal link ke artikel terkait secara natural jika data tersedia
 - JANGAN sertakan heading H1 (judul akan diset terpisah)
+- Hindari definisi umum, sejarah panjang, atau penjelasan textbook kecuali benar-benar membantu keputusan pembaca
+- WAJIB ada elemen simulasi, estimasi, kapasitas, durasi, frekuensi, ruang, biaya, atau angka nyata jika topik memungkinkan
+- Jika sebuah klaim menyangkut kapasitas, kebutuhan, output, atau durasi, usahakan beri unit atau parameter yang konkret
+- Jika simulasi belum tervalidasi penuh, tandai sebagai estimasi konservatif, simulasi rumah tangga, atau skenario kecil; jangan mengemasnya sebagai kepastian absolut
+- WAJIB ada minimal satu scene kecil yang membuat pembaca bisa membayangkan rumah, dapur, balkon, stok, panen, makan, atau keputusan keluarga secara nyata jika topik memungkinkan
+- WAJIB ada bagian atau paragraf yang membahas failure mode: apa yang paling mungkin membuat pendekatan ini gagal
+- WAJIB hubungkan topik ini dengan sistem Arkara lain jika relevan
+- Jangan terdengar seperti lifestyle blog, artikel SEO generik, atau konten motivasi prepper
+- Gunakan beberapa kalimat pendek untuk tekanan dan penekanan, terutama pada hook, reality check, dan closing
+- Hindari penutup seperti ajakan generik, motivasi ringan, atau "mulai dari yang kecil" tanpa konsekuensi nyata
+- Penutup harus menegaskan pilihan, konsekuensi, atau bentuk ketergantungan yang tetap dipelihara jika pembaca tidak bertindak
 ${draftDirection}`,
     },
   ]
@@ -315,7 +426,7 @@ export function buildImagePromptsPrompt(
 
   const arkaraStyleAnchor = getArkaraImageStyleAnchor()
   const imageDirection = getArkaraImageProfileDirection(profile)
-  const toneDirection = getArkaraImageToneDirection()
+  const toneDirection = getArkaraImageToneDirection(profile)
   const geminiSafeDirection = getGeminiSafeImageDirection()
   const isPanduan = profile === 'panduan'
   const promptCountInstruction = isPanduan
@@ -342,15 +453,19 @@ export function buildImagePromptsPrompt(
   ]`
     : `  "hero_prompts": [
     {
-      "label": "Hero Prompt 1",
+      "label": "Scenario Cover Prompt",
       "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
     },
     {
-      "label": "Hero Prompt 2",
+      "label": "Dependency Pressure Prompt",
       "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
     },
     {
-      "label": "Hero Prompt 3",
+      "label": "Tactical Action Prompt",
+      "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
+    },
+    {
+      "label": "Buffer and Space Prompt",
       "prompt": "prompt text-to-image lengkap, spesifik, siap copy untuk Nano Banana"
     }
   ]`
@@ -364,8 +479,12 @@ export function buildImagePromptsPrompt(
 - Jika topik tidak memerlukan skema literal, tetap buat komposisi yang menjelaskan sistem, urutan, atau hubungan alat secara visual
 - Jangan menambahkan teks label, caption, angka langkah, atau callout tertulis di dalam gambar`
     : `Struktur prompt:
+- Prompt 1 harus menjadi scenario cover yang paling kuat: sekali lihat langsung terasa ada gangguan, taruhan, atau tekanan nyata
+- Prompt 2 harus menonjolkan sistem, distribusi, ketergantungan, kelangkaan, atau titik lemah yang dibahas artikel
+- Prompt 3 harus fokus pada tindakan taktis, keputusan, atau adaptasi manusia di lapangan/rumah
+- Prompt 4 harus menampilkan buffer, keterbatasan ruang, stok, alat, atau setup realistis yang membantu pembaca memvisualisasikan skenario
 - Variasikan angle visual agar setiap prompt terasa benar-benar berbeda
-- Kombinasikan adegan cover, detail subjek, momen manusiawi, dan variasi komposisi yang relevan dengan artikel`
+- Hindari mengulang adegan yang sama dalam versi lain yang hanya beda phrasing kecil`
 
   return [
     { role: 'system', content: buildSystemPrompt(profile) },
@@ -411,11 +530,14 @@ Aturan prompt:
 - Jika artikel menyebut daftar alat atau langkah spesifik, gunakan hanya alat dan tindakan itu sebagai dasar visual utama
 - Jika artikel bernada serius, jangan ubah menjadi terlalu cozy, playful, atau inspirational
 - Jika artikel bernada casual atau rumah tangga, jangan buat jadi terlalu gelap, apokaliptik, atau militaristik
+- Untuk blog post Arkara, bangun rasa urgency, pressure, dan emotional tension secara tenang; pembaca harus merasakan bahwa situasinya penting, bukan sekadar cantik
+- Untuk blog post Arkara, utamakan visual yang menunjukkan sistem rapuh, distribusi terganggu, kontrol yang tipis, buffer terbatas, atau keputusan rumah tangga yang harus segera diambil bila relevan
+- Gunakan objek, gesture, ekspresi, dan komposisi yang membuat pembaca membayangkan konsekuensi nyata dalam hidup sehari-hari
 - Prioritaskan wajah, pakaian, arsitektur, peralatan dapur, rumah, jalan, atau lingkungan yang terasa Indonesia modern bila relevan
 - Hindari photorealism generik, glossy 3D render, flat vector style, anime look, dan sci-fi aesthetics
 - Hindari logo merek, signage yang terbaca jelas, teks besar di dalam gambar, atau detail yang berpotensi memicu penolakan moderation
 - Gunakan kata-kata yang aman dan deskriptif; jangan gunakan phrasing yang terdengar eksplisit, sensasional, atau shock-value
-- Hasil akhir harus terasa premium, relevan, dan kuat untuk visual cover`,
+- Hasil akhir harus terasa premium, relevan, emosional, dan kuat untuk visual cover tanpa kehilangan realism Arkara`,
     },
   ]
 }

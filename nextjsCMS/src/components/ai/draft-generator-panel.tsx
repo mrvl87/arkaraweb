@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { Sparkles, Loader2, Copy, Check, Wand2, PlusSquare, Replace, FilePenLine } from 'lucide-react'
+import { Sparkles, Loader2, Copy, Check, Wand2, PlusSquare, Replace, FilePenLine, ChevronDown } from 'lucide-react'
 import type { GenerateFullDraftInput, GenerateFullDraftOutput } from '@/lib/ai/schemas'
 import { AIResultPreview } from './ai-result-preview'
 
@@ -44,6 +44,14 @@ export function DraftGeneratorPanel({
   const [audience, setAudience] = useState(initialState?.input?.audience ?? '')
   const [notes, setNotes] = useState(initialState?.input?.notes ?? '')
   const [outline, setOutline] = useState(initialState?.input?.outline ?? '')
+  const [showAdvanced, setShowAdvanced] = useState(
+    Boolean(
+      initialState?.input?.keyword ||
+      initialState?.input?.angle ||
+      initialState?.input?.audience ||
+      initialState?.input?.outline
+    )
+  )
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<GenerateFullDraftOutput | null>(initialState?.result ?? null)
@@ -55,6 +63,14 @@ export function DraftGeneratorPanel({
     setAudience(initialState?.input?.audience ?? '')
     setNotes(initialState?.input?.notes ?? '')
     setOutline(initialState?.input?.outline ?? '')
+    setShowAdvanced(
+      Boolean(
+        initialState?.input?.keyword ||
+        initialState?.input?.angle ||
+        initialState?.input?.audience ||
+        initialState?.input?.outline
+      )
+    )
     setResult(initialState?.result ?? null)
   }, [initialState])
 
@@ -101,7 +117,7 @@ export function DraftGeneratorPanel({
             <h3 className="text-base font-bold">AI Draft Generator</h3>
           </div>
           <p className="text-xs text-gray-500 mt-1 max-w-2xl">
-            Ubah brief singkat menjadi draft lengkap {entityLabel}, lalu pilih apakah ingin menambahkan ke editor atau mengganti isi editor secara eksplisit.
+            Ubah brief singkat menjadi draft lengkap {entityLabel}. Struktur dasar Arkara tetap menjadi fondasi utama, sementara detail tambahan hanya dipakai jika Anda ingin mengunci nuansa tertentu.
           </p>
         </div>
         <span className="px-2.5 py-1 rounded-full bg-white border border-amber-200 text-[10px] font-bold uppercase tracking-widest text-amber-700">
@@ -109,7 +125,7 @@ export function DraftGeneratorPanel({
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="space-y-3">
         <div className="space-y-1.5">
           <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
             Judul Aktif
@@ -118,69 +134,95 @@ export function DraftGeneratorPanel({
             {title || 'Isi judul artikel terlebih dahulu'}
           </div>
         </div>
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-            Keyword
-          </label>
-          <input
-            type="text"
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-            placeholder="Keyword utama target"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none text-sm"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-            Sudut Pandang
-          </label>
-          <input
-            type="text"
-            value={angle}
-            onChange={(event) => setAngle(event.target.value)}
-            placeholder="Contoh: murah, cepat, untuk pemula"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none text-sm"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-            Audiens
-          </label>
-          <input
-            type="text"
-            value={audience}
-            onChange={(event) => setAudience(event.target.value)}
-            placeholder="Contoh: survivalist pemula"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none text-sm"
-          />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-            Catatan Tambahan
+            Brief Tambahan Opsional
           </label>
           <textarea
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
             rows={4}
-            placeholder="Poin penting, batasan, gaya penulisan, atau CTA"
+            placeholder="Contoh: tekan sisi kontrol vs ketergantungan, gunakan simulasi balkon 2x1 meter, tone lebih tajam dan tenang, tutup dengan konsekuensi yang terasa."
             className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none resize-none text-sm"
           />
+          <p className="text-[11px] text-gray-500">
+            Kosongkan jika ingin AI mengikuti struktur default Arkara tanpa penguncian tambahan.
+          </p>
         </div>
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-            Outline Opsional
-          </label>
-          <textarea
-            value={outline}
-            onChange={(event) => setOutline(event.target.value)}
-            rows={4}
-            placeholder="Tempel outline jika draft harus mengikuti struktur tertentu"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none resize-none text-sm"
-          />
-        </div>
+      </div>
+
+      <div className="rounded-2xl border border-amber-100 bg-white/80 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((current) => !current)}
+          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-amber-50/60 transition-colors"
+        >
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+              Detail Tambahan
+            </p>
+            <p className="mt-1 text-sm font-semibold text-gray-800">
+              Keyword, sudut pandang, audiens, dan outline hanya jika Anda perlu arahan lebih spesifik.
+            </p>
+          </div>
+          <ChevronDown className={`h-4 w-4 text-amber-700 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+        </button>
+
+        {showAdvanced ? (
+          <div className="border-t border-amber-100 bg-amber-50/30 px-4 py-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  Keyword
+                </label>
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(event) => setKeyword(event.target.value)}
+                  placeholder="Opsional: keyword utama target"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  Sudut Pandang
+                </label>
+                <input
+                  type="text"
+                  value={angle}
+                  onChange={(event) => setAngle(event.target.value)}
+                  placeholder="Opsional: tekanan harga, skenario urban, kontrol keluarga"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  Audiens
+                </label>
+                <input
+                  type="text"
+                  value={audience}
+                  onChange={(event) => setAudience(event.target.value)}
+                  placeholder="Opsional: keluarga urban, pemula, rumah tangga apartemen"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  Outline Opsional
+                </label>
+                <textarea
+                  value={outline}
+                  onChange={(event) => setOutline(event.target.value)}
+                  rows={4}
+                  placeholder="Tempel outline hanya jika draft harus mengikuti struktur tertentu"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none resize-none text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

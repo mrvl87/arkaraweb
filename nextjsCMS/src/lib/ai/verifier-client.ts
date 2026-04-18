@@ -2,6 +2,8 @@ import type { AIMessage } from './client'
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
 const DEFAULT_GROUNDED_MODEL = 'openai/gpt-4o-mini-search-preview'
+const OPENROUTER_TIMEOUT_MS = 90000
+const OPENROUTER_MAX_RETRIES = 2
 
 interface OpenRouterAnnotation {
   type?: string
@@ -37,6 +39,56 @@ function buildMessages(messages: AIMessage[]) {
     role: message.role,
     content: message.content,
   }))
+}
+
+function isRetryableOpenRouterError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  const message = error.message.toLowerCase()
+
+  return (
+    message.includes('econnreset') ||
+    message.includes('terminated') ||
+    message.includes('network') ||
+    message.includes('fetch failed') ||
+    message.includes('timeout') ||
+    message.includes('timed out')
+  )
+}
+
+async function fetchOpenRouter(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
+  let attempt = 0
+  let lastError: unknown
+
+  while (attempt <= OPENROUTER_MAX_RETRIES) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS)
+
+    try {
+      return await fetch(input, {
+        cache: 'no-store',
+        ...init,
+        signal: controller.signal,
+      })
+    } catch (error) {
+      lastError = error
+
+      if (!isRetryableOpenRouterError(error) || attempt === OPENROUTER_MAX_RETRIES) {
+        throw error
+      }
+    } finally {
+      clearTimeout(timeout)
+    }
+
+    attempt += 1
+    await new Promise((resolve) => setTimeout(resolve, 750 * attempt))
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('OpenRouter grounded request failed for an unknown reason.')
 }
 
 export function extractGroundedSources(
@@ -99,7 +151,7 @@ export async function callGroundedJSON(
     throw new Error('OPENROUTER_API_KEY is not configured in environment variables.')
   }
 
-  const response = await fetch(OPENROUTER_API_URL, {
+  const response = await fetchOpenRouter(OPENROUTER_API_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,

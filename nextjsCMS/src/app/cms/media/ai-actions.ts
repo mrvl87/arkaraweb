@@ -6,6 +6,8 @@ import { revalidatePath } from 'next/cache'
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const AUTHOR_ID = process.env.CMS_SERVICE_AUTHOR_ID;
 const IMAGE_MODEL = 'google/gemini-3.1-flash-image-preview'
+const OPENROUTER_TIMEOUT_MS = 90000
+const OPENROUTER_MAX_RETRIES = 2
 
 export type AIImageGenerationMode = 'illustration' | 'technical'
 
@@ -19,6 +21,56 @@ interface GenerateAIImageOptions {
   contextName: string
   mode?: AIImageGenerationMode
   referenceImage?: TechnicalReferenceImage | null
+}
+
+function isRetryableOpenRouterError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  const message = error.message.toLowerCase()
+
+  return (
+    message.includes('econnreset') ||
+    message.includes('terminated') ||
+    message.includes('network') ||
+    message.includes('fetch failed') ||
+    message.includes('timeout') ||
+    message.includes('timed out')
+  )
+}
+
+async function fetchOpenRouter(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
+  let attempt = 0
+  let lastError: unknown
+
+  while (attempt <= OPENROUTER_MAX_RETRIES) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS)
+
+    try {
+      return await fetch(input, {
+        cache: 'no-store',
+        ...init,
+        signal: controller.signal,
+      })
+    } catch (error) {
+      lastError = error
+
+      if (!isRetryableOpenRouterError(error) || attempt === OPENROUTER_MAX_RETRIES) {
+        throw error
+      }
+    } finally {
+      clearTimeout(timeout)
+    }
+
+    attempt += 1
+    await new Promise((resolve) => setTimeout(resolve, 750 * attempt))
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('OpenRouter image request failed for an unknown reason.')
 }
 
 function normalizeInput(
@@ -120,7 +172,7 @@ export async function generateAIImage(inputOrPrompt: string | GenerateAIImageOpt
   })
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetchOpenRouter("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
