@@ -155,7 +155,8 @@ function getArkaraImageProfileDirection(profile: AIContentProfile): string {
 - Utamakan medium shot, overhead, cutaway ringan, close-up proses, atau scene setup yang membantu pembaca memahami alat, hubungan komponen, dan tindakan
 - Fokus pada prosedur, alat, bahan, tangan yang sedang bekerja, hubungan antarobjek, dan situasi lapangan/rumah yang realistis
 - Jika relevan, tampilkan skema visual yang rapi dan mudah dipahami, tetapi tetap hidup, editorial, dan tidak dingin
-- Hindari adegan yang terlalu heroik jika mengurangi kejelasan instruksional`
+- Hindari adegan yang terlalu heroik jika mengurangi kejelasan instruksional
+- Selalu gunakan aspec ratio 4:3 secara default`
     case 'post':
       return `Untuk blog post Arkara:
 - Gunakan signature style Arkara sebagai dasar visual, tetapi tone adegan harus mengikuti isi artikel
@@ -163,7 +164,8 @@ function getArkaraImageProfileDirection(profile: AIContentProfile): string {
 - Utamakan storytelling visual yang menunjukkan gangguan, ketergantungan, buffer yang tipis, kontrol yang rapuh, atau keputusan yang harus diambil
 - Komposisi cover harus kuat dalam 1 pandangan: pembaca langsung merasa ada skenario, tekanan, dan taruhan nyata
 - Fokus pada rumah tangga urban Indonesia yang sedang menghadapi keterbatasan, adaptasi, atau transisi dari nyaman ke waspada
-- Boleh atmosferik, tetapi jangan cozy secara generik; visual harus terasa berarti, bukan hanya indah`
+- Boleh atmosferik, tetapi jangan cozy secara generik; visual harus terasa berarti, bukan hanya indah
+- Selalu gunakan aspec ratio 4:3 secara default`
     default:
       return `Untuk workspace Arkara:
 - Gunakan signature style Arkara secara konsisten, tetapi tone visual tetap harus mengikuti isi artikel
