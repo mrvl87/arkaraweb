@@ -327,13 +327,13 @@ code {
 
 .prose-arkara table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   margin: 2rem 0;
   font-size: 0.925rem;
   border: 2px solid var(--ink);
   box-shadow: 4px 4px 0 var(--ink);
-  overflow-x: auto;
-  display: block;
+  display: table;
 }
 .prose-arkara thead {
   background: var(--ink);
@@ -367,8 +367,14 @@ code {
   vertical-align: top;
   color: var(--ink-light);
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 .prose-arkara tbody td:last-child { border-right: none; }
+
+.prose-arkara thead th,
+.prose-arkara tbody td {
+  min-width: 0;
+}
 
 
 /* ─── ANIMATIONS ─────────────────────────────────────────── */
