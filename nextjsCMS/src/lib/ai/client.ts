@@ -19,7 +19,7 @@ export interface AIResponse {
 }
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const DEFAULT_MODEL = 'deepseek/deepseek-v3.2'
+const DEFAULT_MODEL = 'deepseek/deepseek-v4-pro'
 const OPENROUTER_TIMEOUT_MS = 90000
 const OPENROUTER_MAX_RETRIES = 2
 const STABLE_DEEPSEEK_PROVIDER = {
