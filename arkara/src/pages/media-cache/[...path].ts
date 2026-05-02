@@ -3,6 +3,7 @@ import type { APIRoute } from 'astro';
 const SUPABASE_PUBLIC_MEDIA_BASE =
   'https://zythkkmygravwelxbwtf.supabase.co/storage/v1/object/public/media/';
 const MEDIA_CACHE_CONTROL = 'public, max-age=31536000, s-maxage=31536000, immutable';
+const MEDIA_CACHE_EXPIRES = new Date(Date.now() + 31536000 * 1000).toUTCString();
 
 export const GET: APIRoute = async ({ params, request }) => {
   const mediaPath = params.path;
@@ -29,6 +30,8 @@ export const GET: APIRoute = async ({ params, request }) => {
   const headers = new Headers({
     'Cache-Control': MEDIA_CACHE_CONTROL,
     'CDN-Cache-Control': MEDIA_CACHE_CONTROL,
+    'Surrogate-Control': 'max-age=31536000',
+    Expires: MEDIA_CACHE_EXPIRES,
     'Content-Type': upstreamResponse.headers.get('Content-Type') ?? 'application/octet-stream',
     Vary: 'Accept',
   });

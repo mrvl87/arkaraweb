@@ -8,6 +8,9 @@ interface Props {
   sizes?: string; // HTML sizes attribute
   transparent?: boolean; // If true, disable placeholder logic and change default fit
   fetchpriority?: 'high' | 'low' | 'auto'; // Priority for LCP
+  maxSrcSetWidth?: number; // Caps desktop candidates to avoid oversized downloads
+  mobileMaxSrcSetWidth?: number; // Caps mobile candidates independently
+  mobileSizes?: string; // Optional mobile-only sizes source
 }
 
 const { 
@@ -18,7 +21,10 @@ const {
   aspectRatio = '',
   sizes = '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw',
   transparent = false,
-  fetchpriority = 'auto'
+  fetchpriority = 'auto',
+  maxSrcSetWidth = 1200,
+  mobileMaxSrcSetWidth,
+  mobileSizes = sizes
 } = Astro.props;
 
 const SUPABASE_PUBLIC_MEDIA_PATH = '/storage/v1/object/public/media/';
@@ -57,6 +63,7 @@ const isStringUrl = typeof image === 'string';
 // Build the attributes based on whether it's our new JSON format or legacy string URL
 let src = rewriteMediaUrl(isStringUrl ? image : image.url || '');
 let srcSet = '';
+let mobileSrcSet = '';
 let altText = isStringUrl ? alt : (image.alt_text || alt);
 let blurhash = !isStringUrl && image.blurhash ? image.blurhash : '';
 let dominantColor = !isStringUrl && image.dominant_color ? image.dominant_color : '';
@@ -74,12 +81,24 @@ const objectFit = isTransparent
   : (className.includes('object-contain') ? 'object-contain' : 'object-cover');
 
 if (hasFormats) {
-  const formatList = [];
-  if (image.formats.sm) formatList.push(`${rewriteMediaUrl(image.formats.sm)} 400w`);
-  if (image.formats.md) formatList.push(`${rewriteMediaUrl(image.formats.md)} 800w`);
-  if (image.formats.lg) formatList.push(`${rewriteMediaUrl(image.formats.lg)} 1200w`);
-  if (image.formats.original) formatList.push(`${rewriteMediaUrl(image.formats.original)} 2000w`); 
-  srcSet = formatList.join(', ');
+  const candidates = [
+    image.formats.sm ? { url: image.formats.sm, width: 400 } : null,
+    image.formats.md ? { url: image.formats.md, width: 800 } : null,
+    image.formats.lg ? { url: image.formats.lg, width: 1200 } : null,
+    image.formats.original ? { url: image.formats.original, width: 2000 } : null,
+  ].filter(Boolean) as Array<{ url: string; width: number }>;
+
+  function buildSrcSet(maxWidth?: number) {
+    const allowed = candidates.filter((candidate) => !maxWidth || candidate.width <= maxWidth);
+    const selected = allowed.length > 0 ? allowed : candidates.slice(0, 1);
+
+    return selected
+      .map((candidate) => `${rewriteMediaUrl(candidate.url)} ${candidate.width}w`)
+      .join(', ');
+  }
+
+  srcSet = buildSrcSet(maxSrcSetWidth);
+  mobileSrcSet = mobileMaxSrcSetWidth ? buildSrcSet(mobileMaxSrcSetWidth) : '';
   
   // Use md as the default fallback src if available
   if (image.formats.md) src = rewriteMediaUrl(image.formats.md);
@@ -109,6 +128,9 @@ const showBlurhash = !isTransparent && blurhash;
     {hasFormats ? (
        <picture>
          {/* We can explicitly set type image/webp since backend uses webp for these formats */}
+         {mobileSrcSet && (
+           <source media="(max-width: 640px)" type="image/webp" srcset={mobileSrcSet} sizes={mobileSizes} />
+         )}
          <source type="image/webp" srcset={srcSet} sizes={sizes} />
          <img
            src={src}

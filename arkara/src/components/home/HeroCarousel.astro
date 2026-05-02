@@ -48,7 +48,9 @@ const categoryLabels: Record<string, string> = {
                 style="filter: saturate(0.5) contrast(1.1); display: block;"
                 loading={index === 0 ? 'eager' : 'lazy'}
                 fetchpriority={index === 0 ? 'high' : 'auto'}
-                sizes="100vw"
+                sizes="(max-width: 768px) 100vw, calc(100vw - 400px)"
+                mobileMaxSrcSetWidth={800}
+                mobileSizes="100vw"
               />
               <!-- Flat dark overlays, no blur -->
               <div style="position:absolute;inset:0;background:rgba(42,34,24,0.6);"></div>
