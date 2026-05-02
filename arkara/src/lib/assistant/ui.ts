@@ -68,6 +68,8 @@ export function renderAssistantExperience(options: RenderOptions) {
   let lastAssistantBubble: BubbleHandle | null = null;
   let hasDone = false;
   let hasMessages = false;
+  let hasHydratedHistory = false;
+  let isHydratingHistory = false;
   let activeTab = "chat";
 
   function setStatus(
@@ -146,8 +148,24 @@ export function renderAssistantExperience(options: RenderOptions) {
     try {
       const messages = await client.loadMessages();
       renderHistory(messages);
+      hasHydratedHistory = true;
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Gagal memuat riwayat.", "danger");
+    }
+  }
+
+  async function hydrateHistoryOnce() {
+    if (hasHydratedHistory || isHydratingHistory) {
+      return;
+    }
+
+    isHydratingHistory = true;
+    setStatus("Memuat sesi assistant...", "busy");
+
+    try {
+      await hydrateHistory();
+    } finally {
+      isHydratingHistory = false;
     }
   }
 
@@ -281,7 +299,10 @@ export function renderAssistantExperience(options: RenderOptions) {
     }
   }
 
-  launcher?.addEventListener("click", () => setPanelState(true));
+  launcher?.addEventListener("click", () => {
+    setPanelState(true);
+    void hydrateHistoryOnce();
+  });
   backdrop?.addEventListener("click", () => setPanelState(false));
   closeButton?.addEventListener("click", () => setPanelState(false));
   sendButton.addEventListener("click", () => void handleSend());
@@ -324,7 +345,12 @@ export function renderAssistantExperience(options: RenderOptions) {
   setPanelState(isOpen);
   setActiveTab(activeTab);
   syncEmptyState();
-  void hydrateHistory();
+
+  if (options.variant === "page") {
+    void hydrateHistoryOnce();
+  } else {
+    setStatus("Buka assistant saat Anda membutuhkan konteks halaman ini.", "neutral");
+  }
 }
 
 export function resolveAssistantMode(
@@ -499,7 +525,7 @@ function createShellMarkup(input: {
               </section>
               <div class="messages" data-messages></div>
             </div>
-            <div class="status" data-status data-tone="neutral">Memuat sesi...</div>
+            <div class="status" data-status data-tone="neutral">${isFloating ? "Siap saat dibuka." : "Memuat sesi..."}</div>
             <div class="composer">
               <div class="composer-shell">
                 <label class="sr-only" for="arkara-assistant-composer">Pesan assistant</label>

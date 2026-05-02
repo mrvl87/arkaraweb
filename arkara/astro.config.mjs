@@ -7,6 +7,9 @@ import node from '@astrojs/node';
 export default defineConfig({
   output: 'server',
   site: 'https://arkaraweb.com',
+  build: {
+    inlineStylesheets: 'always'
+  },
 
   adapter: node({
     mode: 'standalone'
