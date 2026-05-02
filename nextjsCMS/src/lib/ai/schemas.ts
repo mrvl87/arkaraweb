@@ -118,6 +118,12 @@ export type GenerateImagePromptsOutput = z.infer<typeof GenerateImagePromptsOutp
 export const GenerateClusterIdeasInputSchema = z.object({
   topic: z.string().min(1, 'Topic is required'),
   existing_titles: z.array(z.string()).optional(),
+  source_title: z.string().optional(),
+  source_slug: z.string().optional(),
+  source_description: z.string().optional(),
+  source_content: z.string().optional(),
+  source_category: z.string().optional(),
+  source_status: z.enum(['draft', 'published']).optional(),
 })
 export type GenerateClusterIdeasInput = z.infer<typeof GenerateClusterIdeasInputSchema>
 

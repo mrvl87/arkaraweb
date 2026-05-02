@@ -15,7 +15,7 @@ import {
   actionGenerateSeoPack,
   actionGenerateOutline,
   actionGenerateFullDraft,
-  actionGenerateClusterIdeas,
+  actionGenerateClusterIdeasFromPost,
 } from '@/app/cms/ai/actions'
 import { AIResultPreview } from './ai-result-preview'
 import type {
@@ -24,6 +24,7 @@ import type {
   GenerateFullDraftOutput,
   GenerateClusterIdeasOutput,
 } from '@/lib/ai/schemas'
+import type { ClusterSourcePostOption } from '@/app/cms/ai/actions'
 
 type WorkspaceOperation = 'seo_pack' | 'outline' | 'full_draft' | 'cluster_ideas'
 
@@ -60,13 +61,27 @@ const OPERATIONS: OperationDef[] = [
   {
     id: 'cluster_ideas',
     label: 'Cluster Ideas',
-    description: 'Ide konten dari topik pillar',
+    description: 'Ide konten dari artikel sumber',
     icon: Lightbulb,
     color: 'text-amber-500',
   },
 ]
 
-export function AIWorkspacePanel() {
+interface AIWorkspacePanelProps {
+  clusterSourcePosts: ClusterSourcePostOption[]
+  clusterSourcePostsError?: string | null
+}
+
+function formatPostOption(post: ClusterSourcePostOption) {
+  const status = post.status === 'published' ? 'published' : 'draft'
+  const category = post.category ? ` — ${post.category}` : ''
+  return `[${status}] ${post.title}${category}`
+}
+
+export function AIWorkspacePanel({
+  clusterSourcePosts,
+  clusterSourcePostsError = null,
+}: AIWorkspacePanelProps) {
   const [activeOp, setActiveOp] = useState<WorkspaceOperation>('seo_pack')
   const [loadingOp, setLoadingOp] = useState<WorkspaceOperation | null>(null)
   const [results, setResults] = useState<Partial<Record<WorkspaceOperation, unknown>>>({})
@@ -78,7 +93,7 @@ export function AIWorkspacePanel() {
   const [angle, setAngle] = useState('')
   const [audience, setAudience] = useState('')
   const [notes, setNotes] = useState('')
-  const [topic, setTopic] = useState('')
+  const [selectedClusterPostId, setSelectedClusterPostId] = useState('')
 
   const resetResult = (operation: WorkspaceOperation) => {
     setResults((current) => {
@@ -115,7 +130,7 @@ export function AIWorkspacePanel() {
           response = await actionGenerateFullDraft({ title, keyword, angle, audience, notes })
           break
         case 'cluster_ideas':
-          response = await actionGenerateClusterIdeas({ topic: topic || title })
+          response = await actionGenerateClusterIdeasFromPost({ postId: selectedClusterPostId })
           break
       }
 
@@ -144,6 +159,8 @@ export function AIWorkspacePanel() {
   const currentResult = results[activeOp] ?? null
   const currentError = errors[activeOp] ?? null
   const isLoading = loadingOp === activeOp
+  const selectedClusterPost =
+    clusterSourcePosts.find((post) => post.id === selectedClusterPostId) ?? null
 
   const renderResult = () => {
     if (!currentResult) return null
@@ -233,7 +250,7 @@ export function AIWorkspacePanel() {
               { label: 'Pillar Topic', value: data.pillar_topic },
               ...data.ideas.map((idea, index) => ({
                 label: `Ide ${index + 1} (${idea.content_type || 'post'})`,
-                value: `${idea.title}\nAngle: ${idea.angle}\nKeyword: ${idea.target_keyword}`,
+                value: `Title: ${idea.title}\nAngle: ${idea.angle}\nKeyword: ${idea.target_keyword}`,
               })),
             ]}
           />
@@ -307,17 +324,53 @@ export function AIWorkspacePanel() {
             )}
 
             {activeOp === 'cluster_ideas' && (
-              <div className="space-y-1.5">
+              <div className="space-y-3">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  Topik Pillar
+                  Artikel Sumber
                 </label>
-                <input
-                  type="text"
-                  value={topic}
-                  onChange={(event) => setTopic(event.target.value)}
-                  placeholder="Contoh: pangan darurat, survival medis..."
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-arkara-amber/30 focus:border-arkara-amber transition-all outline-none text-sm"
-                />
+                {clusterSourcePostsError ? (
+                  <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-xs">
+                    {clusterSourcePostsError}
+                  </div>
+                ) : clusterSourcePosts.length === 0 ? (
+                  <div className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-xs">
+                    Belum ada artikel yang bisa dipakai sebagai sumber cluster.
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      value={selectedClusterPostId}
+                      onChange={(event) => setSelectedClusterPostId(event.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-arkara-amber/30 focus:border-arkara-amber transition-all outline-none text-sm bg-white"
+                    >
+                      <option value="">Pilih artikel sumber...</option>
+                      {clusterSourcePosts.map((post) => (
+                        <option key={post.id} value={post.id}>
+                          {formatPostOption(post)}
+                        </option>
+                      ))}
+                    </select>
+
+                    {selectedClusterPost && (
+                      <div className="rounded-xl border border-arkara-amber/20 bg-arkara-amber/5 p-3 text-xs text-gray-600 space-y-1.5">
+                        <div className="flex flex-wrap gap-2">
+                          <span className="font-bold text-arkara-green uppercase">
+                            {selectedClusterPost.status}
+                          </span>
+                          {selectedClusterPost.category && (
+                            <span className="text-gray-400">/{selectedClusterPost.category}</span>
+                          )}
+                          <span className="text-gray-400">/blog/{selectedClusterPost.slug}</span>
+                        </div>
+                        {selectedClusterPost.description && (
+                          <p className="leading-relaxed text-gray-500">
+                            {selectedClusterPost.description}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
@@ -394,7 +447,12 @@ export function AIWorkspacePanel() {
             <button
               type="button"
               onClick={handleGenerate}
-              disabled={isLoading || (activeOp === 'cluster_ideas' ? !topic.trim() : !title.trim())}
+              disabled={
+                isLoading ||
+                (activeOp === 'cluster_ideas'
+                  ? !selectedClusterPostId || Boolean(clusterSourcePostsError)
+                  : !title.trim())
+              }
               className="w-full py-3.5 bg-arkara-amber hover:bg-arkara-amber/90 disabled:opacity-50 disabled:cursor-not-allowed text-arkara-green rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-arkara-amber/20 active:scale-[0.98]"
             >
               {isLoading ? (

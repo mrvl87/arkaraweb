@@ -551,14 +551,24 @@ export function buildClusterIdeasPrompt(
   const existingContext = input.existing_titles?.length
     ? `\n\nArtikel yang sudah ada (jangan duplikasi):\n${input.existing_titles.map((t) => `- ${t}`).join('\n')}`
     : ''
+  const sourceContext = input.source_title
+    ? `\n\nArtikel sumber yang harus dianalisis:
+Judul: ${input.source_title}
+Slug: ${input.source_slug || '-'}
+Kategori: ${input.source_category || '-'}
+Status: ${input.source_status || '-'}
+Deskripsi: ${input.source_description || '-'}
+Konten:
+${input.source_content || '-'}`
+    : ''
 
   return [
     { role: 'system', content: buildSystemPrompt(profile) },
     {
       role: 'user',
-      content: `Buatkan cluster ide konten berdasarkan topik pillar berikut.
+      content: `Buatkan cluster ide konten Arkara berdasarkan artikel sumber atau topik pillar berikut.
 
-Topik: "${input.topic}"${existingContext}
+Topik: "${input.topic}"${sourceContext}${existingContext}
 
 Balas dalam JSON format ini:
 {
@@ -574,10 +584,16 @@ Balas dalam JSON format ini:
 }
 
 Aturan:
-- Generate 5-8 ide
-- Setiap ide harus punya sudut yang unik dan berbeda
-- Campurkan antara post dan panduan
-- Fokus keyword yang realistis dan kompetitif rendah`,
+- Generate tepat 8 ide
+- Campurkan antara "post" dan "panduan"; jangan semua satu tipe
+- Setiap ide harus punya sudut yang unik dan berbeda dari artikel sumber
+- Jangan membuat rewrite judul yang sama; perluas cluster ke masalah turunan, failure mode, simulasi, sistem pendukung, dan keputusan taktis
+- Judul harus kuat SEO, spesifik, long-tail, dan terasa Arkara: tenang, tajam, realistis, urgent, tidak generik
+- Judul harus jelas menargetkan rumah tangga urban Indonesia, ruang terbatas, sumber daya terbatas, atau skenario krisis bila relevan
+- Fokus pada low-to-mid competition keyword yang realistis: household survival, urban resilience, buffer, distribusi, kontrol, krisis, pangan, air, energi, medis, keamanan, komunitas, atau tema turunan sesuai artikel
+- Hindari judul clickbait kosong seperti "tips mudah", "cara praktis", atau "rahasia sukses"
+- Hindari duplikasi dengan daftar artikel yang sudah ada
+- target_keyword harus berupa keyword utama yang bisa dicari, bukan slogan`,
     },
   ]
 }

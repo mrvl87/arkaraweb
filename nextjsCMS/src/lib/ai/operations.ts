@@ -188,6 +188,40 @@ function normalizeFactCheckOutput(output: VerifyLatestFactsOutput): VerifyLatest
   }
 }
 
+function normalizeClusterIdeasOutput(output: GenerateClusterIdeasOutput): GenerateClusterIdeasOutput {
+  const seenTitles = new Set<string>()
+  const ideas = output.ideas
+    .map((idea) => ({
+      title: normalizeSingleLine(idea.title),
+      angle: normalizeSingleLine(idea.angle),
+      target_keyword: normalizeSingleLine(idea.target_keyword),
+      content_type: idea.content_type,
+    }))
+    .filter((idea) => {
+      if (!idea.title || !idea.angle || !idea.target_keyword) {
+        return false
+      }
+
+      const key = idea.title.toLowerCase()
+      if (seenTitles.has(key)) {
+        return false
+      }
+
+      seenTitles.add(key)
+      return true
+    })
+    .slice(0, 8)
+
+  if (ideas.length < 8) {
+    throw new Error('AI menghasilkan kurang dari 8 ide cluster unik. Silakan generate ulang.')
+  }
+
+  return {
+    pillar_topic: normalizeSingleLine(output.pillar_topic),
+    ideas,
+  }
+}
+
 function coerceSourceEntry(value: unknown): Record<string, unknown> | null {
   if (!value) {
     return null
@@ -348,7 +382,7 @@ export async function generateClusterIdeas(
   ctx?: OperationContext
 ): Promise<OperationResponse<GenerateClusterIdeasOutput>> {
   const profile = resolveProfile(ctx?.targetType)
-  return runOperation('generate_cluster_ideas', rawInput, GenerateClusterIdeasInputSchema, GenerateClusterIdeasOutputSchema, (input) => prompts.buildClusterIdeasPrompt(input, profile), undefined, ctx)
+  return runOperation('generate_cluster_ideas', rawInput, GenerateClusterIdeasInputSchema, GenerateClusterIdeasOutputSchema, (input) => prompts.buildClusterIdeasPrompt(input, profile), normalizeClusterIdeasOutput, ctx)
 }
 
 // ─── Rewrite Section ─────────────────────────────────────────────

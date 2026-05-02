@@ -1,7 +1,19 @@
 import { AIWorkspacePanel } from '@/components/ai/ai-workspace-panel'
+import { getClusterSourcePosts } from './actions'
 import { Sparkles } from 'lucide-react'
+import type { ClusterSourcePostOption } from './actions'
 
-export default function AIPage() {
+export default async function AIPage() {
+  let clusterSourcePosts: ClusterSourcePostOption[] = []
+  let clusterSourcePostsError: string | null = null
+
+  try {
+    clusterSourcePosts = await getClusterSourcePosts()
+  } catch (error) {
+    clusterSourcePostsError =
+      error instanceof Error ? error.message : 'Gagal memuat daftar artikel.'
+  }
+
   return (
     <div className="space-y-8 pb-20">
       <div className="text-left border-b border-arkara-green/5 pb-6">
@@ -16,7 +28,10 @@ export default function AIPage() {
         </p>
       </div>
 
-      <AIWorkspacePanel />
+      <AIWorkspacePanel
+        clusterSourcePosts={clusterSourcePosts}
+        clusterSourcePostsError={clusterSourcePostsError}
+      />
     </div>
   )
 }
