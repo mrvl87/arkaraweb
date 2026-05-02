@@ -15,7 +15,6 @@ import ReadingMeta from '../components/blog/ReadingMeta.astro';
 import TableOfContents from '../components/blog/TableOfContents.astro';
 import RelatedPosts from '../components/blog/RelatedPosts.astro';
 import { calculateReadingTime } from '../lib/markdown';
-import { getAssistantApiBaseUrl } from '../lib/assistant/env';
 
 interface Props {
   title: string;
@@ -33,20 +32,6 @@ interface Props {
 const { title, description, publishDate, category, coverImage, headings = [], content = '', currentSlug, canonicalHref, contentType } = Astro.props;
 const readingTime = calculateReadingTime(content);
 
-function buildAssistantBodyText(value: string): string | undefined {
-  const plainText = value
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1 ')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1 ')
-    .replace(/[`*_>#-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  return plainText ? plainText.slice(0, 6000) : undefined;
-}
-
 function resolveSocialImage(image: any): string | undefined {
   if (!image) return undefined;
   if (typeof image === 'string') return image;
@@ -63,13 +48,11 @@ const ogImageUrl = resolveSocialImage(coverImage);
 const ogImageAlt = typeof coverImage === 'string'
   ? title
   : coverImage?.alt_text || title;
-const assistantApiBaseUrl = getAssistantApiBaseUrl();
 
 const assistantMode = contentType === 'panduan' || contentType === 'blog'
   ? 'page_context_mode'
   : 'site_guide_mode';
 const assistantDescription = description?.trim() || undefined;
-const assistantBodyText = buildAssistantBodyText(content);
 ---
 
 <BaseLayout
@@ -80,7 +63,7 @@ const assistantBodyText = buildAssistantBodyText(content);
   canonicalHref={canonicalHref}
   type="article"
   assistantInitialMode={assistantMode}
-  assistantContext={{ title, pathname: canonicalHref, description: assistantDescription, bodyText: assistantBodyText }}
+  assistantContext={{ title, pathname: canonicalHref, description: assistantDescription }}
 >
 
   <!-- â”€â”€ POST HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
@@ -392,38 +375,6 @@ const assistantBodyText = buildAssistantBodyText(content);
       .post-body-padding { padding: 1.5rem !important; }
     }
   </style>
-
-  <script
-    type="module"
-    define:vars={{ assistantApiBaseUrl, title, canonicalHref, assistantMode, assistantDescription, assistantBodyText }}
-  >
-    import { buildAssistantPageUrl } from "../lib/assistant/widget";
-
-    const ctas = document.querySelectorAll("[data-assistant-cta]");
-
-    for (const cta of ctas) {
-      cta.addEventListener("click", async (event) => {
-        event.preventDefault();
-
-        const href = await buildAssistantPageUrl({
-          apiBaseUrl: assistantApiBaseUrl,
-          assistantPageUrl: "/assistant",
-          siteName: "Arkara",
-          locale: "id-ID",
-          initialMode: assistantMode,
-          pageContext: {
-            url: window.location.href,
-            title,
-            pathname: canonicalHref || window.location.pathname,
-            description: assistantDescription,
-            bodyText: assistantBodyText,
-          },
-        });
-
-        window.location.href = href;
-      });
-    }
-  </script>
 
 </BaseLayout>
 

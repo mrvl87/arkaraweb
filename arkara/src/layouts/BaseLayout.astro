@@ -120,6 +120,12 @@ const footerSocialLinks = (footerData?.social_links ?? [])
     url: typeof link?.url === 'string' ? link.url.trim() : '',
   }))
   .filter((link) => getSocialCode(link.platform) && isValidHttpUrl(link.url));
+
+if (Astro.response.status < 300) {
+  const htmlCacheControl = 'public, max-age=0, s-maxage=600, stale-while-revalidate=86400';
+  Astro.response.headers.set('Cache-Control', htmlCacheControl);
+  Astro.response.headers.set('CDN-Cache-Control', htmlCacheControl);
+}
 ---
 
 <!doctype html>

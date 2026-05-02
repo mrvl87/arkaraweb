@@ -21,6 +21,31 @@ const {
   fetchpriority = 'auto'
 } = Astro.props;
 
+const SUPABASE_PUBLIC_MEDIA_PATH = '/storage/v1/object/public/media/';
+
+function rewriteMediaUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+
+    if (
+      parsed.hostname.endsWith('.supabase.co') &&
+      parsed.pathname.startsWith(SUPABASE_PUBLIC_MEDIA_PATH)
+    ) {
+      const mediaPath = parsed.pathname
+        .slice(SUPABASE_PUBLIC_MEDIA_PATH.length)
+        .split('/')
+        .map((segment) => encodeURIComponent(decodeURIComponent(segment)))
+        .join('/');
+
+      return `/media-cache/${mediaPath}${parsed.search}`;
+    }
+  } catch {
+    // Keep relative URLs and malformed legacy values untouched.
+  }
+
+  return url;
+}
+
 // If no image is provided
 if (!image) {
   return null;
@@ -30,7 +55,7 @@ if (!image) {
 const isStringUrl = typeof image === 'string';
 
 // Build the attributes based on whether it's our new JSON format or legacy string URL
-let src = isStringUrl ? image : image.url || '';
+let src = rewriteMediaUrl(isStringUrl ? image : image.url || '');
 let srcSet = '';
 let altText = isStringUrl ? alt : (image.alt_text || alt);
 let blurhash = !isStringUrl && image.blurhash ? image.blurhash : '';
@@ -48,23 +73,16 @@ const objectFit = isTransparent
   ? (className.includes('object-cover') ? 'object-cover' : 'object-contain')
   : (className.includes('object-contain') ? 'object-contain' : 'object-cover');
 
-// ─── SUPABASE TRANSFORMATION UTILITY ─────────────────────
-// Removed /render/ transformation since it requires Supabase Pro plan.
-// We stick to pre-processed formats from the CMS.
-function getTransformedUrl(url: string) {
-  return url; // Return direct public URL
-}
-
 if (hasFormats) {
   const formatList = [];
-  if (image.formats.sm) formatList.push(`${image.formats.sm} 400w`);
-  if (image.formats.md) formatList.push(`${image.formats.md} 800w`);
-  if (image.formats.lg) formatList.push(`${image.formats.lg} 1200w`);
-  if (image.formats.original) formatList.push(`${image.formats.original} 2000w`); 
+  if (image.formats.sm) formatList.push(`${rewriteMediaUrl(image.formats.sm)} 400w`);
+  if (image.formats.md) formatList.push(`${rewriteMediaUrl(image.formats.md)} 800w`);
+  if (image.formats.lg) formatList.push(`${rewriteMediaUrl(image.formats.lg)} 1200w`);
+  if (image.formats.original) formatList.push(`${rewriteMediaUrl(image.formats.original)} 2000w`); 
   srcSet = formatList.join(', ');
   
   // Use md as the default fallback src if available
-  if (image.formats.md) src = image.formats.md;
+  if (image.formats.md) src = rewriteMediaUrl(image.formats.md);
 } else if (src) {
   // Fallback to original src if no formats exist
   srcSet = ''; 
@@ -82,7 +100,7 @@ const showBlurhash = !isTransparent && blurhash;
       <img 
         src={blurhash} 
         alt="" 
-        class="absolute inset-0 w-full h-full ${objectFit} blur-xl opacity-50 scale-110" 
+        class={`absolute inset-0 w-full h-full ${objectFit} blur-xl opacity-50 scale-110`}
         aria-hidden="true" 
       />
     )}
@@ -99,7 +117,6 @@ const showBlurhash = !isTransparent && blurhash;
            decoding={loading === 'eager' ? 'sync' : 'async'}
            fetchpriority={fetchpriority}
            class={`relative z-10 w-full h-full ${objectFit} transition-opacity duration-300`}
-           // When JS loads, we could fade it in, but native browser behavior is usually fine
          />
        </picture>
     ) : (

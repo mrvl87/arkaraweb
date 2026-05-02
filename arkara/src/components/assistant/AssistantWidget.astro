@@ -16,20 +16,161 @@ const {
     bodyText?: string;
   };
 } = Astro.props;
+
+const assistantConfig = {
+  apiBaseUrl,
+  assistantPageUrl: '/assistant',
+  siteName: 'Arkara',
+  initialMode,
+  context
+};
+const assistantConfigJson = JSON.stringify(assistantConfig).replace(/</g, '\\u003c');
 ---
 
-<arkara-assistant-widget
-  api-base-url={apiBaseUrl}
-  assistant-page-url="/assistant"
-  site-name="Arkara"
-  initial-mode={initialMode}
-  context-url={context?.url}
-  context-title={context?.title}
-  context-pathname={context?.pathname}
-  context-description={context?.description}
-  context-body-text={context?.bodyText}
-></arkara-assistant-widget>
+<div class="assistant-lazy-root" data-assistant-lazy-root>
+  <button class="assistant-lazy-trigger" type="button" data-assistant-lazy-trigger>
+    <span class="assistant-lazy-trigger__eyebrow">Arkara AI Assistant</span>
+    <span class="assistant-lazy-trigger__title">Buka assistant</span>
+    <span class="assistant-lazy-trigger__meta">Checklist, ringkasan, dan langkah cepat.</span>
+  </button>
+  <div data-assistant-lazy-mount hidden></div>
+  <script type="application/json" data-assistant-lazy-config set:html={assistantConfigJson} />
+</div>
+
+<style>
+  .assistant-lazy-trigger {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 60;
+    width: min(280px, calc(100vw - 2rem));
+    padding: 0.9rem 1rem;
+    background: var(--ink);
+    border: 3px solid var(--green-terminal);
+    box-shadow: 5px 5px 0 var(--green-terminal);
+    color: var(--cream);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .assistant-lazy-trigger__eyebrow,
+  .assistant-lazy-trigger__meta {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.12em;
+    color: var(--green-terminal);
+    text-transform: uppercase;
+  }
+
+  .assistant-lazy-trigger__title {
+    display: block;
+    margin: 0.2rem 0;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 800;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .assistant-lazy-trigger__meta {
+    color: var(--warm-grey);
+    line-height: 1.4;
+    text-transform: none;
+    letter-spacing: 0.04em;
+  }
+
+  @media (max-width: 640px) {
+    .assistant-lazy-trigger {
+      right: 0.75rem;
+      bottom: 0.75rem;
+      width: min(240px, calc(100vw - 1.5rem));
+      padding: 0.75rem 0.85rem;
+    }
+  }
+</style>
 
 <script>
-  import "../../lib/assistant/widget";
+  const lazyAssistantRoots = document.querySelectorAll('[data-assistant-lazy-root]');
+
+  function readAssistantConfig(root) {
+    const configElement = root.querySelector('[data-assistant-lazy-config]');
+    if (!configElement?.textContent) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(configElement.textContent);
+    } catch {
+      return {};
+    }
+  }
+
+  function setAttributeIfValue(element, name, value) {
+    if (typeof value === 'string' && value.trim()) {
+      element.setAttribute(name, value);
+    }
+  }
+
+  function getPageBodyText() {
+    const article = document.querySelector('.prose-arkara');
+    const text = article?.textContent?.replace(/\s+/g, ' ').trim();
+    return text ? text.slice(0, 6000) : undefined;
+  }
+
+  for (const root of lazyAssistantRoots) {
+    const trigger = root.querySelector('[data-assistant-lazy-trigger]');
+    const mount = root.querySelector('[data-assistant-lazy-mount]');
+
+    trigger?.addEventListener('click', async () => {
+      if (!mount || root.dataset.assistantLoaded === 'true') {
+        return;
+      }
+
+      root.dataset.assistantLoaded = 'true';
+
+      if (trigger instanceof HTMLButtonElement) {
+        trigger.disabled = true;
+        const titleElement = trigger.querySelector('.assistant-lazy-trigger__title');
+        if (titleElement) {
+          titleElement.textContent = 'Memuat assistant';
+        }
+      }
+
+      const config = readAssistantConfig(root);
+      const context = {
+        url: window.location.href,
+        title: document.title,
+        pathname: window.location.pathname,
+        ...(config.context ?? {})
+      };
+      const pageBodyText = getPageBodyText();
+
+      if (pageBodyText) {
+        context.bodyText = pageBodyText;
+      }
+
+      await import('../../lib/assistant/widget');
+
+      const widget = document.createElement('arkara-assistant-widget');
+      setAttributeIfValue(widget, 'api-base-url', config.apiBaseUrl);
+      setAttributeIfValue(widget, 'assistant-page-url', config.assistantPageUrl);
+      setAttributeIfValue(widget, 'site-name', config.siteName);
+      setAttributeIfValue(widget, 'initial-mode', config.initialMode);
+      setAttributeIfValue(widget, 'context-url', context.url);
+      setAttributeIfValue(widget, 'context-title', context.title);
+      setAttributeIfValue(widget, 'context-pathname', context.pathname);
+      setAttributeIfValue(widget, 'context-description', context.description);
+      setAttributeIfValue(widget, 'context-body-text', context.bodyText);
+
+      mount.hidden = false;
+      mount.replaceChildren(widget);
+      trigger?.remove();
+
+      await customElements.whenDefined('arkara-assistant-widget');
+      requestAnimationFrame(() => {
+        widget.shadowRoot?.querySelector('[data-launcher]')?.click();
+      });
+    }, { once: true });
+  }
 </script>
