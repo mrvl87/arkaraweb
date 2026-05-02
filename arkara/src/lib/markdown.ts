@@ -5,6 +5,28 @@ marked.setOptions({
   breaks: true,
 })
 
+function slugifyHeading(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-') || 'bagian'
+}
+
+function getUniqueSlug(baseSlug: string, seen: Map<string, number>): string {
+  const currentCount = seen.get(baseSlug) ?? 0
+  seen.set(baseSlug, currentCount + 1)
+
+  return currentCount === 0 ? baseSlug : `${baseSlug}-${currentCount + 1}`
+}
+
+function extractIdAttribute(attrs: string): string | null {
+  const match = attrs.match(/\bid\s*=\s*["']([^"']+)["']/i)
+  return match?.[1] ?? null
+}
+
 export function renderContent(content: string): string {
   if (!content || content.trim() === '') return ''
   const trimmed = content.trim()
@@ -14,14 +36,18 @@ export function renderContent(content: string): string {
     : marked.parse(trimmed) as string
 
   // Inject IDs into h2 and h3 tags for TOC navigation
+  const seenHeadingIds = new Map<string, number>()
+
   return html.replace(/<(h[23])([^>]*)>(.*?)<\/h\1>/gi, (match, tag, attrs, content) => {
-    // If id already exists, don't overwrite
-    if (attrs.includes('id=')) return match;
+    const existingId = extractIdAttribute(attrs)
+
+    if (existingId) {
+      seenHeadingIds.set(existingId, (seenHeadingIds.get(existingId) ?? 0) + 1)
+      return match
+    }
     
     const text = content.replace(/<[^>]*>/g, '').trim();
-    const slug = text.toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-');
+    const slug = getUniqueSlug(slugifyHeading(text), seenHeadingIds)
     
     return `<${tag}${attrs} id="${slug}">${content}</${tag}>`;
   });
@@ -41,8 +67,9 @@ export function extractHeadings(content: string) {
   
   while ((match = htmlRegex.exec(content)) !== null) {
     const depth = parseInt(match[1]);
+    const attrs = match[0].match(/<h[23]([^>]*)>/i)?.[1] ?? '';
     const text = match[2].replace(/<[^>]*>/g, '').trim();
-    const slug = text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+    const slug = extractIdAttribute(attrs) ?? slugifyHeading(text);
     headings.push({ text, slug, depth });
   }
   
@@ -52,7 +79,7 @@ export function extractHeadings(content: string) {
     while ((match = mdRegex.exec(content)) !== null) {
       const depth = match[1].length;
       const text = match[2].trim();
-      const slug = text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+      const slug = slugifyHeading(text);
       headings.push({ text, slug, depth });
     }
   }

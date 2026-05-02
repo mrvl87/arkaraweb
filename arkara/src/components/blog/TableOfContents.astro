@@ -72,6 +72,8 @@ const redditShareUrl = buildRedditShareUrl(shareUrl);
         <li style={heading.depth === 3 ? 'padding-left: 1rem; border-left: 2px solid var(--cream-dark);' : ''}>
           <a
             href={`#${heading.slug}`}
+            data-toc-link
+            data-heading-text={heading.text}
             style={`
               display: block;
               font-family: 'Share Tech Mono', monospace;
@@ -184,7 +186,79 @@ const redditShareUrl = buildRedditShareUrl(shareUrl);
 )}
 
 <script>
+  const tocLinks = document.querySelectorAll('[data-toc-link]');
   const popupLinks = document.querySelectorAll('[data-share-popup]');
+
+  function getAnchorTarget(id) {
+    if (!id) {
+      return null;
+    }
+
+    const existingTarget = document.getElementById(id);
+    if (existingTarget) {
+      return existingTarget;
+    }
+
+    return null;
+  }
+
+  function normalizeHeadingText(text) {
+    return text
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  function findHeadingByText(text) {
+    const normalizedText = normalizeHeadingText(text);
+    if (!normalizedText) {
+      return null;
+    }
+
+    const headings = document.querySelectorAll('.prose-arkara h2, .prose-arkara h3');
+
+    for (const heading of headings) {
+      if (normalizeHeadingText(heading.textContent || '') === normalizedText) {
+        return heading;
+      }
+    }
+
+    return null;
+  }
+
+  for (const link of tocLinks) {
+    link.addEventListener('click', (event) => {
+      if (!(link instanceof HTMLAnchorElement) || !link.hash) {
+        return;
+      }
+
+      const targetId = decodeURIComponent(link.hash.slice(1));
+      let target = getAnchorTarget(targetId);
+
+      if (!target) {
+        const headingText = link.getAttribute('data-heading-text') || '';
+        target = findHeadingByText(headingText);
+
+        if (target && targetId) {
+          target.id = targetId;
+        }
+      }
+
+      if (!target) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const stickyOffset = 96;
+      const targetTop = target.getBoundingClientRect().top + window.scrollY - stickyOffset;
+      window.history.pushState(null, '', link.hash);
+      window.scrollTo({
+        top: Math.max(0, targetTop),
+        behavior: 'smooth',
+      });
+    });
+  }
 
   for (const link of popupLinks) {
     link.addEventListener('click', (event) => {
