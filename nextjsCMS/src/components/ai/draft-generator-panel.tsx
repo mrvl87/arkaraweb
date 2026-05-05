@@ -27,6 +27,7 @@ interface DraftGeneratorPanelProps {
   onReplaceContent: (markdown: string) => void
   onAppendContent: (markdown: string) => void
   onApplyMetadata: (data: GenerateFullDraftOutput) => void
+  onApplyMobileStructure?: (data: GenerateFullDraftOutput) => void
 }
 
 export function DraftGeneratorPanel({
@@ -38,6 +39,7 @@ export function DraftGeneratorPanel({
   onReplaceContent,
   onAppendContent,
   onApplyMetadata,
+  onApplyMobileStructure,
 }: DraftGeneratorPanelProps) {
   const [keyword, setKeyword] = useState(initialState?.input?.keyword ?? '')
   const [angle, setAngle] = useState(initialState?.input?.angle ?? '')
@@ -56,6 +58,7 @@ export function DraftGeneratorPanel({
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<GenerateFullDraftOutput | null>(initialState?.result ?? null)
   const [copied, setCopied] = useState(false)
+  const [showPreviewDetails, setShowPreviewDetails] = useState(false)
 
   useEffect(() => {
     setKeyword(initialState?.input?.keyword ?? '')
@@ -72,6 +75,7 @@ export function DraftGeneratorPanel({
       )
     )
     setResult(initialState?.result ?? null)
+    setShowPreviewDetails(false)
   }, [initialState])
 
   const handleGenerate = async () => {
@@ -90,6 +94,7 @@ export function DraftGeneratorPanel({
 
       if (response.success) {
         setResult(response.data)
+        setShowPreviewDetails(false)
       } else {
         setError(response.error)
       }
@@ -108,6 +113,14 @@ export function DraftGeneratorPanel({
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handleApplyCompleteDraft = () => {
+    if (!result) return
+
+    onReplaceContent(result.content)
+    onApplyMetadata(result)
+    onApplyMobileStructure?.(result)
+  }
+
   return (
     <div className="bg-gradient-to-br from-amber-50 via-white to-emerald-50 border border-amber-200 rounded-2xl p-5 space-y-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
@@ -117,11 +130,11 @@ export function DraftGeneratorPanel({
             <h3 className="text-base font-bold">AI Draft Generator</h3>
           </div>
           <p className="text-xs text-gray-500 mt-1 max-w-2xl">
-            Ubah brief singkat menjadi draft lengkap {entityLabel}. Struktur dasar Arkara tetap menjadi fondasi utama, sementara detail tambahan hanya dipakai jika Anda ingin mengunci nuansa tertentu.
+            Satu eksekusi menghasilkan draft pendek {entityLabel}, metadata, Jawaban Singkat, Inti Artikel, dan FAQ yang nyaman dibaca di mobile.
           </p>
         </div>
         <span className="px-2.5 py-1 rounded-full bg-white border border-amber-200 text-[10px] font-bold uppercase tracking-widest text-amber-700">
-          Phase 4A
+          Mobile AI
         </span>
       </div>
 
@@ -233,29 +246,48 @@ export function DraftGeneratorPanel({
           className="flex items-center gap-2 px-4 py-3 rounded-xl bg-arkara-amber text-arkara-green text-sm font-bold hover:bg-arkara-amber/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
         >
           {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-          Generate Draft
+          Generate Mobile Draft
         </button>
+      </div>
 
-        {result && (
-          <>
+      {result && (
+        <div className="rounded-2xl border border-emerald-100 bg-white/90 p-4 space-y-4 shadow-sm">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-bold text-arkara-green">Draft sudah jadi. Pilih arah apply berikutnya.</p>
+            <p className="text-xs text-gray-500">
+              Editor utama menyimpan isi artikel. Mobile editor menyimpan Jawaban Singkat, Inti Artikel, FAQ, dan format editorial.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
             <button
               type="button"
               onClick={() => onAppendContent(result.content)}
               disabled={!editorReady}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover:border-emerald-300 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 border border-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              <PlusSquare className="w-4 h-4 text-emerald-600" />
-              Append ke Editor
+              <PlusSquare className="w-4 h-4" />
+              Append ke Editor Utama
             </button>
             <button
               type="button"
               onClick={() => onReplaceContent(result.content)}
               disabled={!editorReady}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover:border-amber-300 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white border border-amber-200 text-sm font-bold text-gray-700 hover:border-amber-300 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <Replace className="w-4 h-4 text-amber-600" />
-              Replace Editor
+              Replace Editor Utama
             </button>
+            {onApplyMobileStructure ? (
+              <button
+                type="button"
+                onClick={() => onApplyMobileStructure(result)}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white border border-emerald-200 text-sm font-bold text-gray-700 hover:border-emerald-300 hover:bg-emerald-50 transition-all"
+              >
+                <Wand2 className="w-4 h-4 text-emerald-600" />
+                Apply ke Mobile Editor
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => onApplyMetadata(result)}
@@ -263,6 +295,18 @@ export function DraftGeneratorPanel({
             >
               <Wand2 className="w-4 h-4 text-blue-600" />
               Apply Metadata
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-4">
+            <button
+              type="button"
+              onClick={handleApplyCompleteDraft}
+              disabled={!editorReady}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-sm font-bold text-emerald-200 hover:border-emerald-400 hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <Wand2 className="w-4 h-4 text-emerald-300" />
+              Replace + Mobile + Metadata
             </button>
             <button
               type="button"
@@ -272,13 +316,13 @@ export function DraftGeneratorPanel({
               {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-gray-500" />}
               {copied ? 'Tersalin' : 'Copy Markdown'}
             </button>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
       {!editorReady && result && (
         <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-xs text-amber-800">
-          Editor belum siap menerima draft. Tunggu editor selesai termuat, lalu klik lagi `Append` atau `Replace`.
+          Editor utama belum siap menerima draft. Tunggu editor selesai termuat, lalu klik lagi `Append`, `Replace`, atau `Replace + Mobile + Metadata`.
         </div>
       )}
 
@@ -289,35 +333,61 @@ export function DraftGeneratorPanel({
       )}
 
       {result && (
-        <div className="space-y-4">
-          <AIResultPreview
-            title="Draft Metadata"
-            rawJson={result}
-            fields={[
-              ...(result.word_count ? [{ label: 'Jumlah Kata', value: `${result.word_count}` }] : []),
-              ...(result.suggested_slug ? [{ label: 'Slug Disarankan', value: result.suggested_slug }] : []),
-              ...(result.suggested_meta_title
-                ? [{ label: 'Meta Title Disarankan', value: result.suggested_meta_title }]
-                : []),
-              ...(result.suggested_meta_desc
-                ? [{ label: 'Meta Description Disarankan', value: result.suggested_meta_desc }]
-                : []),
-            ]}
-          />
+        <div className="rounded-2xl border border-gray-200 bg-white/85 overflow-hidden shadow-sm">
+          <button
+            type="button"
+            onClick={() => setShowPreviewDetails((current) => !current)}
+            className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-gray-50 transition-colors"
+          >
+            <div>
+              <p className="text-sm font-bold text-gray-800">Detail hasil generate</p>
+              <p className="mt-1 text-xs text-gray-500">
+                Draft Metadata dan Preview Draft Markdown disembunyikan agar area CMS tetap lega.
+              </p>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${showPreviewDetails ? 'rotate-180' : ''}`} />
+          </button>
 
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-            <div className="px-5 py-3 bg-gradient-to-r from-arkara-green to-arkara-green/90 flex items-center justify-between">
-              <h4 className="text-sm font-bold text-arkara-amber tracking-wide">Preview Draft Markdown</h4>
-              <span className="text-[10px] text-arkara-amber/70 uppercase tracking-widest">
-                Preview sebelum apply
-              </span>
+          {showPreviewDetails ? (
+            <div className="border-t border-gray-100 p-4 space-y-4">
+              <AIResultPreview
+                title="Draft Metadata"
+                rawJson={result}
+                fields={[
+                  ...(result.editorial_format ? [{ label: 'Format Editorial', value: result.editorial_format }] : []),
+                  ...(result.quick_answer ? [{ label: 'Jawaban Singkat', value: result.quick_answer }] : []),
+                  ...(result.key_takeaways?.length
+                    ? [{ label: 'Inti Artikel', value: result.key_takeaways.join('\n') }]
+                    : []),
+                  ...(result.faq?.length
+                    ? [{ label: 'FAQ', value: result.faq.map((item) => `${item.question}\n${item.answer}`).join('\n\n') }]
+                    : []),
+                  ...(result.word_count ? [{ label: 'Jumlah Kata', value: `${result.word_count}` }] : []),
+                  ...(result.suggested_slug ? [{ label: 'Slug Disarankan', value: result.suggested_slug }] : []),
+                  ...(result.suggested_meta_title
+                    ? [{ label: 'Meta Title Disarankan', value: result.suggested_meta_title }]
+                    : []),
+                  ...(result.suggested_meta_desc
+                    ? [{ label: 'Meta Description Disarankan', value: result.suggested_meta_desc }]
+                    : []),
+                ]}
+              />
+
+              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="px-5 py-3 bg-gradient-to-r from-arkara-green to-arkara-green/90 flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-arkara-amber tracking-wide">Preview Draft Markdown</h4>
+                  <span className="text-[10px] text-arkara-amber/70 uppercase tracking-widest">
+                    Preview sebelum apply
+                  </span>
+                </div>
+                <div className="p-5 max-h-[520px] overflow-y-auto">
+                  <pre className="whitespace-pre-wrap break-words text-sm text-gray-800 leading-relaxed font-mono">
+                    {result.content}
+                  </pre>
+                </div>
+              </div>
             </div>
-            <div className="p-5 max-h-[520px] overflow-y-auto">
-              <pre className="whitespace-pre-wrap break-words text-sm text-gray-800 leading-relaxed font-mono">
-                {result.content}
-              </pre>
-            </div>
-          </div>
+          ) : null}
         </div>
       )}
     </div>

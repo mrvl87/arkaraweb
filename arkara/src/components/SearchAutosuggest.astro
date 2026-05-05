@@ -1,0 +1,460 @@
+---
+interface Props {
+  id?: string;
+  variant?: 'desktop' | 'mobile';
+  placeholder?: string;
+}
+
+const {
+  id,
+  variant = 'desktop',
+  placeholder = 'Cari panduan...',
+} = Astro.props;
+const rootClass = `search-autosuggest search-autosuggest--${variant}`;
+---
+
+<form id={id} class={rootClass} data-search-autosuggest role="search" autocomplete="off">
+  <div class="search-autosuggest__field">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+    <label class="search-autosuggest__label">
+      <span>Cari konten Arkara</span>
+      <input
+        type="search"
+        name="q"
+        placeholder={placeholder}
+        autocomplete="off"
+        inputmode="search"
+        data-search-input
+      />
+    </label>
+  </div>
+  <div class="search-autosuggest__panel" data-search-panel hidden>
+    <div class="search-autosuggest__status" data-search-status>Ketik minimal 2 karakter.</div>
+    <div class="search-autosuggest__results" data-search-results></div>
+  </div>
+</form>
+
+<style>
+  .search-autosuggest {
+    position: relative;
+    width: 100%;
+    color: #f8fafc;
+  }
+
+  .search-autosuggest__field {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.045);
+  }
+
+  .search-autosuggest__field svg {
+    flex: 0 0 auto;
+    color: #e2e8f0;
+  }
+
+  .search-autosuggest__label {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .search-autosuggest__label span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .search-autosuggest input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #f8fafc;
+    font-family: 'Barlow', system-ui, sans-serif;
+  }
+
+  .search-autosuggest input::placeholder {
+    color: #8fa3aa;
+  }
+
+  .search-autosuggest__panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 180;
+    margin-top: 0.5rem;
+    overflow: hidden;
+    border: 1px solid rgba(99,210,181,0.22);
+    border-radius: 10px;
+    background: rgba(8, 14, 15, 0.98);
+    box-shadow: 0 18px 42px rgba(0,0,0,0.42);
+    backdrop-filter: blur(18px);
+  }
+
+  .search-autosuggest__status {
+    padding: 0.82rem 0.95rem;
+    color: #8fa3aa;
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
+
+  .search-autosuggest__results {
+    display: grid;
+    gap: 0.28rem;
+    padding: 0.35rem;
+    overflow: visible;
+  }
+
+  :global(.search-suggest-item) {
+    display: grid;
+    grid-template-columns: 4.65rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.72rem;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0 0.72rem;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-left: 2px solid transparent;
+    border-radius: 8px;
+    color: inherit;
+    text-decoration: none;
+    transition:
+      background 0.14s ease,
+      border-color 0.14s ease,
+      color 0.14s ease,
+      transform 0.14s ease;
+  }
+
+  :global(.search-suggest-item:hover),
+  :global(.search-suggest-item:focus) {
+    border-left-color: #63d2b5;
+    border-color: rgba(99,210,181,0.30);
+    background: rgba(99,210,181,0.11);
+    outline: 0;
+    transform: translateX(1px);
+  }
+
+  :global(.search-suggest-type) {
+    display: inline-grid;
+    place-items: center;
+    min-width: 0;
+    height: 1.35rem;
+    border: 1px solid rgba(99,210,181,0.36);
+    border-radius: 999px;
+    background: rgba(99,210,181,0.08);
+    color: #7ee7ca;
+    font: 900 0.58rem 'Barlow', system-ui, sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  :global(.search-suggest-type--post) {
+    border-color: rgba(245,158,11,0.46);
+    background: rgba(245,158,11,0.10);
+    color: #f6b34b;
+  }
+
+  :global(.search-suggest-type--panduan) {
+    border-color: rgba(99,210,181,0.40);
+    background: rgba(99,210,181,0.10);
+    color: #7ee7ca;
+  }
+
+  :global(.search-suggest-title) {
+    min-width: 0;
+    overflow: hidden;
+    color: #f4efe1;
+    font: 800 0.78rem/1.25 'Barlow', system-ui, sans-serif;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .search-autosuggest--desktop {
+    width: min(25vw, 20rem);
+    min-width: 15rem;
+  }
+
+  .search-autosuggest--desktop .search-autosuggest__panel {
+    left: auto;
+    right: 0;
+    width: min(26rem, calc(100vw - 2rem));
+  }
+
+  .search-autosuggest--desktop .search-autosuggest__field {
+    height: 2.35rem;
+    border-radius: 999px;
+    padding: 0 0.85rem;
+  }
+
+  .search-autosuggest--desktop .search-autosuggest__field svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .search-autosuggest--desktop input {
+    font-size: 0.82rem;
+  }
+
+  .search-autosuggest--mobile .search-autosuggest__field {
+    min-height: 3.25rem;
+    border-radius: 10px;
+    padding: 0 0.95rem;
+  }
+
+  .search-autosuggest--mobile {
+    margin-bottom: 1.35rem;
+  }
+
+  .search-autosuggest--mobile .search-autosuggest__field svg {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  .search-autosuggest--mobile input {
+    font-size: 0.98rem;
+  }
+
+  .search-autosuggest--mobile .search-autosuggest__panel {
+    margin-top: 0.55rem;
+  }
+
+  @media (max-width: 768px) {
+    .search-autosuggest--desktop {
+      display: none;
+    }
+
+    :global(.search-suggest-item) {
+      grid-template-columns: 4.45rem minmax(0, 1fr);
+      gap: 0.62rem;
+      min-height: 2.85rem;
+      padding: 0 0.62rem;
+    }
+
+    :global(.search-suggest-type) {
+      font-size: 0.56rem;
+    }
+
+    :global(.search-suggest-title) {
+      font-size: 0.76rem;
+    }
+  }
+</style>
+
+<style is:global>
+  .search-suggest-item {
+    display: grid;
+    grid-template-columns: 4.65rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.72rem;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0 0.72rem;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-left: 2px solid transparent;
+    border-radius: 8px;
+    color: inherit;
+    text-decoration: none;
+    transition:
+      background 0.14s ease,
+      border-color 0.14s ease,
+      color 0.14s ease,
+      transform 0.14s ease;
+  }
+
+  .search-suggest-item:hover,
+  .search-suggest-item:focus {
+    border-left-color: #63d2b5;
+    border-color: rgba(99,210,181,0.30);
+    background: rgba(99,210,181,0.11);
+    outline: 0;
+    transform: translateX(1px);
+  }
+
+  .search-suggest-type {
+    display: inline-grid;
+    place-items: center;
+    min-width: 0;
+    height: 1.35rem;
+    border: 1px solid rgba(99,210,181,0.36);
+    border-radius: 999px;
+    background: rgba(99,210,181,0.08);
+    color: #7ee7ca;
+    font: 900 0.58rem 'Barlow', system-ui, sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .search-suggest-type--post {
+    border-color: rgba(245,158,11,0.46);
+    background: rgba(245,158,11,0.10);
+    color: #f6b34b;
+  }
+
+  .search-suggest-type--panduan {
+    border-color: rgba(99,210,181,0.40);
+    background: rgba(99,210,181,0.10);
+    color: #7ee7ca;
+  }
+
+  .search-suggest-title {
+    min-width: 0;
+    overflow: hidden;
+    color: #f4efe1;
+    font: 800 0.78rem/1.25 'Barlow', system-ui, sans-serif;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 768px) {
+    .search-suggest-item {
+      grid-template-columns: 4.45rem minmax(0, 1fr);
+      gap: 0.62rem;
+      min-height: 2.85rem;
+      padding: 0 0.62rem;
+    }
+
+    .search-suggest-type {
+      font-size: 0.56rem;
+    }
+
+    .search-suggest-title {
+      font-size: 0.76rem;
+    }
+  }
+</style>
+
+<script>
+  type SearchSuggestion = {
+    title: string;
+    href: string;
+    type: 'post' | 'panduan';
+    category?: string;
+    excerpt?: string;
+    image?: string | null;
+  };
+
+  const searchRoots = document.querySelectorAll<HTMLFormElement>('[data-search-autosuggest]');
+
+  function sanitize(value: string) {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function renderSuggestion(result: SearchSuggestion) {
+    const typeLabel = result.type === 'panduan' ? 'Panduan' : 'Artikel';
+    const typeClass = result.type === 'panduan' ? 'search-suggest-type--panduan' : 'search-suggest-type--post';
+
+    return `
+      <a class="search-suggest-item" href="${sanitize(result.href)}">
+        <span class="search-suggest-type ${typeClass}">${typeLabel}</span>
+        <span class="search-suggest-title">${sanitize(result.title)}</span>
+      </a>
+    `;
+  }
+
+  searchRoots.forEach((root) => {
+    const input = root.querySelector<HTMLInputElement>('[data-search-input]');
+    const panel = root.querySelector<HTMLElement>('[data-search-panel]');
+    const status = root.querySelector<HTMLElement>('[data-search-status]');
+    const results = root.querySelector<HTMLElement>('[data-search-results]');
+    let timer: number | undefined;
+    let controller: AbortController | undefined;
+
+    if (!input || !panel || !status || !results) return;
+
+    function closePanel() {
+      panel.hidden = true;
+    }
+
+    function openPanel(message?: string) {
+      if (message) {
+        status.textContent = message;
+        status.hidden = false;
+        results.innerHTML = '';
+      }
+      panel.hidden = false;
+    }
+
+    async function runSearch(query: string) {
+      const trimmed = query.trim();
+      if (trimmed.length < 2) {
+        openPanel('Ketik minimal 2 karakter.');
+        return;
+      }
+
+      controller?.abort();
+      controller = new AbortController();
+      openPanel('Mencari...');
+
+      try {
+        const response = await fetch(`/api/search-suggestions?q=${encodeURIComponent(trimmed)}`, {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' },
+        });
+        if (!response.ok) throw new Error('Search request failed');
+
+        const payload = await response.json() as { results?: SearchSuggestion[] };
+        const items = payload.results || [];
+        if (items.length === 0) {
+          openPanel('Tidak ada hasil yang cocok.');
+          return;
+        }
+
+        status.hidden = true;
+        results.innerHTML = items.map(renderSuggestion).join('');
+        panel.hidden = false;
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
+        openPanel('Search belum bisa dipakai. Coba lagi.');
+      }
+    }
+
+    input.addEventListener('input', () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => runSearch(input.value), 180);
+    });
+
+    input.addEventListener('focus', () => {
+      if (input.value.trim().length >= 2 || results.innerHTML) {
+        panel.hidden = false;
+      }
+    });
+
+    root.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const firstResult = results.querySelector<HTMLAnchorElement>('a');
+      if (firstResult) {
+        window.location.href = firstResult.href;
+      } else {
+        runSearch(input.value);
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!root.contains(event.target as Node)) {
+        closePanel();
+      }
+    });
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closePanel();
+    });
+  });
+</script>

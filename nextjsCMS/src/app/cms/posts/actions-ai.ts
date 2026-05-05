@@ -12,6 +12,7 @@ import {
   generateSeoPack,
   generateOutline,
   generateFullDraft,
+  generateMobileReaderStructure,
   generateImagePrompts,
   rewriteSection,
   expandSection,
@@ -24,6 +25,7 @@ import type {
   GenerateSEOPackInput,
   GenerateOutlineInput,
   GenerateFullDraftInput,
+  GenerateMobileReaderStructureInput,
   GenerateImagePromptsInput,
   RewriteSectionInput,
   ExpandSectionInput,
@@ -59,6 +61,13 @@ export async function postAIGenerateOutline(input: GenerateOutlineInput, ctx?: P
 
 export async function postAIGenerateFullDraft(input: GenerateFullDraftInput, ctx?: PostContext) {
   return generateFullDraft(input, {
+    targetType: 'post',
+    targetId: ctx?.postId,
+  })
+}
+
+export async function postAIGenerateMobileReaderStructure(input: GenerateMobileReaderStructureInput, ctx?: PostContext) {
+  return generateMobileReaderStructure(input, {
     targetType: 'post',
     targetId: ctx?.postId,
   })

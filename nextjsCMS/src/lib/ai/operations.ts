@@ -30,6 +30,8 @@ import {
   GenerateOutlineOutputSchema,
   GenerateFullDraftInputSchema,
   GenerateFullDraftOutputSchema,
+  GenerateMobileReaderStructureInputSchema,
+  GenerateMobileReaderStructureOutputSchema,
   GenerateImagePromptsInputSchema,
   GenerateImagePromptsOutputSchema,
   GenerateClusterIdeasInputSchema,
@@ -52,6 +54,8 @@ import {
   type GenerateOutlineOutput,
   type GenerateFullDraftInput,
   type GenerateFullDraftOutput,
+  type GenerateMobileReaderStructureInput,
+  type GenerateMobileReaderStructureOutput,
   type GenerateImagePromptsInput,
   type GenerateImagePromptsOutput,
   type GenerateClusterIdeasInput,
@@ -91,9 +95,16 @@ interface OperationContext {
 
 interface OperationAIOptions {
   maxTokens?: number
+  webSearch?: {
+    enabled: boolean
+    engine?: 'auto' | 'native' | 'exa' | 'firecrawl' | 'parallel'
+    maxResults?: number
+    maxTotalResults?: number
+    searchContextSize?: 'low' | 'medium' | 'high'
+  }
 }
 
-const FULL_DRAFT_MAX_TOKENS = 8000
+const FULL_DRAFT_MAX_TOKENS = 6000
 
 function normalizeSingleLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
@@ -219,6 +230,45 @@ function normalizeClusterIdeasOutput(output: GenerateClusterIdeasOutput): Genera
   return {
     pillar_topic: normalizeSingleLine(output.pillar_topic),
     ideas,
+  }
+}
+
+function normalizeFullDraftOutput(output: GenerateFullDraftOutput): GenerateFullDraftOutput {
+  return {
+    ...output,
+    quick_answer: output.quick_answer ? normalizeSingleLine(output.quick_answer) : '',
+    key_takeaways: (output.key_takeaways ?? [])
+      .map((item) => normalizeSingleLine(item))
+      .filter(Boolean)
+      .slice(0, 5),
+    faq: (output.faq ?? [])
+      .map((item) => ({
+        question: normalizeSingleLine(item.question),
+        answer: normalizeSingleLine(item.answer),
+      }))
+      .filter((item) => item.question && item.answer)
+      .slice(0, 5),
+    editorial_format: output.editorial_format || 'mobile_reader',
+  }
+}
+
+function normalizeMobileReaderStructureOutput(
+  output: GenerateMobileReaderStructureOutput
+): GenerateMobileReaderStructureOutput {
+  return {
+    quick_answer: normalizeSingleLine(output.quick_answer),
+    key_takeaways: output.key_takeaways
+      .map((item) => normalizeSingleLine(item))
+      .filter(Boolean)
+      .slice(0, 5),
+    faq: output.faq
+      .map((item) => ({
+        question: normalizeSingleLine(item.question),
+        answer: normalizeSingleLine(item.answer),
+      }))
+      .filter((item) => item.question && item.answer)
+      .slice(0, 5),
+    editorial_format: output.editorial_format || 'mobile_reader',
   }
 }
 
@@ -357,7 +407,33 @@ export async function generateFullDraft(
   return runOperation('generate_full_draft', rawInput, GenerateFullDraftInputSchema, GenerateFullDraftOutputSchema, async (input) => {
     const internalLinks = await getInternalLinksContext(input)
     return prompts.buildFullDraftPrompt(input, internalLinks, profile)
-  }, undefined, ctx, { maxTokens: FULL_DRAFT_MAX_TOKENS })
+  }, normalizeFullDraftOutput, ctx, {
+    maxTokens: FULL_DRAFT_MAX_TOKENS,
+    webSearch: {
+      enabled: true,
+      engine: 'auto',
+      maxResults: 5,
+      maxTotalResults: 10,
+      searchContextSize: 'medium',
+    },
+  })
+}
+
+export async function generateMobileReaderStructure(
+  rawInput: GenerateMobileReaderStructureInput,
+  ctx?: OperationContext
+): Promise<OperationResponse<GenerateMobileReaderStructureOutput>> {
+  const profile = resolveProfile(ctx?.targetType)
+  return runOperation(
+    'generate_mobile_reader_structure',
+    rawInput,
+    GenerateMobileReaderStructureInputSchema,
+    GenerateMobileReaderStructureOutputSchema,
+    (input) => prompts.buildMobileReaderStructurePrompt(input, profile),
+    normalizeMobileReaderStructureOutput,
+    ctx,
+    { maxTokens: 2200 }
+  )
 }
 
 // ─── Generate Cluster Ideas ──────────────────────────────────────
@@ -515,7 +591,7 @@ export async function verifyLatestFacts(
       targetType: ctx?.targetType,
       targetId: ctx?.targetId,
       operation: 'verify_latest_facts',
-      model: process.env.OPENROUTER_API_KEY ? (process.env.OPENROUTER_GROUNDED_MODEL ?? 'openai/gpt-4o-mini-search-preview') : 'unknown',
+      model: process.env.OPENROUTER_API_KEY ? (process.env.OPENROUTER_GROUNDED_MODEL ?? 'deepseek/deepseek-v4-pro') : 'unknown',
       status: 'error',
       inputJson: validInput as Record<string, unknown>,
       outputJson: {},

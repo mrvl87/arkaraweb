@@ -1,0 +1,160 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Login"
+  description="Masuk ke profil Arkara."
+  robots="noindex, nofollow"
+>
+  <section class="login-screen" aria-labelledby="login-title">
+    <div class="login-shell">
+      <a class="login-brand" href="/">Arkaraweb</a>
+      <div class="login-copy">
+        <p>Profil Arkara</p>
+        <h1 id="login-title">Masuk untuk menyimpan panduan dan progres baca.</h1>
+      </div>
+
+      <form class="login-form" action="#" method="post">
+        <label>
+          <span>Email</span>
+          <input type="email" name="email" placeholder="nama@email.com" autocomplete="email" />
+        </label>
+        <label>
+          <span>Password</span>
+          <input type="password" name="password" placeholder="Password" autocomplete="current-password" />
+        </label>
+        <button type="button">Masuk</button>
+      </form>
+
+      <div class="login-actions">
+        <a href="/panduan">Lanjut tanpa login</a>
+        <a href="/blog">Baca artikel terbaru</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .login-screen {
+    min-height: 100dvh;
+    padding: 1rem;
+    background:
+      radial-gradient(circle at 50% -12%, rgba(110,231,183,0.1), transparent 30rem),
+      #070b0c;
+    color: #f8fafc;
+  }
+
+  .login-shell {
+    display: grid;
+    gap: 1.25rem;
+    width: min(100%, 28rem);
+    margin: 0 auto;
+    padding: 1.2rem 0 6rem;
+  }
+
+  .login-brand {
+    color: #f3ead9;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.55rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-decoration: none;
+  }
+
+  .login-copy {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 1.5rem;
+  }
+
+  .login-copy p,
+  .login-copy h1 {
+    margin: 0;
+  }
+
+  .login-copy p {
+    color: #6ee7b7;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.76rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .login-copy h1 {
+    color: #f3ead9;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.85rem, 1.55rem + 1.25vw, 2.45rem);
+    line-height: 1.08;
+    text-transform: none;
+  }
+
+  .login-form {
+    display: grid;
+    gap: 0.85rem;
+    margin-top: 0.6rem;
+    padding: 0.8rem;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.045);
+  }
+
+  .login-form label {
+    display: grid;
+    gap: 0.38rem;
+  }
+
+  .login-form span {
+    color: #cbd5e1;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .login-form input {
+    width: 100%;
+    min-height: 3.15rem;
+    border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 8px;
+    background: rgba(7,11,12,0.76);
+    color: #f8fafc;
+    font: inherit;
+    padding: 0 0.9rem;
+    outline: none;
+  }
+
+  .login-form input:focus {
+    border-color: rgba(110,231,183,0.52);
+  }
+
+  .login-form button {
+    min-height: 3.15rem;
+    border: 0;
+    border-radius: 8px;
+    background: #63d2b5;
+    color: #06231d;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+  }
+
+  .login-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .login-actions a {
+    color: #cbd5e1;
+    font-size: 0.84rem;
+    text-decoration: none;
+  }
+
+  @media (max-width: 768px) {
+    :global(html),
+    :global(body),
+    :global(main) {
+      background: #070b0c !important;
+    }
+  }
+</style>

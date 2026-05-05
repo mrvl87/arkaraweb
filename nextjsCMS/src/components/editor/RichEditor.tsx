@@ -58,6 +58,8 @@ import { MediaPicker } from '../media/media-picker'
 import MarkdownIt from 'markdown-it'
 import { createPortal } from 'react-dom'
 import type {
+  RewriteSectionInput,
+  RewriteSectionOutput,
   VerifyLatestFactsInput,
   VerifyLatestFactsOutput,
 } from '@/lib/ai/schemas'
@@ -159,6 +161,12 @@ export interface RichEditorAIConfig {
     | { success: true; data: VerifyLatestFactsOutput; model: string }
     | { success: false; error: string }
   >
+  rewriteSection?: (
+    input: RewriteSectionInput
+  ) => Promise<
+    | { success: true; data: RewriteSectionOutput; model: string }
+    | { success: false; error: string }
+  >
   getInternalLinkSuggestions?: (input: {
     title: string
     content: string
@@ -193,6 +201,59 @@ function resolveInternalLinksMenuStage(
   }
 
   return 'results'
+}
+
+type SelectionAIMode =
+  | 'hallucination'
+  | 'fact_check'
+  | 'mobile_shorter'
+  | 'bullet'
+  | 'heading_specific'
+  | 'scan_friendly'
+
+type SelectionSuggestionStatus = VerifyLatestFactsOutput['claims'][number]['status'] | 'rewrite'
+
+function insertMarkdownCommand(editor: any, range: { from: number; to: number }, markdown: string) {
+  editor
+    .chain()
+    .focus()
+    .deleteRange(range)
+    .insertContent(markdownRenderer.render(markdown.trim()))
+    .run()
+}
+
+function getSelectionAILabel(mode: SelectionAIMode): string {
+  switch (mode) {
+    case 'hallucination':
+      return 'Hallucination Check'
+    case 'fact_check':
+      return 'Fact Check'
+    case 'mobile_shorter':
+      return 'Perpendek untuk mobile'
+    case 'bullet':
+      return 'Ubah jadi bullet'
+    case 'heading_specific':
+      return 'Buat heading lebih spesifik'
+    case 'scan_friendly':
+      return 'Buat lebih scan-friendly'
+    default:
+      return 'AI Selection Check'
+  }
+}
+
+function getRewriteInstruction(mode: SelectionAIMode): string {
+  switch (mode) {
+    case 'mobile_shorter':
+      return 'Perpendek teks terpilih untuk pembaca mobile. Pertahankan makna dan fakta, hilangkan repetisi, buat kalimat lebih langsung, dan jangan membuat klaim baru.'
+    case 'bullet':
+      return 'Ubah teks terpilih menjadi bullet yang ringkas dan mudah discan di layar HP. Gunakan bullet Markdown pendek, satu ide per bullet, tanpa menambah klaim baru.'
+    case 'heading_specific':
+      return 'Buat teks terpilih menjadi heading atau subheading yang lebih spesifik, tajam, dan membantu pembaca memahami keputusan utama. Beri satu opsi terbaik saja.'
+    case 'scan_friendly':
+      return 'Refactor teks terpilih agar lebih scan-friendly: pecah kalimat panjang, buat ritme lebih pendek, dan prioritaskan keputusan praktis tanpa mengubah fakta.'
+    default:
+      return ''
+  }
 }
 
 export function RichEditor({ value, onChange, placeholder, onEditorReady, aiConfig }: RichEditorProps) {
@@ -364,6 +425,72 @@ export function RichEditor({ value, onChange, placeholder, onEditorReady, aiConf
                   <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><TableIcon className="w-4 h-4"/></div>
                   <span>Tabel</span>
                 </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='Jawaban singkat mobile reader quick answer'
+                  onCommand={({ editor, range }) => {
+                    insertMarkdownCommand(editor, range, `> **Jawaban singkat:** Tulis 2-4 kalimat yang langsung menjawab inti masalah pembaca.`)
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-slate-50 aria-selected:bg-slate-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-slate-200 bg-slate-950 text-emerald-300'><Type className="w-4 h-4"/></div>
+                  <span>Jawaban singkat</span>
+                </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='Checklist mobile reader daftar cek'
+                  onCommand={({ editor, range }) => {
+                    insertMarkdownCommand(editor, range, `## Checklist\n\n- Poin pertama yang perlu dicek.\n- Poin kedua yang menentukan keputusan.\n- Poin ketiga yang sering terlewat.`)
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-slate-50 aria-selected:bg-slate-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-slate-200 bg-white'><CheckSquare className="w-4 h-4"/></div>
+                  <span>Checklist</span>
+                </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='Peringatan risiko warning mobile reader'
+                  onCommand={({ editor, range }) => {
+                    insertMarkdownCommand(editor, range, `> **Peringatan:** Jelaskan batas aman, risiko utama, atau asumsi yang tidak boleh dilewati.`)
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-red-50 aria-selected:bg-red-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-red-100 bg-red-50'><AlertTriangle className="w-4 h-4 text-red-600"/></div>
+                  <span>Peringatan</span>
+                </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='Failure mode kegagalan mobile reader'
+                  onCommand={({ editor, range }) => {
+                    insertMarkdownCommand(editor, range, `## Failure mode\n\nPendekatan ini biasanya gagal ketika:\n\n- Penyebab pertama.\n- Penyebab kedua.\n- Tanda bahwa pembaca perlu mengganti strategi.`)
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-red-50 aria-selected:bg-red-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-red-100 bg-white'><AlertTriangle className="w-4 h-4 text-red-600"/></div>
+                  <span>Failure mode</span>
+                </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='FAQ item pertanyaan jawaban mobile reader'
+                  onCommand={({ editor, range }) => {
+                    insertMarkdownCommand(editor, range, `### Pertanyaan pembaca?\n\nJawaban singkat yang praktis, jujur, dan tidak mengulang pembuka.`)
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-amber-50 aria-selected:bg-amber-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-gray-200 bg-white'><Quote className="w-4 h-4"/></div>
+                  <span>FAQ item</span>
+                </EditorCommandItem>
+
+                <EditorCommandItem
+                  value='Langkah step panduan mobile reader'
+                  onCommand={({ editor, range }) => {
+                    insertMarkdownCommand(editor, range, `## Langkah praktis\n\n1. Lakukan langkah pertama.\n2. Cek hasil atau batas amannya.\n3. Lanjutkan hanya jika kondisi masih sesuai.`)
+                  }}
+                  className='flex w-full items-center space-x-2 rounded-md px-2 py-1 text-left text-sm hover:bg-emerald-50 aria-selected:bg-emerald-100'
+                >
+                  <div className='flex h-8 w-8 items-center justify-center rounded border border-emerald-100 bg-white'><ListOrdered className="w-4 h-4 text-emerald-700"/></div>
+                  <span>Langkah</span>
+                </EditorCommandItem>
               </EditorCommandList>
             </EditorCommand>
 
@@ -389,7 +516,7 @@ function EditorToolbar({
   const [selectionAIState, setSelectionAIState] = useState<{
     open: boolean
     stage: 'menu' | 'loading' | 'results'
-    mode: 'hallucination' | 'fact_check' | null
+    mode: SelectionAIMode | null
     query: string
     selection: { from: number; to: number; text: string } | null
     suggestions: Array<{
@@ -397,7 +524,7 @@ function EditorToolbar({
       label: string
       reason: string
       replacement: string
-      status: VerifyLatestFactsOutput['claims'][number]['status']
+      status: SelectionSuggestionStatus
     }>
     summary: string | null
     error: string | null
@@ -549,6 +676,34 @@ function EditorToolbar({
         description: 'Cek klaim yang sensitif waktu, angka, regulasi, atau data terbaru.',
         icon: Search,
       },
+      ...(aiConfig?.rewriteSection
+        ? [
+            {
+              id: 'mobile_shorter' as const,
+              label: 'Perpendek untuk mobile',
+              description: 'Padatkan teks terpilih tanpa mengubah fakta atau nada Arkara.',
+              icon: Type,
+            },
+            {
+              id: 'bullet' as const,
+              label: 'Ubah jadi bullet',
+              description: 'Pecah paragraf menjadi poin-poin yang mudah discan.',
+              icon: List,
+            },
+            {
+              id: 'heading_specific' as const,
+              label: 'Buat heading lebih spesifik',
+              description: 'Ubah teks menjadi heading yang lebih tajam dan berorientasi keputusan.',
+              icon: Heading2,
+            },
+            {
+              id: 'scan_friendly' as const,
+              label: 'Buat lebih scan-friendly',
+              description: 'Rapikan ritme kalimat untuk pembaca HP yang scanning cepat.',
+              icon: Sparkles,
+            },
+          ]
+        : []),
     ]
 
     const query = selectionAIState.query.trim().toLowerCase()
@@ -609,7 +764,7 @@ function EditorToolbar({
     })
   }
 
-  const runSelectionAICheck = async (mode: 'hallucination' | 'fact_check') => {
+  const runSelectionAICheck = async (mode: SelectionAIMode) => {
     if (!aiConfig || !selectionAIState.selection?.text) {
       return
     }
@@ -624,6 +779,52 @@ function EditorToolbar({
     }))
 
     try {
+      if (mode !== 'hallucination' && mode !== 'fact_check') {
+        if (!aiConfig.rewriteSection) {
+          setSelectionAIState((current) => ({
+            ...current,
+            stage: 'results',
+            mode,
+            error: 'Rewrite AI belum tersedia untuk editor ini.',
+          }))
+          return
+        }
+
+        const response = await aiConfig.rewriteSection({
+          section_text: selectionAIState.selection.text,
+          instruction: getRewriteInstruction(mode),
+          tone: 'Arkara mobile reader: ringkas, tajam, realistis, scan-friendly, dan tidak menambah klaim baru.',
+        })
+
+        if (!response.success) {
+          setSelectionAIState((current) => ({
+            ...current,
+            stage: 'results',
+            mode,
+            error: response.error,
+          }))
+          return
+        }
+
+        setSelectionAIState((current) => ({
+          ...current,
+          stage: 'results',
+          mode,
+          summary: 'Saran rewrite siap diterapkan ke teks terpilih.',
+          error: null,
+          suggestions: [
+            {
+              id: `${mode}-rewrite`,
+              label: getSelectionAILabel(mode),
+              reason: 'Rewrite ini menjaga makna asli sambil membuat teks lebih cocok untuk pengalaman baca mobile.',
+              replacement: response.data.rewritten_text,
+              status: 'rewrite',
+            },
+          ],
+        }))
+        return
+      }
+
       const response = await aiConfig.verifyLatestFacts({
         title: aiConfig.title,
         content: selectionAIState.selection.text,
@@ -1071,7 +1272,7 @@ function EditorToolbar({
                 <Loader2 className="h-6 w-6 animate-spin text-arkara-amber" />
                 <div>
                   <p className="text-sm font-semibold text-gray-900">
-                    {selectionAIState.mode === 'hallucination' ? 'Menjalankan Hallucination Check' : 'Menjalankan Fact Check'}
+                    {selectionAIState.mode ? `Menjalankan ${getSelectionAILabel(selectionAIState.mode)}` : 'Menjalankan AI Selection Check'}
                   </p>
                   <p className="mt-1 text-xs text-gray-500">
                     Mengolah teks terpilih dan menyiapkan beberapa saran revisi yang bisa langsung dipakai.

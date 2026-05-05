@@ -11,16 +11,20 @@ import { MediaPicker } from './media/media-picker'
 import { AIFieldAssist } from './ai/ai-field-assist'
 import { DraftGeneratorPanel } from './ai/draft-generator-panel'
 import { ImagePromptsPanel } from './ai/image-prompts-panel'
+import { MobileReaderFields } from './mobile-reader-fields'
+import { MobileReaderPreview } from './mobile-reader-preview'
 import {
   postAIGenerateSlug,
   postAIGenerateSeoPack,
   postAIGenerateFullDraft,
+  postAIGenerateMobileReaderStructure,
   postAIGenerateImagePrompts,
+  postAIRewriteSection,
   postAIVerifyLatestFacts,
 } from '@/app/cms/posts/actions-ai'
 import { getPostInternalLinkSuggestions, getPostSlugRoutingState } from '@/app/cms/posts/actions'
 import type { FormAIHistoryState } from '@/lib/ai/history'
-import type { GenerateSlugOutput, GenerateSEOPackOutput } from '@/lib/ai/schemas'
+import type { GenerateFullDraftOutput, GenerateSlugOutput, GenerateSEOPackOutput } from '@/lib/ai/schemas'
 import type { PostSlugRoutingState } from '@/app/cms/posts/actions'
 import dynamic from 'next/dynamic'
 import type { RichEditorHandle } from './editor/RichEditor'
@@ -35,6 +39,13 @@ const postSchema = z.object({
   slug: z.string().min(1, 'Slug wajib diisi'),
   content: z.string().catch(''),
   description: z.string().catch(''),
+  quick_answer: z.string().catch(''),
+  key_takeaways: z.array(z.string()).catch([]),
+  faq: z.array(z.object({
+    question: z.string(),
+    answer: z.string(),
+  })).catch([]),
+  editorial_format: z.enum(['legacy', 'mobile_reader', 'technical_guide']).catch('legacy'),
   status: z.enum(['draft', 'published']),
   cover_image: z.string().optional(),
   thumbnail_image: z.any().optional(),
@@ -77,6 +88,10 @@ export function PostForm({ initialData, initialAIState, onSubmit, title }: PostF
       slug: initialData?.slug || '',
       content: initialData?.content || '',
       description: initialData?.description || '',
+      quick_answer: initialData?.quick_answer || '',
+      key_takeaways: initialData?.key_takeaways || [],
+      faq: initialData?.faq || [],
+      editorial_format: initialData?.editorial_format || 'legacy',
       status: initialData?.status || 'draft',
       cover_image: initialData?.cover_image || '',
       thumbnail_image: initialData?.thumbnail_image || null,
@@ -91,6 +106,11 @@ export function PostForm({ initialData, initialAIState, onSubmit, title }: PostF
   const statusValue = watch('status')
   const contentValue = watch('content')
   const descriptionValue = watch('description')
+  const quickAnswerValue = watch('quick_answer')
+  const keyTakeawaysValue = watch('key_takeaways')
+  const faqValue = watch('faq')
+  const editorialFormatValue = watch('editorial_format')
+  const coverImageValue = watch('cover_image')
   const watchThumbnail = watch('thumbnail_image')
   const watchBanner = watch('banner_image')
   const effectiveSlugError = errors.slug?.message || slugRouting?.exactConflict?.message
@@ -136,14 +156,26 @@ export function PostForm({ initialData, initialAIState, onSubmit, title }: PostF
   const handleFormSubmit = async (data: PostFormValues) => {
     setIsSubmitting(true)
     setError(null)
+
+    const sanitizedData: PostFormValues = {
+      ...data,
+      quick_answer: data.quick_answer?.trim() || '',
+      key_takeaways: (data.key_takeaways ?? []).map((item) => item.trim()).filter(Boolean),
+      faq: (data.faq ?? [])
+        .map((item) => ({
+          question: item.question.trim(),
+          answer: item.answer.trim(),
+        }))
+        .filter((item) => item.question && item.answer),
+    }
     
     // For backwards compatibility, if we have a thumbnail but no cover image, use its URL
-    if (data.thumbnail_image && !data.cover_image) {
-       data.cover_image = data.thumbnail_image.url || undefined
+    if (sanitizedData.thumbnail_image && !sanitizedData.cover_image) {
+       sanitizedData.cover_image = sanitizedData.thumbnail_image.url || undefined
     }
 
     try {
-      await onSubmit(data)
+      await onSubmit(sanitizedData)
       // We don't push immediately here if the parent action throws
     } catch (err) {
       setError((err as Error).message)
@@ -206,6 +238,18 @@ export function PostForm({ initialData, initialAIState, onSubmit, title }: PostF
     if (data.suggested_meta_desc) {
       setValue('meta_desc', data.suggested_meta_desc, { shouldDirty: true })
     }
+  }
+
+  const applyDraftMobileStructure = (data: {
+    quick_answer?: string
+    key_takeaways?: string[]
+    faq?: { question: string; answer: string }[]
+    editorial_format?: 'legacy' | 'mobile_reader' | 'technical_guide'
+  }) => {
+    setValue('quick_answer', data.quick_answer || '', { shouldDirty: true })
+    setValue('key_takeaways', data.key_takeaways || [], { shouldDirty: true })
+    setValue('faq', data.faq || [], { shouldDirty: true })
+    setValue('editorial_format', data.editorial_format || 'mobile_reader', { shouldDirty: true })
   }
 
   return (
@@ -483,6 +527,22 @@ export function PostForm({ initialData, initialAIState, onSubmit, title }: PostF
                 onReplaceContent={(markdown) => applyDraftToEditor('replace', markdown)}
                 onAppendContent={(markdown) => applyDraftToEditor('append', markdown)}
                 onApplyMetadata={applyDraftMetadata}
+                onApplyMobileStructure={applyDraftMobileStructure}
+              />
+
+              <MobileReaderFields
+                quickAnswer={quickAnswerValue || ''}
+                keyTakeaways={keyTakeawaysValue || []}
+                faq={faqValue || []}
+                editorialFormat={editorialFormatValue || 'legacy'}
+                onQuickAnswerChange={(value) => setValue('quick_answer', value, { shouldDirty: true })}
+                onKeyTakeawaysChange={(value) => setValue('key_takeaways', value, { shouldDirty: true })}
+                onFaqChange={(value) => setValue('faq', value, { shouldDirty: true })}
+                onEditorialFormatChange={(value) => setValue('editorial_format', value, { shouldDirty: true })}
+                sourceTitle={titleValue}
+                sourceContent={contentValue || ''}
+                sourceDescription={descriptionValue || undefined}
+                generateStructure={(input) => postAIGenerateMobileReaderStructure(input, { postId: recordId })}
               />
 
               <RichEditor 
@@ -491,6 +551,7 @@ export function PostForm({ initialData, initialAIState, onSubmit, title }: PostF
                 aiConfig={{
                   title: titleValue,
                   verifyLatestFacts: (input) => postAIVerifyLatestFacts(input, { postId: recordId }),
+                  rewriteSection: (input) => postAIRewriteSection(input, { postId: recordId }),
                   getInternalLinkSuggestions: (input) =>
                     getPostInternalLinkSuggestions({
                       postId: initialData?.id,
@@ -513,6 +574,17 @@ export function PostForm({ initialData, initialAIState, onSubmit, title }: PostF
 
         {/* Sidebar Settings */}
         <div className="space-y-6 text-left">
+          <MobileReaderPreview
+            title={titleValue}
+            entityLabel="Artikel"
+            description={descriptionValue || undefined}
+            quickAnswer={quickAnswerValue || undefined}
+            keyTakeaways={keyTakeawaysValue || []}
+            faq={faqValue || []}
+            editorialFormat={editorialFormatValue || 'legacy'}
+            contentHtml={contentValue || ''}
+            imageUrl={watchBanner?.url || watchThumbnail?.url || coverImageValue || undefined}
+          />
           
           {/* VISUALS */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-t-amber-500 space-y-6">

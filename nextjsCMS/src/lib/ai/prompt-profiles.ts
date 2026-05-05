@@ -9,6 +9,7 @@ import type {
   GenerateSEOPackInput,
   GenerateOutlineInput,
   GenerateFullDraftInput,
+  GenerateMobileReaderStructureInput,
   GenerateImagePromptsInput,
   GenerateClusterIdeasInput,
   RewriteSectionInput,
@@ -18,7 +19,7 @@ import type {
   VerifyLatestFactsInput,
 } from './schemas'
 
-export const PROMPT_VERSION = 'v10'
+export const PROMPT_VERSION = 'v14'
 
 export type AIContentProfile = 'post' | 'panduan' | 'workspace'
 
@@ -346,6 +347,7 @@ export function buildFullDraftPrompt(
   internalLinks?: string,
   profile: AIContentProfile = 'workspace'
 ): AIMessage[] {
+  const currentDate = new Date().toISOString().slice(0, 10)
   const extras: string[] = []
   if (input.keyword) extras.push(`Keyword target: ${input.keyword}`)
   if (input.angle) extras.push(`Sudut pandang: ${input.angle}`)
@@ -375,15 +377,51 @@ export function buildFullDraftPrompt(
     { role: 'system', content: buildSystemPrompt(profile) },
     {
       role: 'user',
-      content: `Tulis artikel lengkap dalam format Markdown berdasarkan brief berikut.
+      content: `Tulis draft mobile-first dalam format Markdown berdasarkan brief berikut.
 
 Judul: "${input.title}"
 ${extras.join('\n')}${linksContext}
 
+Kontrak utama:
+- Satu eksekusi ini WAJIB menghasilkan paket lengkap: isi artikel, Jawaban Singkat, Inti Artikel, FAQ, dan metadata SEO dasar.
+- Jangan menulis artikel panjang gaya desktop. Prioritaskan pembaca mobile yang membaca cepat, scan heading, lalu berhenti pada bagian yang paling berguna.
+- Isi artikel harus tetap informatif, tetapi dibuat lebih padat: keputusan, batasan, simulasi, dan tindakan praktis lebih penting daripada penjelasan panjang.
+- Field quick_answer, key_takeaways, dan faq harus diturunkan dari draft yang sama, bukan terasa seperti modul terpisah.
+- Jangan mengulang semua isi quick_answer dan key_takeaways mentah-mentah di paragraf pembuka.
+- Tanggal kerja untuk konteks fakta terbaru: ${currentDate}.
+- Jika topik menyentuh impor, kurs rupiah, harga pangan/BBM/energi, cuaca, regulasi, stok nasional, kesehatan, standar keselamatan, produk, tren sosial, gangguan distribusi, konflik, bencana, atau berita terbaru, gunakan web search untuk mengambil sumber terbaru yang relevan.
+- Sisipkan maksimal 2-4 fakta/konteks terbaru yang benar-benar membantu keputusan pembaca. Contoh: statistik impor terbaru, nilai tukar rupiah terbaru, harga komoditas, kebijakan pemerintah, rilis lembaga resmi, atau konteks dari liputan media kredibel.
+- Campuran sumber harus proporsional: gunakan sumber resmi/primer untuk angka keras, dan gunakan media tepercaya untuk konteks peristiwa, dampak publik, kutipan kebijakan, atau perkembangan lapangan.
+- Media nasional yang boleh dipertimbangkan bila relevan: Kompas, Tempo, Antara, Katadata, Bisnis Indonesia, CNBC Indonesia, Kontan, Detik, Tirto, The Jakarta Post. Media internasional yang boleh dipertimbangkan bila relevan: Reuters, AP, BBC, Financial Times, Bloomberg, The Guardian, Al Jazeera, Nikkei Asia.
+- Jangan membuat artikel terasa seperti rangkuman berita. Idealnya cukup 1-2 rujukan media kredibel dan 1-2 sumber data/resmi jika topik memang membutuhkan keduanya.
+- Setiap data atau konteks terbaru WAJIB diberi sitasi Markdown ke sumbernya di dalam content, misalnya [bi.go.id](https://...) atau [kompas.com](https://...).
+- Jika web search tidak menemukan data yang kuat, jangan mengarang angka. Gunakan framing aman seperti "data terbaru perlu diverifikasi ulang" atau hilangkan angka tersebut.
+
 Balas dalam JSON format ini:
 {
   "content": "## Heading pertama\\n\\nParagraf pertama...\\n\\n## Heading kedua\\n\\n...",
-  "word_count": 1500,
+  "quick_answer": "Jawaban langsung 2-3 kalimat untuk pembaca mobile yang ingin inti keputusan sejak awal.",
+  "key_takeaways": [
+    "Inti artikel pertama dalam satu kalimat pendek.",
+    "Inti artikel kedua dalam satu kalimat pendek.",
+    "Inti artikel ketiga dalam satu kalimat pendek."
+  ],
+  "faq": [
+    {
+      "question": "Pertanyaan nyata yang mungkin muncul dari pembaca?",
+      "answer": "Jawaban ringkas, praktis, dan tidak bertele-tele."
+    },
+    {
+      "question": "Pertanyaan pembaca mobile berikutnya?",
+      "answer": "Jawaban singkat yang membantu keputusan."
+    },
+    {
+      "question": "Pertanyaan risiko atau batasan yang perlu dijawab?",
+      "answer": "Jawaban jujur tentang batas aman, konteks, atau kegagalan."
+    }
+  ],
+  "editorial_format": "${profile === 'panduan' ? 'technical_guide' : 'mobile_reader'}",
+  "word_count": 760,
   "suggested_slug": "slug-yang-disarankan",
   "suggested_meta_title": "judul SEO maks 60 karakter",
   "suggested_meta_desc": "deskripsi meta maks 155 karakter"
@@ -392,13 +430,24 @@ Balas dalam JSON format ini:
 Aturan penulisan:
 - Format Markdown dengan heading H2 dan H3
 - Bahasa Indonesia yang rapi, tegas, dan mudah dipahami
-- Minimal 1200 kata
+- Target 650-900 kata untuk blog post, atau 550-850 kata untuk panduan. Lebih penting padat, modular, dan nyaman discan di HP daripada panjang.
+- Gunakan 4-6 heading H2 yang spesifik; H3 hanya jika benar-benar membantu scan-read.
+- Paragraf ideal 2-3 kalimat pendek. Hindari paragraf panjang yang melelahkan di layar HP.
+- Setiap section harus menjawab satu fungsi jelas: konteks, keputusan, langkah, risiko, simulasi, atau penutup.
 - Sertakan tips praktis dan langkah-langkah yang actionable
 - Sisipkan internal link ke artikel terkait secara natural jika data tersedia
 - JANGAN sertakan heading H1 (judul akan diset terpisah)
+- Field quick_answer wajib menjawab inti topik di atas fold: 2-3 kalimat, 120-320 karakter, langsung, tidak memakai bullet.
+- Field key_takeaways wajib berisi 3-5 poin paling penting, masing-masing maksimal 140 karakter dan bisa dipahami tanpa membuka artikel penuh.
+- Field faq wajib berisi 3-5 tanya jawab nyata yang melengkapi artikel, bukan mengulang persis isi pembuka. Jawaban maksimal 2 kalimat.
+- Field editorial_format harus bernilai "${profile === 'panduan' ? 'technical_guide' : 'mobile_reader'}".
 - Hindari definisi umum, sejarah panjang, atau penjelasan textbook kecuali benar-benar membantu keputusan pembaca
 - WAJIB ada elemen simulasi, estimasi, kapasitas, durasi, frekuensi, ruang, biaya, atau angka nyata jika topik memungkinkan
 - Jika sebuah klaim menyangkut kapasitas, kebutuhan, output, atau durasi, usahakan beri unit atau parameter yang konkret
+- Untuk klaim yang sensitif waktu, sebutkan konteks tanggal/periode data jika tersedia.
+- Jangan menumpuk terlalu banyak angka; pilih data yang membuat pembaca lebih cepat memahami risiko atau keputusan.
+- Saat mengutip media, pakai sebagai penguat konteks, bukan sebagai tulang punggung seluruh artikel.
+- Jangan memasukkan URL mentah. Gunakan link Markdown natural pada frasa sumber atau nama domain.
 - Jika simulasi belum tervalidasi penuh, tandai sebagai estimasi konservatif, simulasi rumah tangga, atau skenario kecil; jangan mengemasnya sebagai kepastian absolut
 - WAJIB ada minimal satu scene kecil yang membuat pembaca bisa membayangkan rumah, dapur, balkon, stok, panen, makan, atau keputusan keluarga secara nyata jika topik memungkinkan
 - WAJIB ada bagian atau paragraf yang membahas failure mode: apa yang paling mungkin membuat pendekatan ini gagal
@@ -408,6 +457,69 @@ Aturan penulisan:
 - Hindari penutup seperti ajakan generik, motivasi ringan, atau "mulai dari yang kecil" tanpa konsekuensi nyata
 - Penutup harus menegaskan pilihan, konsekuensi, atau bentuk ketergantungan yang tetap dipelihara jika pembaca tidak bertindak
 ${draftDirection}`,
+    },
+  ]
+}
+
+export function buildMobileReaderStructurePrompt(
+  input: GenerateMobileReaderStructureInput,
+  profile: AIContentProfile = 'workspace'
+): AIMessage[] {
+  const isPanduan = profile === 'panduan'
+  const targetFormat = isPanduan ? 'technical_guide' : 'mobile_reader'
+  const descriptionContext = input.description
+    ? `\n\nRingkasan/meta yang sudah ada:\n"${input.description}"`
+    : ''
+  const labelSet = isPanduan
+    ? `Label konseptual:
+- quick_answer = Prosedur Cepat
+- key_takeaways = Checklist Lapangan
+- faq = Pertanyaan Operasional`
+    : `Label konseptual:
+- quick_answer = Jawaban Singkat
+- key_takeaways = Inti Artikel
+- faq = FAQ`
+
+  return [
+    { role: 'system', content: buildSystemPrompt(profile) },
+    {
+      role: 'user',
+      content: `Buat hanya struktur Mobile Reader untuk artikel/panduan yang sudah ada.
+
+Judul: "${input.title}"${descriptionContext}
+
+Konten existing:
+"${input.content.substring(0, 9000)}"
+
+${labelSet}
+
+Balas dalam JSON format ini:
+{
+  "quick_answer": "Ringkasan langsung 2-3 kalimat untuk bagian atas pengalaman mobile.",
+  "key_takeaways": [
+    "Poin inti pertama dalam satu kalimat pendek.",
+    "Poin inti kedua dalam satu kalimat pendek.",
+    "Poin inti ketiga dalam satu kalimat pendek."
+  ],
+  "faq": [
+    {
+      "question": "Pertanyaan pembaca yang natural?",
+      "answer": "Jawaban singkat, praktis, dan sesuai isi artikel."
+    }
+  ],
+  "editorial_format": "${targetFormat}"
+}
+
+Aturan:
+- Jangan menulis ulang artikel utama.
+- Jangan menambahkan klaim, angka, sumber, atau fakta baru yang tidak ada di konten existing.
+- Tugas ini untuk artikel lama yang sudah tayang dan hanya perlu struktur tampilan mobile.
+- quick_answer wajib 2-3 kalimat, 120-320 karakter, tidak memakai bullet.
+- key_takeaways wajib 3-5 poin, masing-masing maksimal 140 karakter.
+- faq wajib 3-5 item. Jawaban maksimal 2 kalimat dan tidak mengulang persis quick_answer.
+- editorial_format wajib "${targetFormat}", jangan gunakan "legacy".
+- Prioritaskan bagian yang paling membantu pembaca mobile: keputusan cepat, batasan, langkah pertama, risiko, atau konteks praktis.
+- Jika konten existing kurang jelas, buat struktur yang konservatif berdasarkan informasi yang benar-benar tersedia.`,
     },
   ]
 }

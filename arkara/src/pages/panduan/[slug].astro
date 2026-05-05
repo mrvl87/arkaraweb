@@ -56,6 +56,10 @@ const headings = extractHeadings(htmlContent);
     content={guide.content || ''}
     currentSlug={guide.slug}
     contentType="panduan"
+    quickAnswer={guide.quick_answer}
+    keyTakeaways={guide.key_takeaways || []}
+    faq={guide.faq || []}
+    editorialFormat={guide.editorial_format || 'legacy'}
   >
     <div class="flex gap-4 text-sm font-mono mb-8 bg-parchment p-4 rounded-xl border border-stone/10">
       {guide.bab_ref && (

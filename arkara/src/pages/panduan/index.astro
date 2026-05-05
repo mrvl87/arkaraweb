@@ -18,12 +18,16 @@ const categoryLabels: Record<string, string> = {
   air: 'Air', energi: 'Energi', pangan: 'Pangan',
   medis: 'Medis', keamanan: 'Keamanan', komunitas: 'Komunitas',
 };
+const categoryShortLabels: Record<string, string> = {
+  air: 'A', energi: 'E', pangan: 'Pg',
+  medis: 'M', keamanan: 'K', komunitas: 'Ko',
+};
 ---
 
 <BaseLayout title="Panduan Teknis">
 
   <!-- Header -->
-  <header style="
+  <header class="listing-page-hero guide-page-hero" style="
     background: var(--ink);
     border-bottom: 3px solid var(--green-terminal);
     padding: 3.5rem 2rem 4rem;
@@ -37,8 +41,8 @@ const categoryLabels: Record<string, string> = {
       background-size:40px 40px;pointer-events:none;
     " aria-hidden="true"></div>
 
-    <div style="max-width:900px;margin:0 auto;position:relative;z-index:1;">
-      <div style="
+    <div class="listing-page-shell" style="max-width:900px;margin:0 auto;position:relative;z-index:1;">
+      <div class="listing-kicker" style="
         font-family:'Share Tech Mono',monospace;
         font-size:0.6rem;letter-spacing:0.25em;
         color:var(--green-terminal);text-transform:uppercase;
@@ -47,13 +51,13 @@ const categoryLabels: Record<string, string> = {
         <span style="display:inline-block;width:20px;height:1px;background:var(--green-terminal);"></span>
         BUKU PEGANGAN KRISIS - AVAILABLE SOON
       </div>
-      <h1 style="
+      <h1 class="guide-page-title" style="
         font-family:'Barlow Condensed',sans-serif;
         font-size:clamp(2.5rem,6vw,5rem);
         font-weight:800;text-transform:uppercase;
         color:var(--cream);line-height:0.9;margin-bottom:1rem;
       ">PANDUAN<br>TEKNIS</h1>
-      <p style="
+      <p class="guide-page-intro" style="
         font-size:0.85rem;color:var(--warm-grey);
         max-width:440px;line-height:1.65;
         border-left:3px solid var(--green-terminal);padding-left:1rem;
@@ -62,8 +66,8 @@ const categoryLabels: Record<string, string> = {
       </p>
 
       <!-- Category filters — flat tab style -->
-      <div style="display:flex;gap:0;flex-wrap:wrap;margin-top:2.5rem;">
-        <a href="/panduan" style={`
+      <div class="guide-filter-bar" style="display:flex;gap:0;flex-wrap:wrap;margin-top:2.5rem;">
+        <a href="/panduan" class={`guide-filter-link ${!selectedCategory ? 'is-active' : ''}`} style={`
           font-family:'Share Tech Mono',monospace;
           font-size:0.62rem;letter-spacing:0.12em;
           text-transform:uppercase;padding:0.5rem 1rem;
@@ -74,10 +78,13 @@ const categoryLabels: Record<string, string> = {
           transition:all 0.15s;
           margin-right:2px;margin-bottom:4px;
           font-weight:${!selectedCategory ? '700' : '400'};
-        `}>SEMUA</a>
+        `}>
+          <span class="guide-filter-icon" aria-hidden="true">S</span>
+          <span>SEMUA</span>
+        </a>
 
         {categories.map(cat => (
-          <a href={`/panduan?category=${cat}`} style={`
+          <a href={`/panduan?category=${cat}`} class={`guide-filter-link ${selectedCategory === cat ? 'is-active' : ''}`} style={`
             font-family:'Share Tech Mono',monospace;
             font-size:0.62rem;letter-spacing:0.12em;
             text-transform:uppercase;padding:0.5rem 1rem;
@@ -88,16 +95,19 @@ const categoryLabels: Record<string, string> = {
             transition:all 0.15s;
             margin-right:2px;margin-bottom:4px;
             font-weight:${selectedCategory === cat ? '700' : '400'};
-          `}>{categoryLabels[cat]}</a>
+          `}>
+            <span class="guide-filter-icon" aria-hidden="true">{categoryShortLabels[cat]}</span>
+            <span>{categoryLabels[cat]}</span>
+          </a>
         ))}
       </div>
     </div>
   </header>
 
   <!-- Content -->
-  <section style="max-width:900px;margin:0 auto;padding:3rem 2rem 5rem;">
+  <section class="listing-page-section guide-page-section" style="max-width:900px;margin:0 auto;padding:3rem 2rem 5rem;">
 
-    <div style="
+    <div class="listing-section-label" style="
       font-family:'Share Tech Mono',monospace;
       font-size:0.6rem;letter-spacing:0.25em;
       color:var(--warm-grey);text-transform:uppercase;
@@ -109,9 +119,9 @@ const categoryLabels: Record<string, string> = {
     </div>
 
     {allGuides.length > 0 ? (
-      <div style="display:flex;flex-direction:column;gap:0;">
+      <div class="guide-list" style="display:flex;flex-direction:column;gap:0;">
         {allGuides.map((guide, index) => (
-          <a href={`/panduan/${guide.slug}`} style="
+          <a href={`/panduan/${guide.slug}`} class="guide-list-card" style={`
             display:block;
             background:var(--paper);
             border:3px solid var(--ink);
@@ -120,15 +130,15 @@ const categoryLabels: Record<string, string> = {
             text-decoration:none;
             transition:background 0.15s, transform 0.15s;
             position:relative;
-          "
+          `}
           onmouseover="this.style.background='var(--paper-dark)';this.style.transform='translateX(4px)'"
           onmouseout="this.style.background='var(--paper)';this.style.transform=''"
           >
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
-              <div style="display:flex;align-items:baseline;gap:1.5rem;flex:1;">
+            <div class="guide-list-row" style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
+              <div class="guide-list-main" style="display:flex;align-items:baseline;gap:1.5rem;flex:1;">
                 <!-- BAB ref badge -->
                 {guide.bab_ref && (
-                  <span style="
+                  <span class="guide-bab-badge" style="
                     font-family:'Share Tech Mono',monospace;
                     font-size:0.55rem;letter-spacing:0.15em;
                     text-transform:uppercase;
@@ -139,7 +149,7 @@ const categoryLabels: Record<string, string> = {
                     flex-shrink:0;
                   ">{guide.bab_ref}</span>
                 )}
-                <h2 style="
+                <h2 class="guide-title" style="
                   font-family:'Barlow Condensed',sans-serif;
                   font-size:1.25rem;font-weight:700;
                   text-transform:uppercase;
@@ -147,7 +157,7 @@ const categoryLabels: Record<string, string> = {
                   line-height:1.1;margin:0;
                 ">{guide.title}</h2>
                 {guide.category && (
-                  <span style="
+                  <span class="guide-category-badge" style="
                     font-family:'Share Tech Mono',monospace;
                     font-size:0.55rem;letter-spacing:0.15em;
                     text-transform:uppercase;
@@ -158,7 +168,7 @@ const categoryLabels: Record<string, string> = {
                   ">{categoryLabels[guide.category] || guide.category}</span>
                 )}
               </div>
-              <span style="
+              <span class="guide-cta" style="
                 font-family:'Share Tech Mono',monospace;
                 font-size:0.6rem;letter-spacing:0.15em;
                 color:var(--green-terminal);
@@ -170,7 +180,7 @@ const categoryLabels: Record<string, string> = {
         ))}
       </div>
     ) : (
-      <div style="
+      <div class="guide-empty-state" style="
         background:var(--paper);border:3px solid var(--ink);
         box-shadow:5px 5px 0 var(--ink);
         padding:4rem 2rem;text-align:center;
@@ -188,3 +198,215 @@ const categoryLabels: Record<string, string> = {
     )}
   </section>
 </BaseLayout>
+
+<style>
+  .guide-filter-icon {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    :global(html),
+    :global(body),
+    :global(main) {
+      background: #070b0c !important;
+    }
+
+    .listing-page-hero {
+      background: #070b0c !important;
+      border-bottom: 1px solid rgba(255,255,255,0.10) !important;
+      padding: 1.25rem 1rem 1.05rem !important;
+    }
+
+    .listing-page-hero > div[aria-hidden="true"] {
+      opacity: 0.55 !important;
+      background-size: 28px 28px !important;
+    }
+
+    .listing-page-shell {
+      max-width: none !important;
+    }
+
+    .listing-kicker {
+      margin-bottom: 0.7rem !important;
+      color: #63d2b5 !important;
+      font-size: 0.58rem !important;
+      letter-spacing: 0.18em !important;
+    }
+
+    .listing-kicker span {
+      width: 16px !important;
+    }
+
+    .guide-page-title {
+      color: #f8fafc !important;
+      font-family: 'Barlow', system-ui, sans-serif !important;
+      font-size: clamp(2rem, 12vw, 3.15rem) !important;
+      line-height: 1 !important;
+      letter-spacing: 0 !important;
+      margin-bottom: 0.8rem !important;
+      text-transform: none !important;
+    }
+
+    .guide-page-intro {
+      max-width: none !important;
+      border-left: 0 !important;
+      padding-left: 0 !important;
+      color: #b7c9cf !important;
+      font-size: 0.9rem !important;
+      line-height: 1.55 !important;
+    }
+
+    .guide-filter-bar {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 0.55rem !important;
+      margin-top: 1.25rem !important;
+      width: 100% !important;
+    }
+
+    .guide-filter-link {
+      display: flex !important;
+      align-items: center !important;
+      min-width: 0 !important;
+      min-height: 46px !important;
+      gap: 0.55rem !important;
+      margin: 0 !important;
+      padding: 0.52rem 0.62rem !important;
+      border: 1px solid rgba(255,255,255,0.12) !important;
+      border-radius: 8px !important;
+      background: #101617 !important;
+      color: #dbe7ea !important;
+      font-size: 0.64rem !important;
+      letter-spacing: 0.06em !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+
+    .guide-filter-link span:last-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .guide-filter-link.is-active {
+      border-color: rgba(99,210,181,0.68) !important;
+      background: rgba(18,83,69,0.62) !important;
+      color: #f8fafc !important;
+      font-weight: 800 !important;
+    }
+
+    .guide-filter-icon {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      flex: 0 0 30px;
+      place-items: center;
+      border-radius: 999px;
+      border: 1px solid rgba(99,210,181,0.28);
+      background: radial-gradient(circle at 35% 25%, rgba(99,210,181,0.42), rgba(27,95,76,0.72));
+      color: #a8f5dd;
+      font-family: 'Barlow', system-ui, sans-serif;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .listing-page-section {
+      max-width: none !important;
+      padding: 1rem 1rem calc(6rem + env(safe-area-inset-bottom)) !important;
+      background: #070b0c !important;
+    }
+
+    .listing-section-label {
+      margin-bottom: 0.85rem !important;
+      color: #8fa3aa !important;
+      font-size: 0.6rem !important;
+      letter-spacing: 0.16em !important;
+    }
+
+    .listing-section-label span {
+      background: rgba(255,255,255,0.14) !important;
+    }
+
+    .guide-list {
+      gap: 0.8rem !important;
+    }
+
+    .guide-list-card {
+      background: #101617 !important;
+      border: 1px solid rgba(255,255,255,0.12) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+      padding: 0.95rem !important;
+      transform: none !important;
+    }
+
+    .guide-list-row,
+    .guide-list-main {
+      display: grid !important;
+      align-items: start !important;
+      gap: 0.58rem !important;
+      width: 100% !important;
+    }
+
+    .guide-bab-badge {
+      width: fit-content !important;
+      border-color: rgba(99,210,181,0.50) !important;
+      border-radius: 999px !important;
+      color: #63d2b5 !important;
+      background: rgba(99,210,181,0.08) !important;
+      font-size: 0.58rem !important;
+      letter-spacing: 0.12em !important;
+      padding: 0.18rem 0.52rem !important;
+    }
+
+    .guide-title {
+      font-family: 'Barlow', system-ui, sans-serif !important;
+      color: #f8fafc !important;
+      font-size: 1.04rem !important;
+      font-weight: 800 !important;
+      line-height: 1.24 !important;
+      letter-spacing: 0 !important;
+      text-transform: none !important;
+    }
+
+    .guide-category-badge {
+      width: fit-content !important;
+      border-radius: 999px !important;
+      background: rgba(255,255,255,0.07) !important;
+      color: #b7c9cf !important;
+      font-size: 0.58rem !important;
+      letter-spacing: 0.1em !important;
+      padding: 0.2rem 0.55rem !important;
+    }
+
+    .guide-cta {
+      width: fit-content !important;
+      color: #63d2b5 !important;
+      font-size: 0.62rem !important;
+      letter-spacing: 0.12em !important;
+      margin-top: 0.1rem !important;
+    }
+
+    .guide-empty-state {
+      border: 1px solid rgba(255,255,255,0.12) !important;
+      border-radius: 8px !important;
+      background: #101617 !important;
+      box-shadow: none !important;
+      padding: 2rem 1rem !important;
+    }
+
+    .guide-empty-state h2 {
+      color: #f8fafc !important;
+      font-family: 'Barlow', system-ui, sans-serif !important;
+      letter-spacing: 0 !important;
+      text-transform: none !important;
+    }
+
+    .guide-empty-state p {
+      color: #b7c9cf !important;
+    }
+  }
+</style>

@@ -81,11 +81,22 @@ const slugSchema = z.string()
   .transform((value) => normalizeSlug(value))
   .refine((value) => value.length > 0, 'Slug hanya boleh berisi huruf, angka, dan tanda hubung')
 
+const editorialFormatSchema = z.enum(['legacy', 'mobile_reader', 'technical_guide'])
+
+const faqItemSchema = z.object({
+  question: z.string().trim().min(1, 'Pertanyaan FAQ wajib diisi'),
+  answer: z.string().trim().min(1, 'Jawaban FAQ wajib diisi'),
+})
+
 const panduanSchema = z.object({
   id: z.string().uuid().optional(),
   title: z.string().min(1, 'Judul wajib diisi'),
   slug: slugSchema,
   content: z.string().optional().default(''),
+  quick_answer: z.string().optional().default(''),
+  key_takeaways: z.array(z.string().trim().min(1)).max(8).optional().default([]),
+  faq: z.array(faqItemSchema).max(12).optional().default([]),
+  editorial_format: editorialFormatSchema.optional().default('legacy'),
   bab_ref: z.string().optional(),
   qr_slug: z.string().optional(),
   cover_image: z.string().optional(),

@@ -212,8 +212,29 @@ const categoryLabels: Record<string, string> = {
 
 <style>
   @media (max-width: 640px) {
-    .hero-content-padding { padding: 0 1.5rem 3rem !important; }
+    .hero-content-padding { padding: 0 1rem 4.25rem !important; }
     .carousel-controls-padding { left: 1.5rem !important; right: 1.5rem !important; }
+    #hero-section h2 {
+      font-family: 'Barlow', sans-serif !important;
+      font-size: clamp(2rem, 10vw, 3rem) !important;
+      line-height: 1.04 !important;
+      letter-spacing: 0 !important;
+      text-transform: none !important;
+      max-width: 94vw !important;
+    }
+    #hero-section p {
+      font-size: 0.94rem !important;
+      line-height: 1.6 !important;
+      color: #cbd5e1 !important;
+      max-width: 92vw !important;
+    }
+    #hero-section a {
+      border-radius: 999px !important;
+      background: rgba(110,231,183,0.14) !important;
+      border-color: rgba(110,231,183,0.34) !important;
+      color: #a7f3d0 !important;
+      padding: 0.8rem 1rem !important;
+    }
   }
 </style>
 

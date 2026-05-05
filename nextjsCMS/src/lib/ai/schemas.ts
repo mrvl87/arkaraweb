@@ -11,6 +11,7 @@ export const AI_OPERATIONS = [
   'generate_seo_pack',
   'generate_outline',
   'generate_full_draft',
+  'generate_mobile_reader_structure',
   'generate_image_prompts',
   'generate_cluster_ideas',
   'rewrite_section',
@@ -85,14 +86,40 @@ export const GenerateFullDraftInputSchema = z.object({
 })
 export type GenerateFullDraftInput = z.infer<typeof GenerateFullDraftInputSchema>
 
+export const EditorialFormatSchema = z.enum(['legacy', 'mobile_reader', 'technical_guide'])
+
+export const MobileReaderFAQItemSchema = z.object({
+  question: z.string().trim().min(1).max(140),
+  answer: z.string().trim().min(1).max(280),
+})
+
 export const GenerateFullDraftOutputSchema = z.object({
-  content: z.string().min(1),
+  content: z.string().trim().min(1),
+  quick_answer: z.string().trim().min(80).max(360),
+  key_takeaways: z.array(z.string().trim().min(1).max(150)).min(3).max(5),
+  faq: z.array(MobileReaderFAQItemSchema).min(3).max(5),
+  editorial_format: EditorialFormatSchema.optional().default('mobile_reader'),
   word_count: z.number().optional(),
   suggested_slug: z.string().optional(),
   suggested_meta_title: z.string().optional(),
   suggested_meta_desc: z.string().optional(),
 })
 export type GenerateFullDraftOutput = z.infer<typeof GenerateFullDraftOutputSchema>
+
+export const GenerateMobileReaderStructureInputSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required').max(180, 'Title is too long'),
+  content: z.string().trim().min(80, 'Content is required').max(50000, 'Content is too long'),
+  description: z.string().trim().max(500, 'Description is too long').optional(),
+})
+export type GenerateMobileReaderStructureInput = z.infer<typeof GenerateMobileReaderStructureInputSchema>
+
+export const GenerateMobileReaderStructureOutputSchema = z.object({
+  quick_answer: z.string().trim().min(80).max(360),
+  key_takeaways: z.array(z.string().trim().min(1).max(150)).min(3).max(5),
+  faq: z.array(MobileReaderFAQItemSchema).min(3).max(5),
+  editorial_format: z.enum(['mobile_reader', 'technical_guide']).default('mobile_reader'),
+})
+export type GenerateMobileReaderStructureOutput = z.infer<typeof GenerateMobileReaderStructureOutputSchema>
 
 // ─── Generate Cluster Ideas ──────────────────────────────────────
 export const GenerateImagePromptsInputSchema = z.object({

@@ -18,7 +18,7 @@ interface Props {
 }
 
 const { post, categoryLabel } = Astro.props;
-const readingTime = calculateReadingTime(post.content || '');
+const readingTime = post.reading_time ?? calculateReadingTime(post.content || '');
 ---
 
 <article style="
@@ -33,21 +33,25 @@ const readingTime = calculateReadingTime(post.content || '');
 "
 onmouseover="this.style.transform='translate(-2px,-2px)';this.style.boxShadow='9px 9px 0 var(--ink)'"
 onmouseout="this.style.transform='';this.style.boxShadow='7px 7px 0 var(--ink)'"
-class="featured-grid"
+class="featured-grid featured-post"
 >
   <!-- Image side -->
   <div style="position: relative; overflow: hidden; border-right: 3px solid var(--ink);" class="featured-img-side">
     <OptimizedImage
-      image={post.banner_image || post.cover_image}
+      image={post.thumbnail_image || post.banner_image || post.cover_image}
       alt={post.title}
       class="w-full h-full object-cover"
       style="filter: saturate(0.65) contrast(1.1); display: block; min-height: 320px;"
       aspectRatio="aspect-video"
-      mobileMaxSrcSetWidth={800}
+      loading="eager"
+      fetchpriority="high"
+      maxSrcSetWidth={800}
+      mobileMaxSrcSetWidth={400}
       mobileSizes="100vw"
+      sizes="(max-width: 768px) 100vw, 50vw"
     />
     <!-- TERBARU stamp -->
-    <div style="
+    <div class="featured-stamp" style="
       position: absolute; top: 1rem; left: 1rem;
       background: var(--ink);
       border: 2px solid var(--yellow-manual);
@@ -65,7 +69,7 @@ class="featured-grid"
   <div style="padding: 2.5rem; display: flex; flex-direction: column; justify-content: center; background: var(--paper);" class="featured-body-padding">
 
     <!-- Meta -->
-    <div style="
+    <div class="featured-meta" style="
       font-family: 'Share Tech Mono', monospace;
       font-size: 0.58rem;
       letter-spacing: 0.18em;
@@ -83,7 +87,7 @@ class="featured-grid"
 
     <!-- Title -->
     <a href={`/blog/${post.slug}`} style="text-decoration: none; margin-bottom: 1rem; display: block;">
-      <h2 style="
+      <h2 class="featured-title" style="
         font-family: 'Barlow Condensed', sans-serif;
         font-size: clamp(1.5rem, 3vw, 2.4rem);
         font-weight: 800;
@@ -99,7 +103,7 @@ class="featured-grid"
     </a>
 
     <!-- Description -->
-    <p style="
+    <p class="featured-description" style="
       font-size: 0.85rem;
       color: var(--warm-grey-dark);
       line-height: 1.65;
@@ -111,7 +115,7 @@ class="featured-grid"
     ">{post.description}</p>
 
     <!-- CTA -->
-    <a href={`/blog/${post.slug}`} style="
+    <a href={`/blog/${post.slug}`} class="featured-cta" style="
       font-family: 'Share Tech Mono', monospace;
       font-size: 0.7rem;
       letter-spacing: 0.15em;
@@ -135,8 +139,85 @@ class="featured-grid"
 
 <style>
   @media (max-width: 768px) {
-    .featured-grid { grid-template-columns: 1fr !important; }
-    .featured-img-side { border-right: none !important; border-bottom: 3px solid var(--ink); }
-    .featured-body-padding { padding: 1.5rem !important; }
+    .featured-grid {
+      grid-template-columns: 7.4rem minmax(0, 1fr) !important;
+      margin-bottom: 1.2rem !important;
+    }
+
+    .featured-post {
+      background: #101617 !important;
+      border: 1px solid rgba(255,255,255,0.12) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+      overflow: hidden !important;
+      transform: none !important;
+    }
+
+    .featured-img-side {
+      border-right: 1px solid rgba(255,255,255,0.10) !important;
+      border-bottom: 0 !important;
+      min-height: 100% !important;
+    }
+
+    .featured-img-side :global(.relative) {
+      height: 100% !important;
+      aspect-ratio: auto !important;
+    }
+
+    .featured-img-side :global(img) {
+      height: 100% !important;
+      min-height: 0 !important;
+      max-height: none !important;
+    }
+
+    .featured-stamp {
+      display: none !important;
+    }
+
+    .featured-body-padding {
+      padding: 0.85rem !important;
+      background: #101617 !important;
+      min-width: 0 !important;
+      justify-content: flex-start !important;
+    }
+
+    .featured-meta {
+      flex-wrap: wrap !important;
+      gap: 0.45rem !important;
+      color: #8fa3aa !important;
+      font-size: 0.62rem !important;
+      letter-spacing: 0.08em !important;
+      margin-bottom: 0.75rem !important;
+    }
+
+    .featured-title {
+      font-family: 'Barlow', system-ui, sans-serif !important;
+      color: #f8fafc !important;
+      font-size: 0.98rem !important;
+      line-height: 1.2 !important;
+      letter-spacing: 0 !important;
+      text-transform: none !important;
+      display: -webkit-box !important;
+      overflow: hidden !important;
+      -webkit-box-orient: vertical !important;
+      -webkit-line-clamp: 3 !important;
+    }
+
+    .featured-description {
+      color: #b7c9cf !important;
+      font-size: 0.78rem !important;
+      line-height: 1.42 !important;
+      margin-bottom: 0.75rem !important;
+      -webkit-line-clamp: 1 !important;
+    }
+
+    .featured-cta {
+      border: 0 !important;
+      padding: 0 !important;
+      background: transparent !important;
+      color: #63d2b5 !important;
+      box-shadow: none !important;
+      font-size: 0.66rem !important;
+    }
   }
 </style>

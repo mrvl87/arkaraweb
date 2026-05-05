@@ -13,12 +13,23 @@ export interface MediaObject {
   blurhash?: string
 }
 
+export type EditorialFormat = 'legacy' | 'mobile_reader' | 'technical_guide'
+
+export interface ContentFAQItem {
+  question: string
+  answer: string
+}
+
 export interface Post {
   id: string
   title: string
   slug: string
   description?: string
   content: string
+  quick_answer?: string | null
+  key_takeaways?: string[]
+  faq?: ContentFAQItem[]
+  editorial_format?: EditorialFormat
   category: 'air' | 'energi' | 'pangan' | 'medis' | 'keamanan' | 'komunitas'
   status: 'draft' | 'published'
   cover_image?: string           // string URL — untuk fallback dan OG image
@@ -36,6 +47,10 @@ export interface Panduan {
   title: string
   slug: string
   content: string
+  quick_answer?: string | null
+  key_takeaways?: string[]
+  faq?: ContentFAQItem[]
+  editorial_format?: EditorialFormat
   bab_ref?: string
   qr_slug?: string
   status: 'draft' | 'published'

@@ -47,6 +47,10 @@ const headings = extractHeadings(htmlContent);
     content={post.content || ''}
     currentSlug={post.slug}
     contentType="blog"
+    quickAnswer={post.quick_answer}
+    keyTakeaways={post.key_takeaways || []}
+    faq={post.faq || []}
+    editorialFormat={post.editorial_format || 'legacy'}
   >
     <div set:html={htmlContent} />
   </PostLayout>

@@ -4,6 +4,32 @@ const SUPABASE_PUBLIC_MEDIA_BASE =
   'https://zythkkmygravwelxbwtf.supabase.co/storage/v1/object/public/media/';
 const MEDIA_CACHE_CONTROL = 'public, max-age=31536000, s-maxage=31536000, immutable';
 const MEDIA_CACHE_EXPIRES = new Date(Date.now() + 31536000 * 1000).toUTCString();
+const MEMORY_CACHE_TTL_MS = 60 * 60 * 1000;
+const MEMORY_CACHE_MAX_ITEMS = 80;
+const MEMORY_CACHE_MAX_BYTES = 1024 * 1024;
+
+type MemoryMediaEntry = {
+  expiresAt: number;
+  body: ArrayBuffer;
+  headers: Record<string, string>;
+};
+
+const memoryMediaCache = new Map<string, MemoryMediaEntry>();
+
+function createHeaders(values: Record<string, string>) {
+  const headers = new Headers(values);
+  headers.set('X-Arkara-Media-Cache', 'memory');
+  return headers;
+}
+
+function setMemoryMediaCache(key: string, entry: MemoryMediaEntry) {
+  if (memoryMediaCache.size >= MEMORY_CACHE_MAX_ITEMS) {
+    const oldestKey = memoryMediaCache.keys().next().value;
+    if (oldestKey) memoryMediaCache.delete(oldestKey);
+  }
+
+  memoryMediaCache.set(key, entry);
+}
 
 export const GET: APIRoute = async ({ params, request }) => {
   const mediaPath = params.path;
@@ -16,6 +42,20 @@ export const GET: APIRoute = async ({ params, request }) => {
     .split('/')
     .map((segment) => encodeURIComponent(decodeURIComponent(segment)))
     .join('/');
+  const cacheKey = upstreamPath;
+  const cached = memoryMediaCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return new Response(cached.body.slice(0), {
+      status: 200,
+      headers: createHeaders(cached.headers),
+    });
+  }
+
+  if (cached) {
+    memoryMediaCache.delete(cacheKey);
+  }
+
   const upstreamUrl = new URL(upstreamPath, SUPABASE_PUBLIC_MEDIA_BASE);
   const upstreamResponse = await fetch(upstreamUrl, {
     headers: {
@@ -46,8 +86,19 @@ export const GET: APIRoute = async ({ params, request }) => {
     headers.set('Last-Modified', upstreamLastModified);
   }
 
-  return new Response(upstreamResponse.body, {
+  const body = await upstreamResponse.arrayBuffer();
+  const headerValues = Object.fromEntries(headers.entries());
+
+  if (body.byteLength <= MEMORY_CACHE_MAX_BYTES) {
+    setMemoryMediaCache(cacheKey, {
+      expiresAt: Date.now() + MEMORY_CACHE_TTL_MS,
+      body,
+      headers: headerValues,
+    });
+  }
+
+  return new Response(body.slice(0), {
     status: 200,
-    headers,
+    headers: new Headers(headerValues),
   });
 };

@@ -17,20 +17,21 @@ interface Props {
   category: string;
   date: string;
   slug: string;
-  content: string;
+  content?: string;
   image?: any;
   sizes?: string;
+  readingTime?: number;
 }
 
-const { title, excerpt, category, date, slug, content, image, sizes } = Astro.props;
-const readingTime = calculateReadingTime(content || '');
+const { title, excerpt, category, date, slug, content, image, sizes, readingTime: providedReadingTime } = Astro.props;
+const readingTime = providedReadingTime ?? calculateReadingTime(content || '');
 
 const formattedDate = new Date(date).toLocaleDateString('id-ID', {
   day: 'numeric', month: 'short', year: 'numeric'
 });
 ---
 
-<article style="
+<article class={`post-card ${image ? 'post-card--with-image' : 'post-card--no-image'}`} style="
   background: var(--paper);
   border: 3px solid var(--ink);
   box-shadow: 5px 5px 0 var(--ink);
@@ -44,7 +45,7 @@ onmouseover="this.style.transform='translate(-2px,-2px)';this.style.boxShadow='7
 onmouseout="this.style.transform='';this.style.boxShadow='5px 5px 0 var(--ink)'"
 >
   {image && (
-    <div style="overflow: hidden; border-bottom: 3px solid var(--ink); position: relative;">
+    <div class="post-card-image" style="overflow: hidden; border-bottom: 3px solid var(--ink); position: relative;">
       <OptimizedImage
         image={image}
         alt={title}
@@ -52,11 +53,11 @@ onmouseout="this.style.transform='';this.style.boxShadow='5px 5px 0 var(--ink)'"
         style="filter: saturate(0.65) contrast(1.08); display: block; aspect-ratio: 16/9;"
         aspectRatio="aspect-video"
         sizes={sizes}
-        mobileMaxSrcSetWidth={800}
-        maxSrcSetWidth={800}
+        mobileMaxSrcSetWidth={400}
+        maxSrcSetWidth={400}
       />
       <!-- Category stamp -->
-      <div style="
+      <div class="post-card-stamp" style="
         position: absolute; top: 0.75rem; left: 0.75rem;
         background: var(--ink);
         border: 1px solid var(--green-terminal);
@@ -70,10 +71,10 @@ onmouseout="this.style.transform='';this.style.boxShadow='5px 5px 0 var(--ink)'"
     </div>
   )}
 
-  <div style="padding: 1.5rem; display: flex; flex-direction: column; flex: 1; gap: 0.6rem;">
+  <div class="post-card-body" style="padding: 1.5rem; display: flex; flex-direction: column; flex: 1; gap: 0.6rem;">
 
     <!-- Meta row -->
-    <div style="
+    <div class="post-card-meta" style="
       font-family: 'Share Tech Mono', monospace;
       font-size: 0.58rem;
       letter-spacing: 0.12em;
@@ -93,7 +94,7 @@ onmouseout="this.style.transform='';this.style.boxShadow='5px 5px 0 var(--ink)'"
     </div>
 
     <!-- Title -->
-    <a href={`/blog/${slug}`} style="text-decoration: none;">
+    <a href={`/blog/${slug}`} class="post-card-title-link" style="text-decoration: none;">
       <h3 style="
         font-family: 'Barlow Condensed', sans-serif;
         font-size: 1.4rem;
@@ -110,7 +111,7 @@ onmouseout="this.style.transform='';this.style.boxShadow='5px 5px 0 var(--ink)'"
     </a>
 
     <!-- Excerpt -->
-    <p style="
+    <p class="post-card-excerpt" style="
       font-size: 0.82rem;
       color: var(--warm-grey-dark);
       line-height: 1.65;
@@ -123,13 +124,13 @@ onmouseout="this.style.transform='';this.style.boxShadow='5px 5px 0 var(--ink)'"
     ">{excerpt}</p>
 
     <!-- Footer -->
-    <div style="
+    <div class="post-card-footer" style="
       padding-top: 0.75rem;
       border-top: 1px dashed var(--cream-dark);
       display: flex;
       justify-content: flex-end;
     ">
-      <a href={`/blog/${slug}`} style="
+      <a href={`/blog/${slug}`} class="post-card-cta" style="
         font-family: 'Share Tech Mono', monospace;
         font-size: 0.6rem;
         letter-spacing: 0.15em;
@@ -146,3 +147,88 @@ onmouseout="this.style.transform='';this.style.boxShadow='5px 5px 0 var(--ink)'"
     </div>
   </div>
 </article>
+
+<style>
+  @media (max-width: 768px) {
+    .post-card {
+      display: grid !important;
+      grid-template-columns: 5.4rem minmax(0, 1fr) !important;
+      background: #101617 !important;
+      border: 1px solid rgba(255,255,255,0.12) !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+      overflow: hidden !important;
+      transform: none !important;
+    }
+
+    .post-card--no-image {
+      grid-template-columns: 1fr !important;
+    }
+
+    .post-card-image {
+      height: 100% !important;
+      border-right: 1px solid rgba(255,255,255,0.10) !important;
+      border-bottom: 0 !important;
+    }
+
+    .post-card-image :global(.relative) {
+      height: 100% !important;
+      aspect-ratio: auto !important;
+    }
+
+    .post-card-image :global(img) {
+      height: 100% !important;
+    }
+
+    .post-card-stamp {
+      display: none !important;
+    }
+
+    .post-card-body {
+      min-width: 0 !important;
+      padding: 0.72rem !important;
+      gap: 0.38rem !important;
+    }
+
+    .post-card-meta {
+      flex-wrap: wrap !important;
+      gap: 0.45rem !important;
+      color: #8fa3aa !important;
+      font-size: 0.56rem !important;
+      letter-spacing: 0.08em !important;
+    }
+
+    .post-card h3 {
+      font-family: 'Barlow', system-ui, sans-serif !important;
+      color: #f8fafc !important;
+      font-size: 0.88rem !important;
+      font-weight: 850 !important;
+      line-height: 1.22 !important;
+      letter-spacing: 0 !important;
+      text-transform: none !important;
+      display: -webkit-box !important;
+      overflow: hidden !important;
+      -webkit-box-orient: vertical !important;
+      -webkit-line-clamp: 2 !important;
+    }
+
+    .post-card-excerpt {
+      color: #b7c9cf !important;
+      font-size: 0.76rem !important;
+      line-height: 1.38 !important;
+      -webkit-line-clamp: 1 !important;
+    }
+
+    .post-card-footer {
+      display: none !important;
+    }
+
+    .post-card-cta {
+      border: 0 !important;
+      padding: 0 !important;
+      color: #63d2b5 !important;
+      font-size: 0.66rem !important;
+      letter-spacing: 0.12em !important;
+    }
+  }
+</style>

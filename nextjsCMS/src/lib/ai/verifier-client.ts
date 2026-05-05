@@ -1,7 +1,7 @@
 import type { AIMessage } from './client'
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const DEFAULT_GROUNDED_MODEL = 'openai/gpt-4o-mini-search-preview'
+const DEFAULT_GROUNDED_MODEL = 'deepseek/deepseek-v4-pro'
 const OPENROUTER_TIMEOUT_MS = 90000
 const OPENROUTER_MAX_RETRIES = 2
 
@@ -163,6 +163,17 @@ export async function callGroundedJSON(
       model,
       messages: buildMessages(messages),
       temperature: options?.temperature ?? 0.2,
+      tools: [
+        {
+          type: 'openrouter:web_search',
+          parameters: {
+            engine: 'auto',
+            max_results: 5,
+            max_total_results: 12,
+            search_context_size: 'medium',
+          },
+        },
+      ],
     }),
   })
 

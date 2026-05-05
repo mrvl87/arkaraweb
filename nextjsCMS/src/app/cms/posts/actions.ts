@@ -91,6 +91,13 @@ const mediaObjectSchema = z.object({
   blurhash: z.string().optional(),
 }).nullable().optional()
 
+const editorialFormatSchema = z.enum(['legacy', 'mobile_reader', 'technical_guide'])
+
+const faqItemSchema = z.object({
+  question: z.string().trim().min(1, 'Pertanyaan FAQ wajib diisi'),
+  answer: z.string().trim().min(1, 'Jawaban FAQ wajib diisi'),
+})
+
 const slugSchema = z.string()
   .trim()
   .min(1, 'Slug wajib diisi')
@@ -103,6 +110,10 @@ const postSchema = z.object({
   slug: slugSchema,
   content: z.string().optional().default(''),
   description: z.string().optional(),
+  quick_answer: z.string().optional().default(''),
+  key_takeaways: z.array(z.string().trim().min(1)).max(8).optional().default([]),
+  faq: z.array(faqItemSchema).max(12).optional().default([]),
+  editorial_format: editorialFormatSchema.optional().default('legacy'),
   status: z.enum(['draft', 'published']).default('draft'),
   cover_image: z.string().optional(),
   thumbnail_image: mediaObjectSchema,

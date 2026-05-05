@@ -10,6 +10,13 @@ CREATE TABLE IF NOT EXISTS posts (
   status       TEXT NOT NULL DEFAULT 'draft'
                CHECK (status IN ('draft','published')),
   cover_image  TEXT,
+  quick_answer TEXT,
+  key_takeaways JSONB NOT NULL DEFAULT '[]'::jsonb
+               CHECK (jsonb_typeof(key_takeaways) = 'array'),
+  faq           JSONB NOT NULL DEFAULT '[]'::jsonb
+               CHECK (jsonb_typeof(faq) = 'array'),
+  editorial_format TEXT NOT NULL DEFAULT 'legacy'
+               CHECK (editorial_format IN ('legacy','mobile_reader','technical_guide')),
   meta_title   TEXT,
   meta_desc    TEXT,
   ai_generated BOOLEAN NOT NULL DEFAULT false,
@@ -52,6 +59,13 @@ CREATE TABLE IF NOT EXISTS panduan (
   bab_ref      TEXT,
   qr_slug      TEXT,
   cover_image  TEXT,
+  quick_answer TEXT,
+  key_takeaways JSONB NOT NULL DEFAULT '[]'::jsonb
+               CHECK (jsonb_typeof(key_takeaways) = 'array'),
+  faq           JSONB NOT NULL DEFAULT '[]'::jsonb
+               CHECK (jsonb_typeof(faq) = 'array'),
+  editorial_format TEXT NOT NULL DEFAULT 'legacy'
+               CHECK (editorial_format IN ('legacy','mobile_reader','technical_guide')),
   meta_title   TEXT,
   meta_desc    TEXT,
   status       TEXT NOT NULL DEFAULT 'draft'

@@ -27,10 +27,45 @@ interface Props {
   currentSlug?: string;
   canonicalHref?: string;
   contentType?: 'blog' | 'panduan';
+  quickAnswer?: string | null;
+  keyTakeaways?: string[];
+  faq?: Array<{ question: string; answer: string }>;
+  editorialFormat?: 'legacy' | 'mobile_reader' | 'technical_guide';
 }
 
-const { title, description, publishDate, category, coverImage, headings = [], content = '', currentSlug, canonicalHref, contentType } = Astro.props;
+const {
+  title,
+  description,
+  publishDate,
+  category,
+  coverImage,
+  headings = [],
+  content = '',
+  currentSlug,
+  canonicalHref,
+  contentType,
+  quickAnswer,
+  keyTakeaways = [],
+  faq = [],
+  editorialFormat = 'legacy',
+} = Astro.props;
 const readingTime = calculateReadingTime(content);
+const cleanQuickAnswer = quickAnswer?.trim();
+const cleanTakeaways = keyTakeaways.map((item) => item?.trim()).filter(Boolean);
+const cleanFaq = faq
+  .map((item) => ({
+    question: item.question?.trim(),
+    answer: item.answer?.trim(),
+  }))
+  .filter((item) => item.question && item.answer);
+const isMobileReader = editorialFormat === 'mobile_reader';
+const isTechnicalGuide = editorialFormat === 'technical_guide';
+const hasReaderMode = isMobileReader || isTechnicalGuide;
+const hasMobileStructure = hasReaderMode && Boolean(cleanQuickAnswer || cleanTakeaways.length || cleanFaq.length || headings.length);
+const readerLabel = isTechnicalGuide ? 'Prosedur Cepat' : 'Jawaban Singkat';
+const takeawayLabel = isTechnicalGuide ? 'Checklist Lapangan' : 'Inti Artikel';
+const tocLabel = isTechnicalGuide ? 'Urutan Prosedur' : 'Isi Artikel';
+const faqLabel = isTechnicalGuide ? 'Pertanyaan Operasional' : 'FAQ';
 
 function resolveSocialImage(image: any): string | undefined {
   if (!image) return undefined;
@@ -49,10 +84,6 @@ const ogImageAlt = typeof coverImage === 'string'
   ? title
   : coverImage?.alt_text || title;
 
-const assistantMode = contentType === 'panduan' || contentType === 'blog'
-  ? 'page_context_mode'
-  : 'site_guide_mode';
-const assistantDescription = description?.trim() || undefined;
 ---
 
 <BaseLayout
@@ -62,12 +93,10 @@ const assistantDescription = description?.trim() || undefined;
   imageAlt={ogImageAlt}
   canonicalHref={canonicalHref}
   type="article"
-  assistantInitialMode={assistantMode}
-  assistantContext={{ title, pathname: canonicalHref, description: assistantDescription }}
 >
 
   <!-- â”€â”€ POST HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
-  <header style="
+  <header class="post-hero" style="
     background: var(--ink);
     border-bottom: 3px solid var(--green-terminal);
     padding: 4rem 2rem 5rem;
@@ -87,7 +116,7 @@ const assistantDescription = description?.trim() || undefined;
     <div style="max-width: 1200px; margin: 0 auto; position: relative; z-index: 1;">
 
       <!-- Section label -->
-      <div style="
+      <div class="post-meta-strip" style="
         font-family: 'Share Tech Mono', monospace;
         font-size: 0.6rem;
         letter-spacing: 0.25em;
@@ -109,7 +138,7 @@ const assistantDescription = description?.trim() || undefined;
       </div>
 
       <!-- Title -->
-      <h1 style="
+      <h1 class="post-title" style="
         font-family: 'Barlow Condensed', sans-serif;
         font-size: clamp(2.2rem, 6vw, 5rem);
         font-weight: 800;
@@ -122,7 +151,7 @@ const assistantDescription = description?.trim() || undefined;
       ">{title}</h1>
 
       {description && (
-        <p style="
+        <p class="post-description" style="
           font-family: 'Barlow', sans-serif;
           font-size: 1rem;
           color: var(--warm-grey);
@@ -136,11 +165,11 @@ const assistantDescription = description?.trim() || undefined;
   </header>
 
   <!-- â”€â”€ ARTICLE BODY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
-  <div style="max-width: 1200px; margin: 0 auto; padding: 0 2rem 5rem; margin-top: -2rem; position: relative; z-index: 10;">
+  <div class="post-shell" style="max-width: 1200px; margin: 0 auto; padding: 0 2rem 5rem; margin-top: -2rem; position: relative; z-index: 10;">
     <div style="display: grid; grid-template-columns: 1fr 300px; gap: 2rem; align-items: start;" class="post-grid">
 
       <!-- Content column -->
-      <article style="
+      <article class={`post-article ${hasMobileStructure ? 'has-mobile-reader' : ''} ${isTechnicalGuide ? 'is-technical-guide' : ''}`} style="
         background: var(--paper);
         border: 3px solid var(--ink);
         box-shadow: 6px 6px 0 var(--ink);
@@ -163,9 +192,68 @@ const assistantDescription = description?.trim() || undefined;
         )}
 
         <div style="padding: 2.5rem 3rem;" class="post-body-padding">
+          {hasMobileStructure && (
+            <section class={`mobile-reader-stack ${isTechnicalGuide ? 'technical-guide-stack' : ''}`} aria-label={isTechnicalGuide ? 'Struktur technical guide' : 'Ringkasan mobile reader'}>
+              {cleanQuickAnswer && (
+                <div class="mobile-reader-answer">
+                  <p class="mobile-reader-eyebrow">{readerLabel}</p>
+                  <p>{cleanQuickAnswer}</p>
+                </div>
+              )}
+
+              {cleanTakeaways.length > 0 && (
+                <div class="mobile-reader-takeaways">
+                  <div class="mobile-reader-section-title">{takeawayLabel}</div>
+                  <ol>
+                    {cleanTakeaways.map((item) => (
+                      <li>{item}</li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {headings.length > 0 && (
+                <details class="mobile-reader-toc">
+                  <summary>
+                    <span class="mobile-reader-toc-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M8 6h12M8 12h12M8 18h12" />
+                        <path d="M4 6h.01M4 12h.01M4 18h.01" />
+                      </svg>
+                    </span>
+                    <span>{tocLabel}</span>
+                  </summary>
+                  <nav>
+                    {headings.map((heading: any) => (
+                      <a
+                        href={`#${heading.slug || heading.id}`}
+                        data-mobile-toc-link
+                        data-heading-text={heading.text}
+                      >
+                        {heading.text}
+                      </a>
+                    ))}
+                  </nav>
+                </details>
+              )}
+            </section>
+          )}
+
           <div class="prose-arkara">
             <slot />
           </div>
+
+          {hasReaderMode && cleanFaq.length > 0 && (
+            <section class="mobile-reader-faq" aria-label="FAQ">
+              <div class="mobile-reader-section-title">{faqLabel}</div>
+              {cleanFaq.map((item) => (
+                <details>
+                  <summary>{item.question}</summary>
+                  <p>{item.answer}</p>
+                </details>
+              ))}
+            </section>
+          )}
 
           <!-- Article footer -->
           <div style="
@@ -208,59 +296,6 @@ const assistantDescription = description?.trim() || undefined;
             onmouseover="this.style.background='var(--green-dark)'"
             onmouseout="this.style.background=''"
             >â† KEMBALI KE {contentType === 'panduan' ? 'PANDUAN' : 'BLOG'}</a>
-          </div>
-
-          <div style="
-            margin-top: 2rem;
-            padding: 1.5rem;
-            background: var(--ink);
-            border: 3px solid var(--green-terminal);
-            color: var(--cream);
-            display: grid;
-            gap: 0.8rem;
-          ">
-            <div style="
-              font-family: 'Share Tech Mono', monospace;
-              font-size: 0.58rem;
-              letter-spacing: 0.2em;
-              color: var(--green-terminal);
-              text-transform: uppercase;
-            ">ARKARA AI / CONTEXT READY</div>
-            <p style="margin:0;color:var(--warm-grey);line-height:1.7;">
-              Lanjutkan halaman ini dengan assistant. Arkara AI akan membawa konteks artikel atau
-              panduan ke mode percakapan penuh agar tindak lanjut lebih cepat.
-            </p>
-            <div style="display:flex;flex-wrap:wrap;gap:0.75rem;">
-              <a
-                href="/assistant"
-                data-assistant-cta
-                style="
-                  font-family:'Share Tech Mono', monospace;
-                  font-size:0.7rem;
-                  letter-spacing:0.12em;
-                  text-transform:uppercase;
-                  padding:0.85rem 1.2rem;
-                  border:2px solid var(--green-terminal);
-                  background:var(--green-terminal);
-                  color:var(--ink);
-                  text-decoration:none;
-                  font-weight:700;
-                "
-              >Buka Assistant dengan Konteks Ini</a>
-              <a
-                href="/assistant"
-                style="
-                  font-family:'Share Tech Mono', monospace;
-                  font-size:0.7rem;
-                  letter-spacing:0.12em;
-                  text-transform:uppercase;
-                  padding:0.85rem 1.2rem;
-                  border:2px solid rgba(143,175,143,0.35);
-                  color:var(--cream-dark);
-                  text-decoration:none;
-                "
-              >Rute Assistant</a>
-            </div>
           </div>
 
           <!-- Related Posts Section -->
@@ -329,42 +364,6 @@ const assistantDescription = description?.trim() || undefined;
           </div>
         </div>
 
-        <div style="
-          background: var(--paper);
-          border: 3px solid var(--ink);
-          box-shadow: 5px 5px 0 var(--ink);
-          padding: 1.25rem;
-          display: grid;
-          gap: 0.8rem;
-        ">
-          <div style="
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 0.58rem;
-            letter-spacing: 0.2em;
-            color: var(--green-dark);
-            text-transform: uppercase;
-          ">ARKARA AI FIELD DESK</div>
-          <p style="margin:0;font-size:0.82rem;line-height:1.7;color:var(--warm-grey-dark);">
-            Buka assistant penuh untuk merangkum halaman ini, menyusun checklist, atau menilai skenario
-            yang sedang Anda hadapi.
-          </p>
-          <a
-            href="/assistant"
-            data-assistant-cta
-            style="
-              font-family:'Share Tech Mono', monospace;
-              font-size:0.68rem;
-              letter-spacing:0.12em;
-              text-transform:uppercase;
-              padding:0.8rem 1rem;
-              background:var(--ink);
-              color:var(--green-terminal);
-              border:2px solid var(--green-terminal);
-              text-decoration:none;
-              text-align:center;
-            "
-          >Aktifkan Assistant</a>
-        </div>
       </aside>
 
     </div>
@@ -372,11 +371,381 @@ const assistantDescription = description?.trim() || undefined;
 
   <style>
     @media (max-width: 900px) {
-      .post-grid { grid-template-columns: 1fr !important; }
+      :global(html),
+      :global(body),
+      :global(main) {
+        background: #070b0c !important;
+      }
+
+      :global(main) {
+        padding-bottom: 0 !important;
+      }
+
+      .post-hero {
+        background: #070b0c !important;
+        border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+        padding: 1.25rem 1rem 1rem !important;
+      }
+
+      .post-meta-strip {
+        margin-bottom: 1rem !important;
+        gap: 0.5rem !important;
+        flex-wrap: wrap !important;
+        color: #6ee7b7 !important;
+      }
+
+      .post-title {
+        font-family: 'Barlow', sans-serif !important;
+        font-size: clamp(1.68rem, 7.7vw, 2.42rem) !important;
+        line-height: 1.08 !important;
+        text-transform: none !important;
+        color: #f8fafc !important;
+        letter-spacing: 0 !important;
+        margin-bottom: 0 !important;
+      }
+
+      .post-description {
+        display: none !important;
+      }
+
+      .post-shell {
+        margin-top: 0 !important;
+        padding: 0 0 calc(5.1rem + env(safe-area-inset-bottom)) !important;
+        max-width: none !important;
+        background: #070b0c !important;
+      }
+
+      .post-grid { grid-template-columns: 1fr !important; gap: 0 !important; }
       .post-sidebar { display: none !important; }
-      .post-body-padding { padding: 1.5rem !important; }
+      .post-article {
+        background: #070b0c !important;
+        border: 0 !important;
+        box-shadow: none !important;
+      }
+
+      .post-article > div:first-child {
+        border-bottom: 0 !important;
+        border-radius: 0 0 24px 24px;
+      }
+
+      .post-body-padding { padding: 1rem !important; }
+
+      .mobile-reader-stack {
+        display: grid !important;
+      }
+
+      .prose-arkara {
+        color: #cbd5e1 !important;
+        font-size: 1rem !important;
+        line-height: 1.78 !important;
+      }
+
+      .prose-arkara :global(h1),
+      .prose-arkara :global(h2),
+      .prose-arkara :global(h3) {
+        color: #f8fafc !important;
+        font-family: 'Barlow', sans-serif !important;
+        text-transform: none !important;
+        letter-spacing: 0 !important;
+        border-bottom: 0 !important;
+      }
+
+      .prose-arkara :global(h2) {
+        margin-top: 2rem !important;
+        font-size: 1.35rem !important;
+      }
+
+      .prose-arkara :global(h3) {
+        font-size: 1.1rem !important;
+      }
+
+      .prose-arkara :global(h2[id]),
+      .prose-arkara :global(h3[id]) {
+        scroll-margin-top: 1.25rem;
+      }
+
+      .prose-arkara :global(p),
+      .prose-arkara :global(li) {
+        color: #cbd5e1 !important;
+      }
+
+      .prose-arkara :global(strong),
+      .prose-arkara :global(b) {
+        color: #f8fafc !important;
+        font-weight: 800 !important;
+      }
+
+      .prose-arkara :global(ul li::before) {
+        content: "" !important;
+        top: 0.72rem !important;
+        width: 0.38rem !important;
+        height: 0.38rem !important;
+        border-radius: 999px !important;
+        background: #6ee7b7 !important;
+      }
+
+      .prose-arkara :global(a) {
+        color: #6ee7b7 !important;
+      }
+
+      .prose-arkara :global(blockquote) {
+        background: rgba(110,231,183,0.08) !important;
+        border-left: 3px solid #6ee7b7 !important;
+        color: #d1fae5 !important;
+      }
+
+      .mobile-reader-faq {
+        display: grid !important;
+      }
+    }
+
+    .mobile-reader-stack {
+      display: none;
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .mobile-reader-answer,
+    .mobile-reader-takeaways,
+    .mobile-reader-toc,
+    .mobile-reader-faq details {
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      background: rgba(255,255,255,0.045);
+    }
+
+    .mobile-reader-answer {
+      padding: 1rem;
+      background: rgba(110,231,183,0.1);
+      border-color: rgba(110,231,183,0.24);
+    }
+
+    .is-technical-guide .mobile-reader-answer {
+      background: rgba(245,158,11,0.1);
+      border-color: rgba(245,158,11,0.28);
+    }
+
+    .mobile-reader-answer p:last-child {
+      margin: 0.35rem 0 0;
+      color: #ecfdf5;
+      font-size: 0.98rem;
+      line-height: 1.65;
+    }
+
+    .mobile-reader-eyebrow,
+    .mobile-reader-section-title {
+      margin: 0;
+      color: #6ee7b7;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .is-technical-guide .mobile-reader-eyebrow,
+    .is-technical-guide .mobile-reader-section-title {
+      color: #fbbf24;
+    }
+
+    .mobile-reader-takeaways {
+      padding: 1rem;
+    }
+
+    .mobile-reader-takeaways ol {
+      display: grid;
+      gap: 0.75rem;
+      margin: 0.9rem 0 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: takeaway;
+    }
+
+    .mobile-reader-takeaways li {
+      counter-increment: takeaway;
+      display: grid;
+      grid-template-columns: 1.8rem 1fr;
+      gap: 0.75rem;
+      color: #e2e8f0;
+      line-height: 1.55;
+    }
+
+    .mobile-reader-takeaways li::before {
+      content: counter(takeaway);
+      width: 1.8rem;
+      height: 1.8rem;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(110,231,183,0.12);
+      color: #a7f3d0;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .is-technical-guide .mobile-reader-takeaways li::before {
+      border-radius: 7px;
+      background: rgba(245,158,11,0.14);
+      color: #fde68a;
+      content: "✓";
+    }
+
+    .is-technical-guide .mobile-reader-takeaways,
+    .is-technical-guide .mobile-reader-toc,
+    .is-technical-guide .mobile-reader-faq details {
+      border-color: rgba(245,158,11,0.18);
+      background: rgba(255,255,255,0.035);
+    }
+
+    .mobile-reader-toc {
+      padding: 0.9rem 1rem;
+    }
+
+    .mobile-reader-toc summary {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      list-style: none;
+      cursor: pointer;
+      color: #f8fafc;
+      font-weight: 800;
+    }
+
+    .mobile-reader-toc summary::marker {
+      content: "";
+    }
+
+    .mobile-reader-toc summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .mobile-reader-toc-icon {
+      display: grid;
+      width: 1.75rem;
+      height: 1.75rem;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(110,231,183,0.12);
+      color: #6ee7b7;
+      flex: 0 0 auto;
+    }
+
+    .mobile-reader-toc-icon svg {
+      width: 1rem;
+      height: 1rem;
+    }
+
+    .mobile-reader-toc nav {
+      display: grid;
+      gap: 0.65rem;
+      margin-top: 0.9rem;
+    }
+
+    .mobile-reader-toc a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+
+    .prose-arkara :global(h2[id]),
+    .prose-arkara :global(h3[id]) {
+      scroll-margin-top: 6.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .prose-arkara :global(h2[id]),
+      .prose-arkara :global(h3[id]) {
+        scroll-margin-top: 1.25rem;
+      }
+    }
+
+    .mobile-reader-faq {
+      display: none;
+      gap: 0.75rem;
+      margin-top: 2rem;
+    }
+
+    .mobile-reader-faq details {
+      padding: 1rem;
+    }
+
+    .mobile-reader-faq summary {
+      cursor: pointer;
+      color: #f8fafc;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .mobile-reader-faq p {
+      margin: 0.75rem 0 0;
+      color: #94a3b8;
+      line-height: 1.65;
     }
   </style>
+
+  <script>
+    const mobileTocLinks = document.querySelectorAll('[data-mobile-toc-link]');
+
+    function normalizeMobileHeadingText(text) {
+      return text
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    }
+
+    function findMobileHeadingByText(text) {
+      const normalizedText = normalizeMobileHeadingText(text);
+      if (!normalizedText) {
+        return null;
+      }
+
+      const headings = document.querySelectorAll('.prose-arkara h2, .prose-arkara h3');
+
+      for (const heading of headings) {
+        if (normalizeMobileHeadingText(heading.textContent || '') === normalizedText) {
+          return heading;
+        }
+      }
+
+      return null;
+    }
+
+    for (const link of mobileTocLinks) {
+      link.addEventListener('click', (event) => {
+        if (!(link instanceof HTMLAnchorElement) || !link.hash) {
+          return;
+        }
+
+        const targetId = decodeURIComponent(link.hash.slice(1));
+        let target = document.getElementById(targetId);
+
+        if (!target) {
+          const headingText = link.getAttribute('data-heading-text') || '';
+          target = findMobileHeadingByText(headingText);
+
+          if (target && targetId) {
+            target.id = targetId;
+          }
+        }
+
+        if (!target) {
+          return;
+        }
+
+        event.preventDefault();
+
+        const stickyOffset = window.matchMedia('(max-width: 900px)').matches ? 20 : 96;
+        const targetTop = target.getBoundingClientRect().top + window.scrollY - stickyOffset;
+        window.history.pushState(null, '', link.hash);
+        window.scrollTo({
+          top: Math.max(0, targetTop),
+          behavior: 'smooth',
+        });
+      });
+    }
+  </script>
 
 </BaseLayout>
 

@@ -15,7 +15,20 @@ export interface AIResponse {
     prompt_tokens: number
     completion_tokens: number
     total_tokens: number
+    server_tool_use?: {
+      web_search_requests?: number
+    }
   }
+}
+
+interface OpenRouterWebSearchOptions {
+  enabled: boolean
+  engine?: 'auto' | 'native' | 'exa' | 'firecrawl' | 'parallel'
+  maxResults?: number
+  maxTotalResults?: number
+  searchContextSize?: 'low' | 'medium' | 'high'
+  allowedDomains?: string[]
+  excludedDomains?: string[]
 }
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
@@ -88,10 +101,32 @@ export async function callAI(
     model?: string
     temperature?: number
     maxTokens?: number
+    webSearch?: OpenRouterWebSearchOptions
   }
 ): Promise<AIResponse> {
   const apiKey = process.env.OPENROUTER_API_KEY
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const model = options?.model ?? DEFAULT_MODEL
+  const webSearch = options?.webSearch?.enabled ? options.webSearch : undefined
+  const webSearchTool = webSearch
+    ? {
+        type: 'openrouter:web_search',
+        parameters: {
+          engine: webSearch.engine ?? 'auto',
+          max_results: webSearch.maxResults ?? 5,
+          max_total_results: webSearch.maxTotalResults ?? 10,
+          search_context_size: webSearch.searchContextSize ?? 'medium',
+          ...(webSearch.allowedDomains?.length ? { allowed_domains: webSearch.allowedDomains } : {}),
+          ...(webSearch.excludedDomains?.length ? { excluded_domains: webSearch.excludedDomains } : {}),
+        },
+      }
+    : undefined
+  const provider =
+    model === DEFAULT_MODEL
+      ? webSearch
+        ? { order: STABLE_DEEPSEEK_PROVIDER.order, allow_fallbacks: STABLE_DEEPSEEK_PROVIDER.allow_fallbacks }
+        : STABLE_DEEPSEEK_PROVIDER
+      : undefined
 
   if (!apiKey) {
     throw new Error('OPENROUTER_API_KEY is not configured in environment variables.')
@@ -106,12 +141,11 @@ export async function callAI(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: options?.model ?? DEFAULT_MODEL,
+      model,
       messages,
       temperature: options?.temperature ?? 0.7,
-      ...((options?.model ?? DEFAULT_MODEL) === DEFAULT_MODEL
-        ? { provider: STABLE_DEEPSEEK_PROVIDER }
-        : {}),
+      ...(provider ? { provider } : {}),
+      ...(webSearchTool ? { tools: [webSearchTool] } : {}),
       ...(options?.maxTokens && { max_tokens: options.maxTokens }),
     }),
   })

@@ -52,3 +52,37 @@
   display: inline-block;
   margin: 0.2rem 0;
 }
+
+.mobile-preview-body h1,
+.mobile-preview-body h2,
+.mobile-preview-body h3 {
+  color: #f8fafc;
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 1.1rem 0 0.55rem;
+}
+
+.mobile-preview-body h1 { font-size: 1.35rem; }
+.mobile-preview-body h2 { font-size: 1.15rem; }
+.mobile-preview-body h3 { font-size: 1rem; }
+
+.mobile-preview-body p {
+  margin: 0.75rem 0;
+}
+
+.mobile-preview-body ul,
+.mobile-preview-body ol {
+  margin: 0.75rem 0;
+  padding-left: 1.1rem;
+}
+
+.mobile-preview-body li {
+  margin: 0.35rem 0;
+}
+
+.mobile-preview-body blockquote {
+  border-left: 3px solid #6ee7b7;
+  color: #d1fae5;
+  margin: 1rem 0;
+  padding-left: 0.85rem;
+}

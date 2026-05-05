@@ -9,12 +9,23 @@ export interface MediaObject {
   blurhash?: string
 }
 
+export type EditorialFormat = 'legacy' | 'mobile_reader' | 'technical_guide'
+
+export interface ContentFAQItem {
+  question: string
+  answer: string
+}
+
 export interface Post {
   id: string
   title: string
   slug: string
   description?: string
-  content: string
+  content?: string
+  quick_answer?: string | null
+  key_takeaways?: string[]
+  faq?: ContentFAQItem[]
+  editorial_format?: EditorialFormat
   category?: string
   status: string
   cover_image?: string
@@ -23,6 +34,7 @@ export interface Post {
   published_at?: string
   meta_title?: string
   meta_desc?: string
+  reading_time?: number
 }
 
 interface PostSlugRedirect {
@@ -57,7 +69,11 @@ export interface Panduan {
   id: string
   title: string
   slug: string
-  content: string
+  content?: string
+  quick_answer?: string | null
+  key_takeaways?: string[]
+  faq?: ContentFAQItem[]
+  editorial_format?: EditorialFormat
   category?: string
   bab_ref?: string
   qr_slug?: string
@@ -65,6 +81,47 @@ export interface Panduan {
   cover_image?: string
   thumbnail_image?: any
   banner_image?: any
+  published_at?: string
+}
+
+const CONTENT_CACHE_TTL_MS = 5 * 60 * 1000
+const POST_LISTING_SELECT = 'id,title,slug,description,category,status,cover_image,thumbnail_image,banner_image,published_at,meta_title,meta_desc'
+const POST_SEARCH_SELECT = 'id,title,slug,description,category,status,cover_image,thumbnail_image,banner_image,published_at,quick_answer,key_takeaways,faq,content'
+const PANDUAN_LISTING_SELECT = 'id,title,slug,category,bab_ref,qr_slug,status,cover_image,thumbnail_image,banner_image,published_at'
+const PANDUAN_SEARCH_SELECT = 'id,title,slug,category,bab_ref,qr_slug,status,cover_image,thumbnail_image,banner_image,quick_answer,key_takeaways,faq,content'
+
+type CacheEntry<T> = {
+  expiresAt: number
+  value: Promise<T>
+}
+
+const contentCache = new Map<string, CacheEntry<unknown>>()
+
+function getCachedContent<T>(key: string, factory: () => Promise<T>, ttlMs = CONTENT_CACHE_TTL_MS): Promise<T> {
+  const now = Date.now()
+  const cached = contentCache.get(key) as CacheEntry<T> | undefined
+
+  if (cached && cached.expiresAt > now) {
+    return cached.value
+  }
+
+  const value = factory().catch((error) => {
+    contentCache.delete(key)
+    throw error
+  })
+
+  contentCache.set(key, {
+    expiresAt: now + ttlMs,
+    value,
+  })
+
+  return value
+}
+
+function estimateReadingTimeFromSummary(post: Pick<Post, 'title' | 'description' | 'meta_desc'>): number {
+  const text = `${post.title ?? ''} ${post.description ?? ''} ${post.meta_desc ?? ''}`.trim()
+  const words = text ? text.split(/\s+/).length : 0
+  return Math.max(1, Math.ceil(words / 200))
 }
 
 export async function getPublishedPosts(options?: {
@@ -72,25 +129,35 @@ export async function getPublishedPosts(options?: {
   limit?: number
   offset?: number
 }): Promise<Post[]> {
-  let query = supabase
-    .from('posts')
-    .select('*')
-    .eq('status', 'published')
-    .order('published_at', { ascending: false })
+  const cacheKey = `posts:list:${options?.category ?? 'all'}:${options?.limit ?? 'all'}:${options?.offset ?? 0}`
 
-  if (options?.limit) {
-    query = query.limit(options.limit)
-  }
-  if (options?.offset) {
-    query = query.range(options.offset, (options.offset + (options.limit ?? 10)) - 1)
-  }
+  return getCachedContent(cacheKey, async () => {
+    let query = supabase
+      .from('posts')
+      .select(POST_LISTING_SELECT)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
 
-  const { data, error } = await query
-  if (error) {
-    console.error('Error fetching posts:', error)
-    return []
-  }
-  return data ?? []
+    if (options?.category) {
+      query = query.eq('category', options.category)
+    }
+    if (options?.offset !== undefined) {
+      query = query.range(options.offset, (options.offset + (options.limit ?? 10)) - 1)
+    } else if (options?.limit) {
+      query = query.limit(options.limit)
+    }
+
+    const { data, error } = await query
+    if (error) {
+      console.error('Error fetching posts:', error)
+      return []
+    }
+
+    return (data ?? []).map((post) => ({
+      ...post,
+      reading_time: estimateReadingTimeFromSummary(post),
+    }))
+  })
 }
 
 async function fetchPublishedPostBySlug(slug: string): Promise<Post | null> {
@@ -204,22 +271,26 @@ export async function getRelatedPosts(currentSlug: string, category: string | un
 }
 
 export async function getPublishedPanduan(options?: { category?: string }): Promise<Panduan[]> {
-  let query = supabase
-    .from('panduan')
-    .select('*')
-    .eq('status', 'published')
-    .order('title', { ascending: true })
+  const cacheKey = `panduan:list:${options?.category ?? 'all'}`
 
-  if (options?.category) {
-    query = query.eq('category', options.category)
-  }
+  return getCachedContent(cacheKey, async () => {
+    let query = supabase
+      .from('panduan')
+      .select(PANDUAN_LISTING_SELECT)
+      .eq('status', 'published')
+      .order('title', { ascending: true })
 
-  const { data, error } = await query
-  if (error) {
-    console.error('Error fetching panduan:', error)
-    return []
-  }
-  return data ?? []
+    if (options?.category) {
+      query = query.eq('category', options.category)
+    }
+
+    const { data, error } = await query
+    if (error) {
+      console.error('Error fetching panduan:', error)
+      return []
+    }
+    return data ?? []
+  })
 }
 
 async function fetchPublishedPanduanBySlug(slug: string): Promise<Panduan | null> {
@@ -330,17 +401,215 @@ export async function getRelatedPanduan(currentSlug: string, category: string | 
 
 // ── SITE SETTINGS ──────────────────────────────────────────
 
-export async function getSiteSettings(): Promise<Record<string, string>> {
-  const { data, error } = await supabase
-    .from('site_settings')
-    .select('key, value')
-  
-  if (error) {
-    console.error('Error fetching site settings:', error)
-    return {}
+export type SearchContentType = 'post' | 'panduan'
+
+export interface SearchResultItem {
+  id: string
+  type: SearchContentType
+  title: string
+  slug: string
+  href: string
+  excerpt: string
+  category?: string
+  published_at?: string
+  image?: MediaObject | string | null
+  score: number
+}
+
+function normalizeSearchText(value?: string | string[] | null): string {
+  if (Array.isArray(value)) {
+    return value.join(' ')
   }
-  
-  return Object.fromEntries((data ?? []).map(row => [row.key, row.value]))
+
+  return String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function flattenFaq(faq?: ContentFAQItem[]): string {
+  return (faq ?? [])
+    .map((item) => `${item.question ?? ''} ${item.answer ?? ''}`)
+    .join(' ')
+}
+
+function stripContentText(value?: string | null): string {
+  return String(value ?? '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/[#>*_`~\[\](){}|\\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function createExcerpt(primary?: string | null, fallback?: string | null, maxLength = 156): string {
+  const text = stripContentText(primary || fallback || '')
+  if (text.length <= maxLength) {
+    return text
+  }
+
+  return `${text.slice(0, maxLength).trim()}...`
+}
+
+function scoreSearchMatch(terms: string[], fullQuery: string, fields: {
+  title?: string | null
+  category?: string | null
+  summary?: string | null
+  body?: string | null
+  extras?: string | null
+}) {
+  const normalizedFields = {
+    title: normalizeSearchText(fields.title),
+    category: normalizeSearchText(fields.category),
+    summary: normalizeSearchText(fields.summary),
+    body: normalizeSearchText(fields.body),
+    extras: normalizeSearchText(fields.extras),
+  }
+  const haystack = Object.values(normalizedFields).join(' ')
+
+  if (!terms.every((term) => haystack.includes(term))) {
+    return 0
+  }
+
+  let score = normalizedFields.title.includes(fullQuery) ? 18 : 0
+  for (const term of terms) {
+    if (normalizedFields.title.includes(term)) score += 9
+    if (normalizedFields.category.includes(term)) score += 5
+    if (normalizedFields.summary.includes(term)) score += 5
+    if (normalizedFields.extras.includes(term)) score += 4
+    if (normalizedFields.body.includes(term)) score += 2
+  }
+
+  return score
+}
+
+async function getSearchablePosts(): Promise<Post[]> {
+  return getCachedContent('posts:search-index', async () => {
+    const { data, error } = await supabase
+      .from('posts')
+      .select(POST_SEARCH_SELECT)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching searchable posts:', error)
+      return []
+    }
+
+    return data ?? []
+  })
+}
+
+async function getSearchablePanduan(): Promise<Panduan[]> {
+  return getCachedContent('panduan:search-index', async () => {
+    const { data, error } = await supabase
+      .from('panduan')
+      .select(PANDUAN_SEARCH_SELECT)
+      .eq('status', 'published')
+      .order('title', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching searchable panduan:', error)
+      return []
+    }
+
+    return data ?? []
+  })
+}
+
+export async function searchPublishedContent(rawQuery: string, limit = 24): Promise<SearchResultItem[]> {
+  const fullQuery = normalizeSearchText(rawQuery)
+  const terms = fullQuery.split(' ').filter(Boolean)
+
+  if (terms.length === 0) {
+    return []
+  }
+
+  const [posts, panduan] = await Promise.all([
+    getSearchablePosts(),
+    getSearchablePanduan(),
+  ])
+
+  const postResults = posts
+    .map((post) => {
+      const summary = post.description || post.quick_answer || ''
+      const extras = `${(post.key_takeaways ?? []).join(' ')} ${flattenFaq(post.faq)}`
+      const score = scoreSearchMatch(terms, fullQuery, {
+        title: post.title,
+        category: post.category,
+        summary,
+        body: post.content,
+        extras,
+      })
+
+      if (!score) return null
+
+      return {
+        id: post.id,
+        type: 'post' as const,
+        title: post.title,
+        slug: post.slug,
+        href: `/blog/${post.slug}`,
+        excerpt: createExcerpt(summary, post.content),
+        category: post.category || 'Artikel',
+        published_at: post.published_at,
+        image: post.thumbnail_image || post.banner_image || post.cover_image || null,
+        score,
+      }
+    })
+    .filter((result): result is SearchResultItem => Boolean(result))
+
+  const panduanResults = panduan
+    .map((guide) => {
+      const summary = guide.quick_answer || ''
+      const extras = `${guide.bab_ref ?? ''} ${(guide.key_takeaways ?? []).join(' ')} ${flattenFaq(guide.faq)}`
+      const score = scoreSearchMatch(terms, fullQuery, {
+        title: guide.title,
+        category: guide.category,
+        summary,
+        body: guide.content,
+        extras,
+      })
+
+      if (!score) return null
+
+      return {
+        id: guide.id,
+        type: 'panduan' as const,
+        title: guide.title,
+        slug: guide.slug,
+        href: `/panduan/${guide.slug}`,
+        excerpt: createExcerpt(summary, guide.content),
+        category: guide.category || 'Panduan',
+        image: guide.thumbnail_image || guide.banner_image || guide.cover_image || null,
+        score,
+      }
+    })
+    .filter((result): result is SearchResultItem => Boolean(result))
+
+  return [...postResults, ...panduanResults]
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score
+      return String(b.published_at ?? '').localeCompare(String(a.published_at ?? ''))
+    })
+    .slice(0, limit)
+}
+
+export async function getSiteSettings(): Promise<Record<string, string>> {
+  return getCachedContent('site-settings', async () => {
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('key, value')
+    
+    if (error) {
+      console.error('Error fetching site settings:', error)
+      return {}
+    }
+    
+    return Object.fromEntries((data ?? []).map(row => [row.key, row.value]))
+  })
 }
 
 export interface HeroSection {
@@ -354,13 +623,15 @@ export interface HeroSection {
 }
 
 export async function getHeroSection(): Promise<HeroSection | null> {
-  const { data, error } = await supabase
-    .from('hero_section')
-    .select('*')
-    .single()
-  
-  if (error) return null
-  return data
+  return getCachedContent('hero-section', async () => {
+    const { data, error } = await supabase
+      .from('hero_section')
+      .select('*')
+      .single()
+    
+    if (error) return null
+    return data
+  })
 }
 
 export interface CtaSection {
@@ -372,13 +643,15 @@ export interface CtaSection {
 }
 
 export async function getCtaSection(): Promise<CtaSection | null> {
-  const { data, error } = await supabase
-    .from('cta_section')
-    .select('*')
-    .single()
-  
-  if (error) return null
-  return data
+  return getCachedContent('cta-section', async () => {
+    const { data, error } = await supabase
+      .from('cta_section')
+      .select('*')
+      .single()
+    
+    if (error) return null
+    return data
+  })
 }
 
 export interface FooterData {
@@ -389,11 +662,13 @@ export interface FooterData {
 }
 
 export async function getFooterData(): Promise<FooterData | null> {
-  const { data, error } = await supabase
-    .from('footer')
-    .select('*')
-    .single()
-  
-  if (error) return null
-  return data
+  return getCachedContent('footer-data', async () => {
+    const { data, error } = await supabase
+      .from('footer')
+      .select('*')
+      .single()
+    
+    if (error) return null
+    return data
+  })
 }

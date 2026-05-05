@@ -4,6 +4,7 @@ import {
   generateSlug,
   generateSeoPack,
   generateFullDraft,
+  generateMobileReaderStructure,
   generateImagePrompts,
   rewriteSection,
   expandSection,
@@ -15,6 +16,7 @@ import type {
   GenerateSlugInput,
   GenerateSEOPackInput,
   GenerateFullDraftInput,
+  GenerateMobileReaderStructureInput,
   GenerateImagePromptsInput,
   RewriteSectionInput,
   ExpandSectionInput,
@@ -43,6 +45,13 @@ export async function panduanAIGenerateSeoPack(input: GenerateSEOPackInput, ctx?
 
 export async function panduanAIGenerateFullDraft(input: GenerateFullDraftInput, ctx?: PanduanContext) {
   return generateFullDraft(input, {
+    targetType: 'panduan',
+    targetId: ctx?.panduanId,
+  })
+}
+
+export async function panduanAIGenerateMobileReaderStructure(input: GenerateMobileReaderStructureInput, ctx?: PanduanContext) {
+  return generateMobileReaderStructure(input, {
     targetType: 'panduan',
     targetId: ctx?.panduanId,
   })

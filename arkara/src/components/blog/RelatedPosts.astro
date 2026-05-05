@@ -9,68 +9,166 @@ interface Props {
 
 const { currentSlug, category, contentType } = Astro.props;
 
-let relatedItems: Array<{title: string, slug: string, category?: string}> = [];
+let relatedItems: Array<{ title: string; slug: string; category?: string }> = [];
 
 if (contentType === 'blog') {
   const posts = await getRelatedPosts(currentSlug, category, 3);
-  relatedItems = posts.map(p => ({ title: p.title, slug: `/blog/${p.slug}`, category: p.category }));
+  relatedItems = posts.map((post) => ({
+    title: post.title,
+    slug: `/blog/${post.slug}`,
+    category: post.category,
+  }));
 } else {
   const guides = await getRelatedPanduan(currentSlug, category, 3);
-  relatedItems = guides.map(g => ({ title: g.title, slug: `/panduan/${g.slug}`, category: g.category }));
+  relatedItems = guides.map((guide) => ({
+    title: guide.title,
+    slug: `/panduan/${guide.slug}`,
+    category: guide.category,
+  }));
 }
 ---
 
 {relatedItems.length > 0 && (
-  <div style="margin-top: 4rem; padding-top: 2rem; border-top: 3px solid var(--ink);">
-    <h3 style="
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 1rem;
-      letter-spacing: 0.15em;
-      color: var(--green-dark);
-      margin-bottom: 2rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    ">
-      <span style="display:inline-block;width:24px;height:3px;background:var(--green-terminal);"></span>
+  <section class="related-posts" aria-labelledby="related-posts-title">
+    <h3 id="related-posts-title" class="related-posts-title">
+      <span></span>
       {contentType === 'blog' ? 'ARTIKEL TERKAIT' : 'PANDUAN TERKAIT'}
     </h3>
-    
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem;">
-      {relatedItems.map(item => (
-        <a href={item.slug} class="card-ink" style="
-          padding: 1.25rem; 
-          text-decoration: none; 
-          display: flex; 
-          flex-direction: column; 
-          gap: 0.75rem;
-          background: var(--paper-dark);
-        ">
-          <div style="
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 0.65rem;
-            color: var(--green-dark);
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-          ">
-            {item.category || 'MANDIRI'}
-          </div>
-          <h4 style="
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--ink);
-            line-height: 1.15;
-            margin: 0;
-            text-transform: uppercase;
-          ">
-            {item.title}
-          </h4>
-          <div style="margin-top: auto; padding-top: 0.75rem; font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; color: var(--green-terminal); font-weight: bold;">
-            BACA SEKARANG ➔
-          </div>
+
+    <div class="related-posts-grid">
+      {relatedItems.map((item) => (
+        <a href={item.slug} class="card-ink related-post-card">
+          <div class="related-post-kicker">{item.category || 'MANDIRI'}</div>
+          <h4 class="related-post-title">{item.title}</h4>
+          <div class="related-post-action">BACA SEKARANG</div>
         </a>
       ))}
     </div>
-  </div>
+  </section>
 )}
+
+<style>
+  .related-posts {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 3px solid var(--ink);
+  }
+
+  .related-posts-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    color: var(--green-dark);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.15em;
+  }
+
+  .related-posts-title span {
+    display: inline-block;
+    width: 24px;
+    height: 3px;
+    background: var(--green-terminal);
+  }
+
+  .related-posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .related-post-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.25rem;
+    background: var(--paper-dark);
+    text-decoration: none;
+  }
+
+  .related-post-kicker {
+    color: var(--green-dark);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .related-post-title {
+    margin: 0;
+    color: var(--ink);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.15;
+    text-transform: uppercase;
+  }
+
+  .related-post-action {
+    margin-top: auto;
+    padding-top: 0.75rem;
+    color: var(--green-terminal);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: bold;
+  }
+
+  @media (max-width: 900px) {
+    .related-posts {
+      margin-top: 2rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .related-posts-title {
+      gap: 0.6rem;
+      margin-bottom: 0.9rem;
+      color: #6ee7b7;
+      font-size: 0.72rem;
+      line-height: 1.2;
+    }
+
+    .related-posts-title span {
+      width: 1rem;
+      height: 1px;
+    }
+
+    .related-posts-grid {
+      grid-template-columns: 1fr;
+      gap: 0.6rem;
+    }
+
+    .related-post-card {
+      min-height: auto;
+      gap: 0.45rem;
+      padding: 0.85rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.045);
+      box-shadow: none;
+    }
+
+    .related-post-kicker {
+      color: #6ee7b7;
+      font-size: 0.58rem;
+      letter-spacing: 0.12em;
+    }
+
+    .related-post-title {
+      color: #f8fafc;
+      font-family: 'Barlow', sans-serif;
+      font-size: 0.96rem;
+      line-height: 1.35;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .related-post-action {
+      margin-top: 0;
+      padding-top: 0.25rem;
+      color: #94a3b8;
+      font-size: 0.62rem;
+    }
+  }
+</style>

@@ -12,16 +12,21 @@ import { MediaPicker } from './media/media-picker'
 import { AIFieldAssist } from './ai/ai-field-assist'
 import { DraftGeneratorPanel } from './ai/draft-generator-panel'
 import { ImagePromptsPanel } from './ai/image-prompts-panel'
+import { MobileReaderFields } from './mobile-reader-fields'
+import { MobileReaderPreview } from './mobile-reader-preview'
 import {
   panduanAIGenerateSlug,
   panduanAIGenerateSeoPack,
   panduanAIGenerateFullDraft,
+  panduanAIGenerateMobileReaderStructure,
   panduanAIGenerateImagePrompts,
+  panduanAIRewriteSection,
   panduanAIVerifyLatestFacts,
 } from '@/app/cms/panduan/actions-ai'
 import { getPanduanInternalLinkSuggestions, getPanduanSlugRoutingState } from '@/app/cms/panduan/actions'
 import type {
   GenerateSlugOutput,
+  GenerateFullDraftOutput,
   GenerateSEOPackOutput,
 } from '@/lib/ai/schemas'
 import type { FormAIHistoryState } from '@/lib/ai/history'
@@ -39,6 +44,13 @@ const panduanSchema = z.object({
   title: z.string().min(1, 'Judul wajib diisi'),
   slug: z.string().min(1, 'Slug wajib diisi'),
   content: z.string().catch(''),
+  quick_answer: z.string().catch(''),
+  key_takeaways: z.array(z.string()).catch([]),
+  faq: z.array(z.object({
+    question: z.string(),
+    answer: z.string(),
+  })).catch([]),
+  editorial_format: z.enum(['legacy', 'mobile_reader', 'technical_guide']).catch('legacy'),
   bab_ref: z.string().catch(''),
   qr_slug: z.string().catch(''),
   cover_image: z.string().catch(''),
@@ -82,6 +94,10 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
       title: initialData?.title || '',
       slug: initialData?.slug || '',
       content: initialData?.content || '',
+      quick_answer: initialData?.quick_answer || '',
+      key_takeaways: initialData?.key_takeaways || [],
+      faq: initialData?.faq || [],
+      editorial_format: initialData?.editorial_format || 'legacy',
       bab_ref: initialData?.bab_ref || '',
       qr_slug: initialData?.qr_slug || '',
       status: initialData?.status || 'draft',
@@ -96,6 +112,11 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
   const slugValue = watch('slug')
   const statusValue = watch('status')
   const contentValue = watch('content')
+  const quickAnswerValue = watch('quick_answer')
+  const keyTakeawaysValue = watch('key_takeaways')
+  const faqValue = watch('faq')
+  const editorialFormatValue = watch('editorial_format')
+  const coverImageValue = watch('cover_image')
   const metaDescValue = watch('meta_desc')
   const categoryValue = watch('category')
   const effectiveSlugError = errors.slug?.message || slugRouting?.exactConflict?.message
@@ -174,11 +195,35 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
     }
   }
 
+  const applyDraftMobileStructure = (data: {
+    quick_answer?: string
+    key_takeaways?: string[]
+    faq?: { question: string; answer: string }[]
+    editorial_format?: 'legacy' | 'mobile_reader' | 'technical_guide'
+  }) => {
+    setValue('quick_answer', data.quick_answer || '', { shouldDirty: true })
+    setValue('key_takeaways', data.key_takeaways || [], { shouldDirty: true })
+    setValue('faq', data.faq || [], { shouldDirty: true })
+    setValue('editorial_format', data.editorial_format || 'mobile_reader', { shouldDirty: true })
+  }
+
   const handleFormSubmit = async (data: PanduanFormValues) => {
     setIsSubmitting(true)
     setError(null)
+    const sanitizedData: PanduanFormValues = {
+      ...data,
+      quick_answer: data.quick_answer?.trim() || '',
+      key_takeaways: (data.key_takeaways ?? []).map((item) => item.trim()).filter(Boolean),
+      faq: (data.faq ?? [])
+        .map((item) => ({
+          question: item.question.trim(),
+          answer: item.answer.trim(),
+        }))
+        .filter((item) => item.question && item.answer),
+    }
+
     try {
-      await onSubmit(data)
+      await onSubmit(sanitizedData)
       router.push('/cms/panduan')
     } catch (err) {
       setError((err as Error).message)
@@ -471,6 +516,22 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
                 onReplaceContent={(markdown) => applyDraftToEditor('replace', markdown)}
                 onAppendContent={(markdown) => applyDraftToEditor('append', markdown)}
                 onApplyMetadata={applyDraftMetadata}
+                onApplyMobileStructure={applyDraftMobileStructure}
+              />
+
+              <MobileReaderFields
+                quickAnswer={quickAnswerValue || ''}
+                keyTakeaways={keyTakeawaysValue || []}
+                faq={faqValue || []}
+                editorialFormat={editorialFormatValue || 'legacy'}
+                onQuickAnswerChange={(value) => setValue('quick_answer', value, { shouldDirty: true })}
+                onKeyTakeawaysChange={(value) => setValue('key_takeaways', value, { shouldDirty: true })}
+                onFaqChange={(value) => setValue('faq', value, { shouldDirty: true })}
+                onEditorialFormatChange={(value) => setValue('editorial_format', value, { shouldDirty: true })}
+                sourceTitle={titleValue}
+                sourceContent={contentValue || ''}
+                sourceDescription={metaDescValue || undefined}
+                generateStructure={(input) => panduanAIGenerateMobileReaderStructure(input, { panduanId: recordId })}
               />
 
               <RichEditor
@@ -479,6 +540,7 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
                 aiConfig={{
                   title: titleValue,
                   verifyLatestFacts: (input) => panduanAIVerifyLatestFacts(input, { panduanId: recordId }),
+                  rewriteSection: (input) => panduanAIRewriteSection(input, { panduanId: recordId }),
                   getInternalLinkSuggestions: (input) =>
                     getPanduanInternalLinkSuggestions({
                       panduanId: initialData?.id,
@@ -495,6 +557,19 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
         </div>
 
         <div className="space-y-6 text-left">
+          <MobileReaderPreview
+            title={titleValue}
+            entityLabel="Panduan"
+            description={metaDescValue || undefined}
+            quickAnswer={quickAnswerValue || undefined}
+            keyTakeaways={keyTakeawaysValue || []}
+            faq={faqValue || []}
+            editorialFormat={editorialFormatValue || 'legacy'}
+            contentHtml={contentValue || ''}
+            imageUrl={coverImageValue || undefined}
+            category={categoryValue}
+          />
+
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-6">
             <h3 className="font-bold text-gray-900 border-b pb-3">Informasi Tambahan</h3>
             

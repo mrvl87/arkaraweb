@@ -14,63 +14,66 @@ const assistantHref = initialMode
 
 <div class="assistant-lazy-root" data-assistant-lazy-root>
   <a class="assistant-lazy-trigger" href={assistantHref} aria-label="Buka Arkara AI Assistant">
-    <span class="assistant-lazy-trigger__eyebrow">Arkara AI Assistant</span>
-    <span class="assistant-lazy-trigger__title">Buka assistant</span>
-    <span class="assistant-lazy-trigger__meta">Checklist, ringkasan, dan langkah cepat.</span>
+    <span class="assistant-lazy-trigger__logo" aria-hidden="true">A</span>
   </a>
 </div>
 
 <style>
+  .assistant-lazy-root {
+    position: fixed !important;
+    right: 1rem !important;
+    bottom: 1.1rem !important;
+    z-index: 140 !important;
+    width: 3.25rem !important;
+    height: 3.25rem !important;
+    pointer-events: none;
+  }
+
   .assistant-lazy-trigger {
-    position: fixed;
-    right: 1rem;
-    bottom: 1rem;
-    z-index: 60;
-    width: min(280px, calc(100vw - 2rem));
-    padding: 0.9rem 1rem;
-    background: var(--ink);
-    border: 3px solid var(--green-terminal);
-    box-shadow: 5px 5px 0 var(--green-terminal);
-    color: var(--cream);
+    position: relative !important;
+    z-index: 1 !important;
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    place-items: center !important;
+    border: 1px solid rgba(110, 231, 183, 0.46) !important;
+    border-radius: 999px !important;
+    background:
+      radial-gradient(circle at 32% 22%, rgba(110, 231, 183, 0.22), transparent 38%),
+      #0d1516 !important;
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.32) !important;
+    color: var(--cream) !important;
     cursor: pointer;
-    display: block;
-    text-align: left;
-    text-decoration: none;
+    overflow: hidden !important;
+    pointer-events: auto;
+    text-align: center !important;
+    text-decoration: none !important;
   }
 
-  .assistant-lazy-trigger__eyebrow,
-  .assistant-lazy-trigger__meta {
-    display: block;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.55rem;
-    letter-spacing: 0.12em;
-    color: var(--green-terminal);
-    text-transform: uppercase;
-  }
-
-  .assistant-lazy-trigger__title {
-    display: block;
-    margin: 0.2rem 0;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 1.1rem;
-    font-weight: 800;
-    line-height: 1;
-    text-transform: uppercase;
-  }
-
-  .assistant-lazy-trigger__meta {
-    color: var(--warm-grey);
-    line-height: 1.4;
-    text-transform: none;
-    letter-spacing: 0.04em;
+  .assistant-lazy-trigger__logo {
+    display: grid !important;
+    width: 2.35rem !important;
+    height: 2.35rem !important;
+    place-items: center !important;
+    border-radius: inherit !important;
+    background: rgba(110, 231, 183, 0.09) !important;
+    color: #a7f3d0 !important;
+    font-family: Georgia, 'Times New Roman', serif !important;
+    font-size: 1.42rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
   }
 
   @media (max-width: 640px) {
-    .assistant-lazy-trigger {
-      right: 0.75rem;
-      bottom: 0.75rem;
-      width: min(240px, calc(100vw - 1.5rem));
-      padding: 0.75rem 0.85rem;
+    .assistant-lazy-root {
+      right: 0.95rem !important;
+      bottom: calc(5.35rem + env(safe-area-inset-bottom)) !important;
+      width: 3.05rem !important;
+      height: 3.05rem !important;
     }
   }
 </style>

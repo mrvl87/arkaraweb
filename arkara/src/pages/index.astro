@@ -9,9 +9,11 @@
  * - CTA section: dark ink bg, flat box-shadow (no blur)
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
+import OptimizedImage from '../components/ui/OptimizedImage.astro';
 import PostCard from '../components/blog/PostCard.astro';
 import HeroCarousel from '../components/home/HeroCarousel.astro';
 import MascotSection from '../components/home/MascotSection.astro';
+import SearchAutosuggest from '../components/SearchAutosuggest.astro';
 import { getRecentPosts, getCtaSection, getSiteSettings, getHeroSection } from '../lib/content';
 
 const [recentPosts, cta, settings, hero] = await Promise.all([
@@ -42,12 +44,206 @@ const tickerItems = tickerRaw
     'Survival bukan gaya hidup — ini kebutuhan',
   ];
 const tickerDouble = [...tickerItems, ...tickerItems];
+const featuredPost = displayPosts[0];
+const continuePosts = recentPosts.slice(1, 3);
+const editorPosts = recentPosts.slice(2, 5);
+const categoryLabels: Record<string, string> = {
+  air: 'Air',
+  energi: 'Energi',
+  pangan: 'Pangan',
+  medis: 'Medis',
+  keamanan: 'Keamanan',
+  komunitas: 'Komunitas',
+  panduan: 'Panduan',
+};
+const guideCategories = [
+  { label: 'Panduan', href: '/panduan', icon: 'guide' },
+  { label: 'Energi', href: '/panduan?category=energi', icon: 'energy' },
+  { label: 'Air', href: '/panduan?category=air', icon: 'water' },
+  { label: 'Pangan', href: '/panduan?category=pangan', icon: 'food' },
+  { label: 'Medis', href: '/panduan?category=medis', icon: 'medical' },
+  { label: 'Komunitas', href: '/panduan?category=komunitas', icon: 'community' },
+];
+const fixedGuideCategory = guideCategories[0];
+const scrollGuideCategories = guideCategories.slice(1);
+
+function getPostImage(post: any) {
+  return post?.thumbnail_image || post?.banner_image || post?.cover_image;
+}
+
+function getCategoryLabel(category?: string | null) {
+  if (!category) return 'Artikel';
+  return categoryLabels[category] || category;
+}
 ---
 
 <BaseLayout title="Beranda">
+  <nav class="mobile-topic-rail" aria-label="Topik cepat">
+    <a href="/blog">Terbaru</a>
+    <a href="/panduan">Panduan</a>
+    {categories.map((cat) => (
+      <a href={`/panduan?category=${cat.slug}`}>{cat.name}</a>
+    ))}
+  </nav>
+
+  <section class="mobile-home-screen" aria-label="Beranda Arkara mobile">
+    <header class="mobile-home-header">
+      <a href="/" class="mobile-brand">Arkaraweb</a>
+      <div class="mobile-header-actions" aria-label="Aksi cepat">
+        <a href="/blog" aria-label="Artikel tersimpan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4h12v17l-6-4-6 4V4Z"/></svg>
+        </a>
+        <a href="#mobile-search" aria-label="Cari">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </a>
+      </div>
+    </header>
+
+    <SearchAutosuggest id="mobile-search" variant="mobile" placeholder="Cari panduan..." />
+
+    <nav class="mobile-home-tabs" aria-label="Kategori panduan">
+      <a href={fixedGuideCategory.href} class="mobile-category-fixed">
+        <span class="mobile-category-logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M6 4.5h8.5A3.5 3.5 0 0 1 18 8v11.5H8.5A2.5 2.5 0 0 0 6 22V4.5Z" />
+            <path d="M6 4.5A2.5 2.5 0 0 1 8.5 2H18v17.5" />
+            <path d="M9 8h6M9 11h5" />
+          </svg>
+        </span>
+        <em>{fixedGuideCategory.label}</em>
+      </a>
+
+      <div class="mobile-category-scroll">
+        {scrollGuideCategories.map((category) => (
+          <a href={category.href} aria-label={category.label}>
+          <span class="mobile-category-logo" aria-hidden="true">
+            {category.icon === 'energy' && (
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13.3 2 5 13.1h6.2L9.9 22 19 9.8h-6.4L13.3 2Z" />
+              </svg>
+            )}
+            {category.icon === 'water' && (
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5c-3.5 4.1-5.3 7.2-5.3 9.8a5.3 5.3 0 1 0 10.6 0c0-2.6-1.8-5.7-5.3-9.8Z" />
+              </svg>
+            )}
+            {category.icon === 'food' && (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M6 20c7.4-.8 11.4-4.9 12-12" />
+                <path d="M7 17c-.5-4.7 2.3-8.4 7.5-10.7 1.1-.5 2.4.4 2.2 1.6C15.8 13 12.1 16.2 7 17Z" />
+                <path d="M9 13c1.8.1 3.4.8 4.8 2.1" />
+              </svg>
+            )}
+            {category.icon === 'medical' && (
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9.6 3h4.8v6.6H21v4.8h-6.6V21H9.6v-6.6H3V9.6h6.6V3Z" />
+              </svg>
+            )}
+            {category.icon === 'community' && (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                <path d="M17 10a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                <path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
+                <path d="M14.7 14.4A4.7 4.7 0 0 1 20.5 19" />
+              </svg>
+            )}
+          </span>
+          </a>
+        ))}
+      </div>
+    </nav>
+
+    {featuredPost && (
+      <a href={`/blog/${featuredPost.slug}`} class="mobile-feature-card">
+        {getPostImage(featuredPost) && (
+          <div class="mobile-feature-image">
+            <OptimizedImage
+              image={getPostImage(featuredPost)}
+              alt={featuredPost.title}
+              class="w-full h-full object-cover"
+              aspectRatio="aspect-square"
+              loading="eager"
+              mobileMaxSrcSetWidth={400}
+              mobileSizes="38vw"
+            />
+          </div>
+        )}
+        <div class="mobile-feature-copy">
+          <span class="mobile-kicker">{getCategoryLabel(featuredPost.category)}</span>
+          <h2>{featuredPost.title}</h2>
+          <p>{featuredPost.description || 'Panduan ringkas Arkara untuk keputusan praktis saat kondisi tidak ideal.'}</p>
+          <div>
+            <span>◷</span>
+            <span>6 menit baca</span>
+            <span class="mobile-bookmark">⌑</span>
+          </div>
+        </div>
+      </a>
+    )}
+
+    <section class="mobile-reading-section">
+      <div class="mobile-section-head">
+        <h2>Lanjutkan Membaca</h2>
+        <a href="/blog">Lihat semua ›</a>
+      </div>
+      <div class="mobile-continue-list">
+        {continuePosts.map((post, index) => (
+          <a href={`/blog/${post.slug}`} class="mobile-continue-item">
+            {getPostImage(post) && (
+              <div class="mobile-continue-image">
+                <OptimizedImage
+                  image={getPostImage(post)}
+                  alt={post.title}
+                  class="w-full h-full object-cover"
+                  aspectRatio="aspect-square"
+                  loading="lazy"
+                  mobileMaxSrcSetWidth={240}
+                  mobileSizes="72px"
+                />
+              </div>
+            )}
+            <div>
+              <h3>{post.title}</h3>
+              <span>{index === 0 ? '60%' : '30%'} selesai</span>
+              <div class="mobile-progress"><i style={`width:${index === 0 ? 60 : 30}%`}></i></div>
+            </div>
+            <span class="mobile-small-bookmark">⌑</span>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="mobile-editor-section">
+      <div class="mobile-section-head">
+        <h2>Pilihan Editor</h2>
+        <a href="/blog">Lihat semua ›</a>
+      </div>
+      <div class="mobile-editor-rail">
+        {editorPosts.map((post, index) => (
+          <a href={`/blog/${post.slug}`} class="mobile-editor-card">
+            {getPostImage(post) && (
+              <div>
+                <OptimizedImage
+                  image={getPostImage(post)}
+                  alt={post.title}
+                  class="w-full h-full object-cover"
+                  aspectRatio="aspect-video"
+                  loading="lazy"
+                  mobileMaxSrcSetWidth={360}
+                  mobileSizes="42vw"
+                />
+              </div>
+            )}
+            <span>{getCategoryLabel(post.category)}</span>
+            <h3>{post.title}</h3>
+          </a>
+        ))}
+      </div>
+    </section>
+  </section>
 
   <!-- ── HERO SECTION (GRID 2 COLUMNS) ─────────────────── -->
-  <div class="grid grid-cols-1 md:grid-cols-[1fr_400px] border-b-4 border-zinc-900 bg-zinc-900 overflow-hidden">
+  <div class="home-hero-grid grid grid-cols-1 md:grid-cols-[1fr_400px] border-b-4 border-zinc-900 bg-zinc-900 overflow-hidden">
     <HeroCarousel posts={displayPosts} />
     <MascotSection 
       mascotImage={hero?.mascot_image} 
@@ -57,7 +253,7 @@ const tickerDouble = [...tickerItems, ...tickerItems];
   </div>
 
   <!-- ── WARNING BAND TICKER ───────────────────────────── -->
-  <div style="
+  <div class="home-ticker" style="
     background: var(--yellow-manual);
     border-top: 3px solid var(--ink);
     border-bottom: 3px solid var(--ink);
@@ -92,7 +288,7 @@ const tickerDouble = [...tickerItems, ...tickerItems];
   </div>
 
   <!-- ── RECENT ARTICLES ───────────────────────────────── -->
-  <section style="
+  <section class="home-feed-section" style="
     max-width: 1200px;
     margin: 0 auto;
     padding: 4rem 2rem;
@@ -158,7 +354,7 @@ const tickerDouble = [...tickerItems, ...tickerItems];
 
     <!-- Posts grid -->
     {recentPosts.length > 0 ? (
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5px; background: var(--ink); border: 3px solid var(--ink);" class="posts-grid">
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5px; background: var(--ink); border: 3px solid var(--ink);" class="posts-grid home-feed-grid">
         {displayPosts.map((post) => (
           <div style="background: var(--cream);">
             <PostCard
@@ -167,7 +363,7 @@ const tickerDouble = [...tickerItems, ...tickerItems];
               category={post.category}
               date={post.published_at || ''}
               slug={post.slug}
-              content={post.content || ''}
+              readingTime={post.reading_time}
               image={post.thumbnail_image || post.cover_image}
               sizes="(max-width: 640px) 100vw, (max-width: 900px) 50vw, 400px"
             />
@@ -187,7 +383,7 @@ const tickerDouble = [...tickerItems, ...tickerItems];
   </section>
 
   <!-- ── PILAR PENGETAHUAN ──────────────────────────────── -->
-  <section style="
+  <section class="home-category-section" style="
     background: var(--ink);
     border-top: 3px solid var(--green-terminal);
     border-bottom: 3px solid var(--green-terminal);
@@ -236,7 +432,7 @@ const tickerDouble = [...tickerItems, ...tickerItems];
       </div>
 
       <!-- Category grid — flat ink-border panels -->
-      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 1.5px; background: var(--green-terminal); border: 2px solid var(--green-terminal);" class="cat-grid">
+      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 1.5px; background: var(--green-terminal); border: 2px solid var(--green-terminal);" class="cat-grid home-category-grid">
         {categories.map((cat) => (
           <a href={`/panduan?category=${cat.slug}`} style="
             background: var(--ink);
@@ -269,7 +465,7 @@ const tickerDouble = [...tickerItems, ...tickerItems];
   </section>
 
   <!-- ── CTA / PANDUAN ─────────────────────────────────── -->
-  <section style="
+  <section class="home-cta-section" style="
     max-width: 1200px;
     margin: 0 auto;
     padding: 4rem 2rem;
@@ -366,12 +562,465 @@ const tickerDouble = [...tickerItems, ...tickerItems];
 </BaseLayout>
 
 <style>
+  .mobile-home-appbar,
+  .mobile-topic-rail,
+  .mobile-home-screen {
+    display: none;
+  }
+
   @media (max-width: 900px) {
     .posts-grid { grid-template-columns: 1fr !important; }
     .cat-grid   { grid-template-columns: repeat(3, 1fr) !important; }
     .cta-grid   { grid-template-columns: 1fr !important; }
   }
-  @media (max-width: 640px) {
-    .cat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  @media (max-width: 768px) {
+    :global(html),
+    :global(body),
+    :global(main) {
+      background: #070b0c !important;
+    }
+
+    :global(main) {
+      padding-bottom: 0 !important;
+    }
+
+    .mobile-home-appbar,
+    .mobile-topic-rail {
+      display: none !important;
+    }
+
+    .mobile-home-screen {
+      display: block;
+      min-height: 100dvh;
+      padding: 0.75rem 0.9rem calc(5.1rem + env(safe-area-inset-bottom));
+      background:
+        radial-gradient(circle at 50% -10%, rgba(110,231,183,0.08), transparent 32rem),
+        #070b0c;
+      color: #f8fafc;
+    }
+
+    .mobile-home-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-top: 0.2rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .mobile-brand {
+      color: #f3ead9;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      text-decoration: none;
+    }
+
+    .mobile-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .mobile-header-actions a {
+      color: #f8fafc;
+      display: grid;
+      height: 1.7rem;
+      width: 1.7rem;
+      place-items: center;
+      text-decoration: none;
+    }
+
+    .mobile-header-actions svg {
+      height: 1.45rem;
+      width: 1.45rem;
+    }
+
+    .mobile-home-tabs {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(7rem, 1.25fr) repeat(5, minmax(2.55rem, 1fr));
+      align-items: center;
+      gap: clamp(0.34rem, 1.35vw, 0.7rem);
+      min-height: 3.75rem;
+      margin: 0 -0.9rem 0.9rem;
+      padding: 0.25rem 0.9rem 0.45rem;
+      overflow: hidden;
+    }
+
+    .mobile-category-scroll {
+      display: contents;
+    }
+
+    .mobile-home-tabs a {
+      flex: 0 0 auto;
+      display: inline-grid;
+      align-items: center;
+      color: #dbeafe;
+      text-decoration: none;
+    }
+
+    .mobile-category-fixed {
+      z-index: 3;
+      grid-template-columns: 2rem auto;
+      gap: 0.45rem;
+      min-height: 3.05rem;
+      min-width: 0;
+      padding: 0.42rem 0.72rem 0.42rem 0.48rem;
+      border: 1px solid rgba(74,222,128,0.42);
+      border-radius: 8px;
+      background: #0b1815;
+      color: #d1fae5;
+    }
+
+    .mobile-category-scroll a {
+      justify-self: center;
+      width: clamp(2.45rem, 10.2vw, 3.15rem);
+      height: clamp(2.45rem, 10.2vw, 3.15rem);
+      place-items: center;
+      border: 0;
+      background: transparent;
+    }
+
+    .mobile-category-fixed:first-child {
+      border-color: rgba(74,222,128,0.42);
+      background: rgba(16,185,129,0.16);
+      color: #d1fae5;
+    }
+
+    .mobile-category-logo {
+      display: grid;
+      width: 100%;
+      height: 100%;
+      place-items: center;
+      border-radius: 999px;
+      border: 1px solid rgba(110,231,183,0.18);
+      background:
+        radial-gradient(circle at 35% 25%, rgba(167,243,208,0.24), transparent 36%),
+        rgba(20,83,45,0.52);
+      color: #6ee7b7;
+      line-height: 1;
+    }
+
+    .mobile-category-logo svg {
+      width: 52%;
+      height: 52%;
+    }
+
+    .mobile-category-fixed em {
+      font-style: normal;
+      font-size: 0.8rem;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .mobile-feature-card {
+      display: grid;
+      grid-template-columns: 38% 1fr;
+      gap: 0.85rem;
+      margin-bottom: 1.45rem;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.045);
+      padding: 0.7rem;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .mobile-feature-image {
+      overflow: hidden;
+      border-radius: 8px;
+      background: #111827;
+      aspect-ratio: 1;
+    }
+
+    .mobile-feature-copy {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .mobile-kicker {
+      width: fit-content;
+      border: 1px solid rgba(245,158,11,0.72);
+      border-radius: 5px;
+      color: #f59e0b;
+      padding: 0.15rem 0.42rem;
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .mobile-feature-copy h2 {
+      margin: 0;
+      color: #f3ead9;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 1.08rem;
+      line-height: 1.25;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .mobile-feature-copy p {
+      display: -webkit-box;
+      margin: 0;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      color: #a8b3bd;
+      font-size: 0.83rem;
+      line-height: 1.45;
+    }
+
+    .mobile-feature-copy div {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-top: auto;
+      color: #cbd5e1;
+      font-size: 0.82rem;
+    }
+
+    .mobile-bookmark {
+      margin-left: auto;
+      color: #f8fafc;
+      font-size: 1.25rem;
+    }
+
+    .mobile-reading-section,
+    .mobile-editor-section {
+      margin-top: 1.1rem;
+    }
+
+    .mobile-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .mobile-section-head h2 {
+      margin: 0;
+      color: #f3ead9;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 1.15rem;
+      line-height: 1.2;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .mobile-section-head a {
+      color: #cbd5e1;
+      font-size: 0.82rem;
+      text-decoration: none;
+    }
+
+    .mobile-continue-list {
+      display: grid;
+      gap: 0.4rem;
+      border: 1px solid rgba(255,255,255,0.11);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.035);
+      padding: 0.65rem;
+    }
+
+    .mobile-continue-item {
+      display: grid;
+      grid-template-columns: 4.3rem 1fr auto;
+      gap: 0.85rem;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 0.3rem 0 0.65rem;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .mobile-continue-item:last-child {
+      border-bottom: 0;
+      padding-bottom: 0.25rem;
+    }
+
+    .mobile-continue-image {
+      overflow: hidden;
+      width: 4.3rem;
+      height: 4.3rem;
+      border-radius: 7px;
+      background: #111827;
+    }
+
+    .mobile-continue-item h3 {
+      margin: 0 0 0.25rem;
+      color: #f8fafc;
+      font-family: 'Barlow', sans-serif;
+      font-size: 0.95rem;
+      line-height: 1.25;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .mobile-continue-item span {
+      color: #a8b3bd;
+      font-size: 0.78rem;
+    }
+
+    .mobile-progress {
+      height: 2px;
+      margin-top: 0.35rem;
+      background: rgba(255,255,255,0.12);
+    }
+
+    .mobile-progress i {
+      display: block;
+      height: 100%;
+      background: #63d2b5;
+    }
+
+    .mobile-small-bookmark {
+      color: #f8fafc !important;
+      font-size: 1.35rem !important;
+    }
+
+    .mobile-editor-rail {
+      display: flex;
+      gap: 0.75rem;
+      overflow-x: auto;
+      padding-bottom: 0.35rem;
+      scrollbar-width: none;
+    }
+
+    .mobile-editor-rail::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mobile-editor-card {
+      flex: 0 0 8.65rem;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.045);
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .mobile-editor-card > div {
+      height: 5.1rem;
+      overflow: hidden;
+      background: #111827;
+    }
+
+    .mobile-editor-card span {
+      display: block;
+      padding: 0.65rem 0.65rem 0.2rem;
+      color: #6ee7b7;
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .mobile-editor-card h3 {
+      margin: 0;
+      padding: 0 0.65rem 0.8rem;
+      color: #f8fafc;
+      font-family: 'Barlow', sans-serif;
+      font-size: 0.84rem;
+      line-height: 1.35;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .mobile-home-appbar {
+      position: sticky;
+      top: 0;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.9rem 1rem;
+      background: rgba(7, 11, 12, 0.92);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+    }
+
+    .mobile-home-appbar p {
+      margin: 0;
+      color: #f8fafc;
+      font-family: 'Barlow', sans-serif;
+      font-weight: 900;
+      letter-spacing: 0;
+      line-height: 1;
+    }
+
+    .mobile-home-appbar span {
+      display: block;
+      margin-top: 0.18rem;
+      color: #64748b;
+      font-size: 0.72rem;
+      line-height: 1;
+    }
+
+    .mobile-home-appbar a {
+      display: grid;
+      width: 2.35rem;
+      height: 2.35rem;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(110,231,183,0.12);
+      border: 1px solid rgba(110,231,183,0.28);
+      color: #a7f3d0;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .mobile-topic-rail {
+      display: flex;
+      gap: 0.55rem;
+      overflow-x: auto;
+      padding: 0.8rem 1rem 0.9rem;
+      background: #070b0c;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      scrollbar-width: none;
+    }
+
+    .mobile-topic-rail::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mobile-topic-rail a {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.045);
+      padding: 0.58rem 0.85rem;
+      color: #cbd5e1;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .mobile-topic-rail a:first-child {
+      background: rgba(110,231,183,0.12);
+      border-color: rgba(110,231,183,0.25);
+      color: #a7f3d0;
+    }
+
+    .home-hero-grid {
+      display: none !important;
+    }
+
+    .home-ticker,
+    .home-feed-section,
+    .home-category-section,
+    .home-cta-section {
+      display: none !important;
+    }
   }
 </style>

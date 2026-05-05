@@ -10,7 +10,7 @@
  */
 import '../styles/global.css';
 import { getFooterData } from '../lib/content';
-import AssistantWidget from '../components/assistant/AssistantWidget.astro';
+import SearchAutosuggest from '../components/SearchAutosuggest.astro';
 
 interface Props {
   title?: string;
@@ -21,15 +21,6 @@ interface Props {
   siteName?: string;
   type?: 'website' | 'article';
   robots?: string;
-  showAssistantWidget?: boolean;
-  assistantInitialMode?: 'site_guide_mode' | 'page_context_mode' | 'scenario_mode';
-  assistantContext?: {
-    url?: string;
-    title?: string;
-    pathname?: string;
-    description?: string;
-    bodyText?: string;
-  };
 }
 
 const {
@@ -40,20 +31,17 @@ const {
   canonicalHref,
   siteName = 'Arkara',
   type = 'website',
-  robots = 'index, follow',
-  showAssistantWidget = true,
-  assistantInitialMode,
-  assistantContext
+  robots = 'index, follow'
 } = Astro.props;
 const siteTitle = title ? `${title} â€” ${siteName}` : `${siteName} â€” Survive with Knowledge`;
 const siteUrl = 'https://arkaraweb.com';
 const canonicalUrl = new URL(canonicalHref || Astro.url.pathname, siteUrl);
+const currentPath = Astro.url.pathname;
 const footerData = await getFooterData();
 
 const navLinks = [
   { label: 'BLOG',    href: '/blog' },
   { label: 'PANDUAN', href: '/panduan' },
-  { label: 'ASSISTANT', href: '/assistant' },
 ];
 
 const footerTagline = footerData?.tagline?.trim()
@@ -219,15 +207,7 @@ if (Astro.response.status < 300) {
         ))}
       </ul>
 
-      <!-- Status -->
-      <div style="
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 0.6rem;
-        color: var(--yellow-manual);
-        letter-spacing: 0.1em;
-      " class="nav-status-desktop">
-        â—‰ SISTEM AKTIF
-      </div>
+      <SearchAutosuggest variant="desktop" placeholder="Cari..." />
 
       <!-- Mobile hamburger -->
       <button id="nav-mobile-btn" class="nav-mobile-btn" aria-label="Menu" style="display: none;">
@@ -262,6 +242,29 @@ if (Astro.response.status < 300) {
         ">{link.label}</a>
       ))}
     </div>
+
+    <nav class="mobile-bottom-nav" aria-label="Navigasi bawah">
+      <a href="/" class={currentPath === '/' ? 'active' : ''} aria-label="Beranda">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.5Z"/></svg>
+        <span>Beranda</span>
+      </a>
+      <a href="/blog" class={currentPath.startsWith('/blog') ? 'active' : ''} aria-label="Artikel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h9l3 3v15H6V3Z"/><path d="M14 3v4h4M8.5 11h7M8.5 15h7"/></svg>
+        <span>Artikel</span>
+      </a>
+      <a href="/#mobile-search" aria-label="Cari">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span>Cari</span>
+      </a>
+      <a href="/panduan" class={currentPath.startsWith('/panduan') ? 'active' : ''} aria-label="Panduan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"/><path d="M4 5.5A2.5 2.5 0 0 1 6.5 8H20"/></svg>
+        <span>Panduan</span>
+      </a>
+      <a href="/login" class={currentPath.startsWith('/login') ? 'active' : ''} aria-label="Profil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>
+        <span>Profil</span>
+      </a>
+    </nav>
 
     <!-- â”€â”€ MAIN CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <main>
@@ -434,12 +437,63 @@ if (Astro.response.status < 300) {
         animation: blink 1.2s steps(1) infinite;
       }
 
+      .mobile-bottom-nav {
+        display: none;
+      }
+
       /* Responsive nav */
       @media (max-width: 768px) {
-        .nav-links-desktop  { display: none !important; }
-        .nav-status-desktop { display: none !important; }
-        .nav-mobile-btn     { display: flex !important; background: none; border: none; cursor: pointer; padding: 0; }
-        .footer-grid        { grid-template-columns: 1fr !important; gap: 2rem !important; }
+        #main-nav,
+        #nav-mobile-menu {
+          display: none !important;
+        }
+
+        main {
+          padding-bottom: calc(78px + env(safe-area-inset-bottom));
+        }
+
+        footer {
+          display: none !important;
+        }
+
+        .mobile-bottom-nav {
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 120;
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 0.2rem;
+          padding: 0.55rem 0.75rem calc(0.65rem + env(safe-area-inset-bottom));
+          border-top: 1px solid rgba(255,255,255,0.12);
+          background: rgba(7,11,12,0.94);
+          backdrop-filter: blur(18px);
+        }
+
+        .mobile-bottom-nav a {
+          display: grid;
+          justify-items: center;
+          gap: 0.25rem;
+          color: #e2e8f0;
+          font-size: 0.68rem;
+          text-decoration: none;
+          line-height: 1;
+        }
+
+        .mobile-bottom-nav a.active {
+          color: #63d2b5;
+        }
+
+        .mobile-bottom-nav svg {
+          width: 1.45rem;
+          height: 1.45rem;
+        }
+
+        .mobile-bottom-nav span {
+          font-family: 'Barlow', system-ui, sans-serif;
+          font-weight: 500;
+        }
       }
     </style>
 
@@ -452,9 +506,6 @@ if (Astro.response.status < 300) {
       });
     </script>
 
-    {showAssistantWidget && (
-      <AssistantWidget initialMode={assistantInitialMode} context={assistantContext} />
-    )}
   </body>
 </html>
 

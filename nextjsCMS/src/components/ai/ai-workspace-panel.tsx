@@ -215,6 +215,14 @@ export function AIWorkspacePanel({
               title="Draft Metadata"
               rawJson={data}
               fields={[
+                ...(data.editorial_format ? [{ label: 'Format Editorial', value: data.editorial_format }] : []),
+                ...(data.quick_answer ? [{ label: 'Jawaban Singkat', value: data.quick_answer }] : []),
+                ...(data.key_takeaways?.length
+                  ? [{ label: 'Inti Artikel', value: data.key_takeaways.join('\n') }]
+                  : []),
+                ...(data.faq?.length
+                  ? [{ label: 'FAQ', value: data.faq.map((item) => `${item.question}\n${item.answer}`).join('\n\n') }]
+                  : []),
                 ...(data.suggested_slug ? [{ label: 'Slug', value: data.suggested_slug }] : []),
                 ...(data.suggested_meta_title
                   ? [{ label: 'Meta Title', value: data.suggested_meta_title }]
