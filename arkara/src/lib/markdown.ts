@@ -1,4 +1,5 @@
 import { marked } from 'marked'
+import { rewriteHtmlMediaUrls } from './media'
 
 marked.setOptions({
   gfm: true,
@@ -34,6 +35,8 @@ export function renderContent(content: string): string {
   let html = trimmed.startsWith('<') 
     ? trimmed 
     : marked.parse(trimmed) as string
+
+  html = rewriteHtmlMediaUrls(html)
 
   // Inject IDs into h2 and h3 tags for TOC navigation
   const seenHeadingIds = new Map<string, number>()

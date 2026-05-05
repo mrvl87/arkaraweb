@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
+import sharp from 'sharp';
+import { SUPABASE_PUBLIC_MEDIA_BASE } from '../../lib/media';
 
-const SUPABASE_PUBLIC_MEDIA_BASE =
-  'https://zythkkmygravwelxbwtf.supabase.co/storage/v1/object/public/media/';
 const MEDIA_CACHE_CONTROL = 'public, max-age=31536000, s-maxage=31536000, immutable';
 const MEDIA_CACHE_EXPIRES = new Date(Date.now() + 31536000 * 1000).toUTCString();
 const MEMORY_CACHE_TTL_MS = 60 * 60 * 1000;
@@ -15,6 +15,21 @@ type MemoryMediaEntry = {
 };
 
 const memoryMediaCache = new Map<string, MemoryMediaEntry>();
+const TRANSFORMABLE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+function parseDimension(value: string | null) {
+  const width = Number.parseInt(value || '', 10);
+  if (!Number.isFinite(width) || width <= 0) return undefined;
+
+  return Math.min(Math.max(width, 64), 1600);
+}
+
+function parseQuality(value: string | null) {
+  const quality = Number.parseInt(value || '', 10);
+  if (!Number.isFinite(quality) || quality <= 0) return 74;
+
+  return Math.min(Math.max(quality, 45), 86);
+}
 
 function createHeaders(values: Record<string, string>) {
   const headers = new Headers(values);
@@ -33,6 +48,9 @@ function setMemoryMediaCache(key: string, entry: MemoryMediaEntry) {
 
 export const GET: APIRoute = async ({ params, request }) => {
   const mediaPath = params.path;
+  const requestUrl = new URL(request.url);
+  const variantWidth = parseDimension(requestUrl.searchParams.get('w'));
+  const variantQuality = parseQuality(requestUrl.searchParams.get('q'));
 
   if (!mediaPath || mediaPath.includes('..')) {
     return new Response('Not found', { status: 404 });
@@ -42,7 +60,9 @@ export const GET: APIRoute = async ({ params, request }) => {
     .split('/')
     .map((segment) => encodeURIComponent(decodeURIComponent(segment)))
     .join('/');
-  const cacheKey = upstreamPath;
+  const cacheKey = variantWidth
+    ? `${upstreamPath}?w=${variantWidth}&q=${variantQuality}`
+    : upstreamPath;
   const cached = memoryMediaCache.get(cacheKey);
 
   if (cached && cached.expiresAt > Date.now()) {
@@ -75,8 +95,34 @@ export const GET: APIRoute = async ({ params, request }) => {
     'Content-Type': upstreamResponse.headers.get('Content-Type') ?? 'application/octet-stream',
     Vary: 'Accept',
   });
-  const upstreamEtag = upstreamResponse.headers.get('ETag');
-  const upstreamLastModified = upstreamResponse.headers.get('Last-Modified');
+  let contentType = upstreamResponse.headers.get('Content-Type') ?? 'application/octet-stream';
+  let upstreamEtag = upstreamResponse.headers.get('ETag');
+  let upstreamLastModified = upstreamResponse.headers.get('Last-Modified');
+  let body: Buffer | ArrayBuffer = Buffer.from(await upstreamResponse.arrayBuffer());
+
+  if (variantWidth && TRANSFORMABLE_TYPES.has(contentType.split(';')[0].trim().toLowerCase())) {
+    try {
+      body = await sharp(body)
+        .rotate()
+        .resize({
+          width: variantWidth,
+          withoutEnlargement: true,
+        })
+        .webp({
+          quality: variantQuality,
+          effort: 4,
+        })
+        .toBuffer();
+      contentType = 'image/webp';
+      upstreamEtag = null;
+      upstreamLastModified = null;
+      headers.set('X-Arkara-Media-Variant', `${variantWidth}w-q${variantQuality}`);
+    } catch {
+      headers.set('X-Arkara-Media-Variant', 'fallback-original');
+    }
+  }
+
+  headers.set('Content-Type', contentType);
 
   if (upstreamEtag) {
     headers.set('ETag', upstreamEtag);
@@ -86,18 +132,18 @@ export const GET: APIRoute = async ({ params, request }) => {
     headers.set('Last-Modified', upstreamLastModified);
   }
 
-  const body = await upstreamResponse.arrayBuffer();
   const headerValues = Object.fromEntries(headers.entries());
+  const bodySize = Buffer.isBuffer(body) ? body.byteLength : body.byteLength;
 
-  if (body.byteLength <= MEMORY_CACHE_MAX_BYTES) {
+  if (bodySize <= MEMORY_CACHE_MAX_BYTES) {
     setMemoryMediaCache(cacheKey, {
       expiresAt: Date.now() + MEMORY_CACHE_TTL_MS,
-      body,
+      body: Buffer.isBuffer(body) ? body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) : body,
       headers: headerValues,
     });
   }
 
-  return new Response(body.slice(0), {
+  return new Response(Buffer.isBuffer(body) ? body : body.slice(0), {
     status: 200,
     headers: new Headers(headerValues),
   });

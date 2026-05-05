@@ -186,7 +186,10 @@ const ogImageAlt = typeof coverImage === 'string'
               fetchpriority="high"
               sizes="(max-width: 1200px) 100vw, 1200px"
               mobileMaxSrcSetWidth={800}
+              mobileTargetWidths={[400, 640, 800]}
+              targetWidths={[800, 1200]}
               mobileSizes="100vw"
+              quality={74}
             />
           </div>
         )}

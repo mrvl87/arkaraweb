@@ -164,7 +164,10 @@ function getCategoryLabel(category?: string | null) {
               aspectRatio="aspect-square"
               loading="eager"
               mobileMaxSrcSetWidth={400}
+              mobileTargetWidths={[160, 240, 320, 400]}
+              targetWidths={[320, 400]}
               mobileSizes="38vw"
+              quality={72}
             />
           </div>
         )}
@@ -198,7 +201,10 @@ function getCategoryLabel(category?: string | null) {
                   aspectRatio="aspect-square"
                   loading="lazy"
                   mobileMaxSrcSetWidth={240}
+                  mobileTargetWidths={[120, 160, 240]}
+                  targetWidths={[160, 240]}
                   mobileSizes="72px"
+                  quality={70}
                 />
               </div>
             )}
@@ -230,7 +236,10 @@ function getCategoryLabel(category?: string | null) {
                   aspectRatio="aspect-video"
                   loading="lazy"
                   mobileMaxSrcSetWidth={360}
+                  mobileTargetWidths={[160, 240, 320, 360]}
+                  targetWidths={[240, 360]}
                   mobileSizes="42vw"
+                  quality={72}
                 />
               </div>
             )}

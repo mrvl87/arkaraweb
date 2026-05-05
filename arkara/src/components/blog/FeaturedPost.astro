@@ -46,9 +46,12 @@ class="featured-grid featured-post"
       loading="eager"
       fetchpriority="high"
       maxSrcSetWidth={800}
-      mobileMaxSrcSetWidth={400}
-      mobileSizes="100vw"
+      mobileMaxSrcSetWidth={320}
+      mobileTargetWidths={[160, 240, 320]}
+      targetWidths={[400, 640, 800]}
+      mobileSizes="128px"
       sizes="(max-width: 768px) 100vw, 50vw"
+      quality={72}
     />
     <!-- TERBARU stamp -->
     <div class="featured-stamp" style="

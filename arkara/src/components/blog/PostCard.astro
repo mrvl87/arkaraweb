@@ -53,8 +53,12 @@ onmouseout="this.style.transform='';this.style.boxShadow='5px 5px 0 var(--ink)'"
         style="filter: saturate(0.65) contrast(1.08); display: block; aspect-ratio: 16/9;"
         aspectRatio="aspect-video"
         sizes={sizes}
-        mobileMaxSrcSetWidth={400}
+        mobileMaxSrcSetWidth={240}
         maxSrcSetWidth={400}
+        mobileTargetWidths={[160, 240]}
+        targetWidths={[240, 320, 400]}
+        mobileSizes="96px"
+        quality={70}
       />
       <!-- Category stamp -->
       <div class="post-card-stamp" style="

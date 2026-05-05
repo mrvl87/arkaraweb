@@ -50,7 +50,10 @@ const categoryLabels: Record<string, string> = {
                 fetchpriority={index === 0 ? 'high' : 'auto'}
                 sizes="(max-width: 768px) 100vw, calc(100vw - 400px)"
                 mobileMaxSrcSetWidth={800}
+                mobileTargetWidths={[360, 480, 640, 800]}
+                targetWidths={[800, 1200]}
                 mobileSizes="100vw"
+                quality={74}
               />
               <!-- Flat dark overlays, no blur -->
               <div style="position:absolute;inset:0;background:rgba(42,34,24,0.6);"></div>
@@ -247,9 +250,13 @@ const categoryLabels: Record<string, string> = {
     const dotBtns = document.querySelectorAll('.carousel-dot');
 
     if (!container) return;
+    if ((container as HTMLElement).dataset.carouselBound === 'true') return;
+    (container as HTMLElement).dataset.carouselBound = 'true';
+
     const slides = container.children;
     const total = slides.length;
     if (total === 0) return;
+    const shouldAutoplay = !window.matchMedia('(max-width: 768px), (prefers-reduced-motion: reduce)').matches;
 
     let current = 0;
 
@@ -266,7 +273,6 @@ const categoryLabels: Record<string, string> = {
       });
     }
 
-    goTo(0);
     prevBtn?.addEventListener('click', () => goTo(current - 1));
     nextBtn?.addEventListener('click', () => goTo(current + 1));
     dotBtns.forEach(btn => {
@@ -275,14 +281,20 @@ const categoryLabels: Record<string, string> = {
       });
     });
 
-    let timer = setInterval(() => goTo(current + 1), 6000);
-    container.addEventListener('mouseenter', () => clearInterval(timer));
-    container.addEventListener('mouseleave', () => {
-      clearInterval(timer);
-      timer = setInterval(() => goTo(current + 1), 6000);
-    });
+    if (shouldAutoplay) {
+      let timer = window.setInterval(() => goTo(current + 1), 6000);
+      container.addEventListener('mouseenter', () => clearInterval(timer));
+      container.addEventListener('mouseleave', () => {
+        clearInterval(timer);
+        timer = window.setInterval(() => goTo(current + 1), 6000);
+      });
+    }
   }
 
-  setupCarousel();
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(() => setupCarousel(), { timeout: 1200 });
+  } else {
+    window.setTimeout(setupCarousel, 0);
+  }
   document.addEventListener('astro:after-swap', setupCarousel);
 </script>
