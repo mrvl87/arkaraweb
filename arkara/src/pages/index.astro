@@ -1081,6 +1081,103 @@ function getCategoryLabel(category?: string | null) {
       fill: currentColor;
     }
 
+    :global(.mobile-home-screen .mobile-continue-item) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.7rem;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 0.55rem 0;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    :global(.mobile-home-screen .mobile-continue-item:last-child) {
+      border-bottom: 0;
+      padding-bottom: 0.45rem;
+    }
+
+    :global(.mobile-home-screen .mobile-continue-link) {
+      display: grid;
+      grid-template-columns: 4rem minmax(0, 1fr);
+      gap: 0.72rem;
+      align-items: center;
+      min-width: 0;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    :global(.mobile-home-screen .mobile-continue-link > .mobile-small-bookmark) {
+      display: none !important;
+    }
+
+    :global(.mobile-home-screen .mobile-continue-image) {
+      overflow: hidden;
+      width: 4rem;
+      height: 4rem;
+      border-radius: 7px;
+      background: #111827;
+    }
+
+    :global(.mobile-home-screen .mobile-continue-image img) {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    :global(.mobile-home-screen .mobile-continue-item h3) {
+      margin: 0 0 0.25rem;
+      color: #f8fafc;
+      font-family: 'Barlow', sans-serif;
+      font-size: 0.88rem;
+      line-height: 1.23;
+      text-transform: none;
+      letter-spacing: 0;
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    :global(.mobile-home-screen .mobile-continue-item span) {
+      color: #a8b3bd;
+      font-size: 0.74rem;
+    }
+
+    :global(.mobile-home-screen .mobile-progress) {
+      height: 2px;
+      margin-top: 0.35rem;
+      background: rgba(255,255,255,0.12);
+    }
+
+    :global(.mobile-home-screen .mobile-progress i) {
+      display: block;
+      height: 100%;
+      background: #63d2b5;
+    }
+
+    :global(.mobile-home-screen .mobile-small-bookmark) {
+      display: grid;
+      width: 1.85rem;
+      height: 1.85rem;
+      place-items: center;
+      border: 0;
+      background: transparent;
+      color: #f8fafc !important;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    :global(.mobile-home-screen .mobile-small-bookmark svg) {
+      width: 1rem;
+      height: 1rem;
+    }
+
+    :global(.mobile-home-screen .mobile-small-bookmark.is-saved) {
+      color: #63d2b5 !important;
+    }
+
     .mobile-editor-rail {
       display: flex;
       gap: 0.75rem;
