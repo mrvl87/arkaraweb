@@ -15,6 +15,7 @@ import HeroCarousel from '../components/home/HeroCarousel.astro';
 import MascotSection from '../components/home/MascotSection.astro';
 import SearchAutosuggest from '../components/SearchAutosuggest.astro';
 import { getRecentPosts, getCtaSection, getSiteSettings, getHeroSection } from '../lib/content';
+import { rewriteMediaUrl } from '../lib/media';
 
 const [recentPosts, cta, settings, hero] = await Promise.all([
   getRecentPosts(5),
@@ -69,6 +70,15 @@ const scrollGuideCategories = guideCategories.slice(1);
 
 function getPostImage(post: any) {
   return post?.thumbnail_image || post?.banner_image || post?.cover_image;
+}
+
+function getPostImageUrl(post: any) {
+  const image = getPostImage(post);
+  const rawUrl = typeof image === 'string'
+    ? image
+    : image?.formats?.sm || image?.formats?.md || image?.url || image?.src || '';
+
+  return rawUrl ? rewriteMediaUrl(rawUrl, { width: 160, quality: 70 }) : '';
 }
 
 function getCategoryLabel(category?: string | null) {
@@ -160,7 +170,18 @@ function getCategoryLabel(category?: string | null) {
     </nav>
 
     {featuredPost && (
-      <a href={`/blog/${featuredPost.slug}`} class="mobile-feature-card">
+      <a
+        href={`/blog/${featuredPost.slug}`}
+        class="mobile-feature-card"
+        data-reader-card
+        data-reader-id={`blog:${featuredPost.slug}`}
+        data-reader-type="blog"
+        data-reader-slug={featuredPost.slug}
+        data-reader-title={featuredPost.title}
+        data-reader-href={`/blog/${featuredPost.slug}`}
+        data-reader-image={getPostImageUrl(featuredPost)}
+        data-reader-category={getCategoryLabel(featuredPost.category)}
+      >
         {getPostImage(featuredPost) && (
           <div class="mobile-feature-image">
             <OptimizedImage
@@ -195,9 +216,20 @@ function getCategoryLabel(category?: string | null) {
         <h2>Lanjutkan Membaca</h2>
         <a href="/blog">Lihat semua ›</a>
       </div>
-      <div class="mobile-continue-list">
-        {continuePosts.map((post, index) => (
-          <a href={`/blog/${post.slug}`} class="mobile-continue-item">
+      <div class="mobile-continue-list" data-mobile-continue-list>
+        {continuePosts.map((post) => (
+          <article
+            class="mobile-continue-item"
+            data-reader-card
+            data-reader-id={`blog:${post.slug}`}
+            data-reader-type="blog"
+            data-reader-slug={post.slug}
+            data-reader-title={post.title}
+            data-reader-href={`/blog/${post.slug}`}
+            data-reader-image={getPostImageUrl(post)}
+            data-reader-category={getCategoryLabel(post.category)}
+          >
+          <a href={`/blog/${post.slug}`} class="mobile-continue-link">
             {getPostImage(post) && (
               <div class="mobile-continue-image">
                 <OptimizedImage
@@ -216,11 +248,17 @@ function getCategoryLabel(category?: string | null) {
             )}
             <div>
               <h3>{post.title}</h3>
-              <span>{index === 0 ? '60%' : '30%'} selesai</span>
-              <div class="mobile-progress"><i style={`width:${index === 0 ? 60 : 30}%`}></i></div>
+              <span data-reader-progress-label>Mulai baca</span>
+              <div class="mobile-progress"><i data-reader-progress-bar style="width:0%"></i></div>
             </div>
             <span class="mobile-small-bookmark">⌑</span>
           </a>
+          <button type="button" class="mobile-small-bookmark reader-save-button" data-reader-save aria-pressed="false" aria-label="Simpan artikel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
+              <path d="M7 4h10v16l-5-3.2L7 20V4Z"></path>
+            </svg>
+          </button>
+          </article>
         ))}
       </div>
     </section>
@@ -258,6 +296,13 @@ function getCategoryLabel(category?: string | null) {
   </section>
 
   <!-- ── HERO SECTION (GRID 2 COLUMNS) ─────────────────── -->
+  <script>
+    import { enhanceMobileReadingList } from '../lib/reader-state';
+
+    enhanceMobileReadingList();
+    document.addEventListener('astro:after-swap', enhanceMobileReadingList);
+  </script>
+
   <div class="home-hero-grid grid grid-cols-1 md:grid-cols-[1fr_400px] border-b-4 border-zinc-900 bg-zinc-900 overflow-hidden">
     <HeroCarousel posts={displayPosts} />
     <MascotSection 
@@ -893,6 +938,10 @@ function getCategoryLabel(category?: string | null) {
       font-size: 1.25rem;
     }
 
+    .mobile-bookmark.is-saved {
+      color: #63d2b5;
+    }
+
     .mobile-reading-section,
     .mobile-editor-section {
       margin-top: 1.1rem;
@@ -933,13 +982,27 @@ function getCategoryLabel(category?: string | null) {
 
     .mobile-continue-item {
       display: grid;
-      grid-template-columns: 4.3rem 1fr auto;
-      gap: 0.85rem;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.7rem;
       align-items: center;
       border-bottom: 1px solid rgba(255,255,255,0.08);
       padding: 0.3rem 0 0.65rem;
       color: inherit;
       text-decoration: none;
+    }
+
+    .mobile-continue-link {
+      display: grid;
+      grid-template-columns: 4.3rem minmax(0, 1fr);
+      gap: 0.85rem;
+      align-items: center;
+      min-width: 0;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .mobile-continue-link > .mobile-small-bookmark {
+      display: none !important;
     }
 
     .mobile-continue-item:last-child {
@@ -953,6 +1016,13 @@ function getCategoryLabel(category?: string | null) {
       height: 4.3rem;
       border-radius: 7px;
       background: #111827;
+    }
+
+    .mobile-continue-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     .mobile-continue-item h3 {
@@ -983,8 +1053,28 @@ function getCategoryLabel(category?: string | null) {
     }
 
     .mobile-small-bookmark {
+      display: grid;
+      width: 2.1rem;
+      height: 2.1rem;
+      place-items: center;
+      border: 0;
+      background: transparent;
       color: #f8fafc !important;
-      font-size: 1.35rem !important;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .mobile-small-bookmark svg {
+      width: 1.15rem;
+      height: 1.15rem;
+    }
+
+    .mobile-small-bookmark.is-saved {
+      color: #63d2b5 !important;
+    }
+
+    .mobile-small-bookmark.is-saved svg {
+      fill: currentColor;
     }
 
     .mobile-editor-rail {

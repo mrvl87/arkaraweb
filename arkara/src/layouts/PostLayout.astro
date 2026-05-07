@@ -15,6 +15,7 @@ import ReadingMeta from '../components/blog/ReadingMeta.astro';
 import TableOfContents from '../components/blog/TableOfContents.astro';
 import RelatedPosts from '../components/blog/RelatedPosts.astro';
 import { calculateReadingTime } from '../lib/markdown';
+import { rewriteMediaUrl } from '../lib/media';
 
 interface Props {
   title: string;
@@ -83,6 +84,20 @@ const ogImageUrl = resolveSocialImage(coverImage);
 const ogImageAlt = typeof coverImage === 'string'
   ? title
   : coverImage?.alt_text || title;
+const readerImageUrl = ogImageUrl ? rewriteMediaUrl(ogImageUrl, { width: 240, quality: 70 }) : undefined;
+const readerType = contentType === 'panduan' ? 'panduan' : 'blog';
+const readerHref = canonicalHref || (currentSlug ? `/${readerType === 'panduan' ? 'panduan' : 'blog'}/${currentSlug}` : '#');
+const readerMeta = {
+  id: `${readerType}:${currentSlug || title}`,
+  type: readerType,
+  slug: currentSlug || '',
+  title,
+  href: readerHref,
+  image: readerImageUrl,
+  category,
+  readingTime,
+};
+const readerMetaJson = JSON.stringify(readerMeta).replace(/</g, '\\u003c');
 
 ---
 
@@ -687,6 +702,21 @@ const ogImageAlt = typeof coverImage === 'string'
       line-height: 1.65;
     }
   </style>
+
+  <script id="arkara-reader-meta" type="application/json" set:html={readerMetaJson}></script>
+
+  <script>
+    import { trackCurrentReaderContent } from '../lib/reader-state';
+
+    const readerMetaElement = document.getElementById('arkara-reader-meta');
+    if (readerMetaElement?.textContent) {
+      try {
+        trackCurrentReaderContent(JSON.parse(readerMetaElement.textContent));
+      } catch {
+        // Keep the article readable if metadata cannot be parsed.
+      }
+    }
+  </script>
 
   <script>
     const mobileTocLinks = document.querySelectorAll('[data-mobile-toc-link]');
