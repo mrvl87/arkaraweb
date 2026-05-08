@@ -31,6 +31,12 @@ interface OpenRouterWebSearchOptions {
   excludedDomains?: string[]
 }
 
+interface EmptyAIResponseDetails {
+  model: string
+  finishReason?: string
+  nativeFinishReason?: string
+}
+
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions'
 const DEFAULT_MODEL = 'deepseek/deepseek-v4-pro'
 const OPENROUTER_TIMEOUT_MS = 90000
@@ -40,6 +46,18 @@ const STABLE_DEEPSEEK_PROVIDER = {
   allow_fallbacks: true,
   require_parameters: true,
 } as const
+
+export class EmptyAIResponseError extends Error {
+  public details: EmptyAIResponseDetails
+
+  constructor(details: EmptyAIResponseDetails) {
+    const finishReason = details.finishReason ? ` finish_reason=${details.finishReason}` : ''
+    const nativeFinishReason = details.nativeFinishReason ? ` native_finish_reason=${details.nativeFinishReason}` : ''
+    super(`AI returned an empty response.${finishReason}${nativeFinishReason}`.trim())
+    this.name = 'EmptyAIResponseError'
+    this.details = details
+  }
+}
 
 function isRetryableOpenRouterError(error: unknown): boolean {
   if (!(error instanceof Error)) {
@@ -56,6 +74,40 @@ function isRetryableOpenRouterError(error: unknown): boolean {
     message.includes('timeout') ||
     message.includes('timed out')
   )
+}
+
+function extractMessageContent(content: unknown): string {
+  if (typeof content === 'string') {
+    return content.trim()
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === 'string') {
+          return part
+        }
+
+        if (!part || typeof part !== 'object') {
+          return ''
+        }
+
+        const typedPart = part as Record<string, unknown>
+        if (typeof typedPart.text === 'string') {
+          return typedPart.text
+        }
+
+        if (typeof typedPart.content === 'string') {
+          return typedPart.content
+        }
+
+        return ''
+      })
+      .join('\n')
+      .trim()
+  }
+
+  return ''
 }
 
 async function fetchOpenRouter(
@@ -170,13 +222,18 @@ export async function callAI(
 
   const data = await response.json()
   const choice = data.choices?.[0]
+  const content = extractMessageContent(choice?.message?.content)
 
-  if (!choice?.message?.content) {
-    throw new Error('AI returned an empty response.')
+  if (!content) {
+    throw new EmptyAIResponseError({
+      model: data.model || model,
+      finishReason: choice?.finish_reason,
+      nativeFinishReason: choice?.native_finish_reason,
+    })
   }
 
   return {
-    content: choice.message.content,
+    content,
     model: data.model || DEFAULT_MODEL,
     usage: data.usage,
   }

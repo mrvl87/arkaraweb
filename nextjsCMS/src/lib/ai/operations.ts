@@ -13,7 +13,7 @@
  */
 
 import { z } from 'zod'
-import { callAI } from './client'
+import { callAI, EmptyAIResponseError } from './client'
 import { parseAIResponse, parseWithRetry } from './parser'
 import { logGeneration } from './logger'
 import { getInternalLinksContext } from './context'
@@ -102,6 +102,9 @@ interface OperationAIOptions {
   repairMaxTokens?: number
   repairTimeoutMs?: number
   repairMaxRetries?: number
+  retryWithoutWebSearchOnEmpty?: boolean
+  emptyResponseFallbackInstruction?: string
+  emptyResponseFallbackTimeoutMs?: number
   webSearch?: {
     enabled: boolean
     engine?: 'auto' | 'native' | 'exa' | 'firecrawl' | 'parallel'
@@ -129,6 +132,11 @@ const FULL_DRAFT_REPAIR_INSTRUCTION = `Struktur JSON wajib:
   "suggested_meta_desc": "deskripsi meta maks 155 karakter"
 }
 Jika input sebelumnya berupa artikel Markdown biasa, gunakan Markdown itu sebagai field content, lalu buat quick_answer, key_takeaways, faq, dan metadata dari isi yang sama. Jangan menambah klaim baru saat repair.`
+const FULL_DRAFT_EMPTY_FALLBACK_INSTRUCTION = `Panggilan web search sebelumnya tidak menghasilkan final answer. Ulangi tugas dengan aturan berikut:
+- Tetap balas hanya JSON valid sesuai kontrak.
+- Jangan memakai atau mengarang data terbaru, angka sensitif waktu, kutipan berita, kurs, harga, atau statistik baru kecuali sudah ada eksplisit di brief.
+- Jika topik membutuhkan data terbaru tetapi tidak tersedia, gunakan framing aman seperti "data terbaru perlu diverifikasi ulang" atau hilangkan angka tersebut.
+- Prioritaskan draft mobile-first yang padat, praktis, dan siap masuk CMS.`
 
 function normalizeSingleLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
@@ -440,6 +448,9 @@ export async function generateFullDraft(
     repairMaxTokens: FULL_DRAFT_MAX_TOKENS,
     repairTimeoutMs: FULL_DRAFT_REPAIR_TIMEOUT_MS,
     repairMaxRetries: 0,
+    retryWithoutWebSearchOnEmpty: true,
+    emptyResponseFallbackInstruction: FULL_DRAFT_EMPTY_FALLBACK_INSTRUCTION,
+    emptyResponseFallbackTimeoutMs: 60000,
     webSearch: {
       enabled: true,
       engine: 'auto',
@@ -660,7 +671,32 @@ async function runOperation<TInput extends Record<string, unknown>, TOutput exte
     const messages = await Promise.resolve(buildMessages(validInput))
 
     // 3. Call AI
-    const aiResponse = await callAI(messages, aiOptions)
+    let aiResponse
+    try {
+      aiResponse = await callAI(messages, aiOptions)
+    } catch (error) {
+      if (aiOptions?.retryWithoutWebSearchOnEmpty && error instanceof EmptyAIResponseError) {
+        aiResponse = await callAI(
+          [
+            ...messages,
+            {
+              role: 'user',
+              content:
+                aiOptions.emptyResponseFallbackInstruction ??
+                'Ulangi tugas tanpa web search dan balas hanya JSON valid sesuai struktur yang diminta.',
+            },
+          ],
+          {
+            maxTokens: aiOptions.maxTokens,
+            timeoutMs: aiOptions.emptyResponseFallbackTimeoutMs ?? aiOptions.timeoutMs,
+            maxRetries: 0,
+            temperature: 0.5,
+          }
+        )
+      } else {
+        throw error
+      }
+    }
 
     // 4. Parse and validate output with retry
     const parsedData = await parseWithRetry(aiResponse.content, outputSchema, {
