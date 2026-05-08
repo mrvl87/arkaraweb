@@ -11,6 +11,7 @@ import { SlugInput } from './slug-input'
 import { MediaPicker } from './media/media-picker'
 import { AIFieldAssist } from './ai/ai-field-assist'
 import { DraftGeneratorPanel } from './ai/draft-generator-panel'
+import { ContentAdoptionPanel } from './content-adoption-panel'
 import { ImagePromptsPanel } from './ai/image-prompts-panel'
 import { MobileReaderFields } from './mobile-reader-fields'
 import { MobileReaderPreview } from './mobile-reader-preview'
@@ -31,6 +32,7 @@ import type {
 } from '@/lib/ai/schemas'
 import type { FormAIHistoryState } from '@/lib/ai/history'
 import type { PanduanSlugRoutingState } from '@/app/cms/panduan/actions'
+import type { InternalLinkOpportunity } from '@/lib/internal-link-opportunities'
 import dynamic from 'next/dynamic'
 import type { RichEditorHandle } from './editor/RichEditor'
 
@@ -205,6 +207,18 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
     setValue('key_takeaways', data.key_takeaways || [], { shouldDirty: true })
     setValue('faq', data.faq || [], { shouldDirty: true })
     setValue('editorial_format', data.editorial_format || 'mobile_reader', { shouldDirty: true })
+  }
+
+  const insertInternalLinkFromSuggestion = (item: InternalLinkOpportunity) => {
+    if (!editorApiRef.current) {
+      setError('Editor belum siap menerima internal link. Klik area editor lalu coba lagi.')
+      return
+    }
+
+    setError(null)
+    editorApiRef.current.insertContent(`[${item.suggestedAnchor || item.title}](${item.path})`, {
+      format: 'markdown',
+    })
   }
 
   const handleFormSubmit = async (data: PanduanFormValues) => {
@@ -521,21 +535,6 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
                 onApplyMobileStructure={applyDraftMobileStructure}
               />
 
-              <MobileReaderFields
-                quickAnswer={quickAnswerValue || ''}
-                keyTakeaways={keyTakeawaysValue || []}
-                faq={faqValue || []}
-                editorialFormat={editorialFormatValue || 'legacy'}
-                onQuickAnswerChange={(value) => setValue('quick_answer', value, { shouldDirty: true })}
-                onKeyTakeawaysChange={(value) => setValue('key_takeaways', value, { shouldDirty: true })}
-                onFaqChange={(value) => setValue('faq', value, { shouldDirty: true })}
-                onEditorialFormatChange={(value) => setValue('editorial_format', value, { shouldDirty: true })}
-                sourceTitle={titleValue}
-                sourceContent={contentValue || ''}
-                sourceDescription={metaDescValue || undefined}
-                generateStructure={(input) => panduanAIGenerateMobileReaderStructure(input, { panduanId: recordId })}
-              />
-
               <RichEditor
                 value={contentValue || ''}
                 onEditorReady={handleEditorReady}
@@ -553,6 +552,37 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
                     }),
                 }}
                 onChange={(val: string) => setValue('content', val, { shouldValidate: true, shouldDirty: true })}
+              />
+
+              <ContentAdoptionPanel
+                entityLabel="panduan"
+                sourceTitle={titleValue}
+                sourceContent={contentValue || ''}
+                sourceDescription={metaDescValue || undefined}
+                editorReady={isEditorReady}
+                generateStructure={(input) => panduanAIGenerateMobileReaderStructure(input, { panduanId: recordId })}
+                findInternalLinks={(input) =>
+                  getPanduanInternalLinkSuggestions({
+                    panduanId: initialData?.id,
+                    title: input.title,
+                    content: input.content,
+                    category: categoryValue,
+                    publishedAt: initialData?.published_at || initialData?.created_at || null,
+                  })
+                }
+                onApplyMobileStructure={applyDraftMobileStructure}
+                onInsertInternalLink={insertInternalLinkFromSuggestion}
+              />
+
+              <MobileReaderFields
+                quickAnswer={quickAnswerValue || ''}
+                keyTakeaways={keyTakeawaysValue || []}
+                faq={faqValue || []}
+                editorialFormat={editorialFormatValue || 'legacy'}
+                onQuickAnswerChange={(value) => setValue('quick_answer', value, { shouldDirty: true })}
+                onKeyTakeawaysChange={(value) => setValue('key_takeaways', value, { shouldDirty: true })}
+                onFaqChange={(value) => setValue('faq', value, { shouldDirty: true })}
+                onEditorialFormatChange={(value) => setValue('editorial_format', value, { shouldDirty: true })}
               />
             </div>
           </div>

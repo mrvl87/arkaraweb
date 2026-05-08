@@ -6,6 +6,7 @@ import type {
   GenerateMobileReaderStructureInput,
   GenerateMobileReaderStructureOutput,
 } from '@/lib/ai/schemas'
+import { normalizeEditorContentForAI } from '@/lib/editor-content'
 
 type EditorialFormat = 'legacy' | 'mobile_reader' | 'technical_guide'
 
@@ -42,23 +43,6 @@ function updateFaqItem(items: FAQItem[], index: number, patch: Partial<FAQItem>)
   return items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item))
 }
 
-function buildMobileStructureSourceContent(value: string): string {
-  return value
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<\/(p|div|section|article|h[1-6]|li|blockquote|tr)>/gi, '\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim()
-    .slice(0, 30000)
-}
-
 export function MobileReaderFields({
   quickAnswer,
   keyTakeaways,
@@ -78,7 +62,7 @@ export function MobileReaderFields({
   const [generationSuccess, setGenerationSuccess] = useState(false)
   const takeaways = keyTakeaways.length ? keyTakeaways : ['']
   const faqItems = faq.length ? faq : [{ question: '', answer: '' }]
-  const normalizedSourceContent = buildMobileStructureSourceContent(sourceContent)
+  const normalizedSourceContent = normalizeEditorContentForAI(sourceContent)
   const canGenerateStructure = Boolean(generateStructure && sourceTitle.trim() && normalizedSourceContent.length >= 80)
   const modeDescriptions: Record<EditorialFormat, string> = {
     legacy: 'Artikel memakai layout lama. Field struktur tetap bisa disimpan, tetapi tidak tampil di halaman publik.',
