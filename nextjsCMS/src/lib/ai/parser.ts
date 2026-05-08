@@ -206,6 +206,12 @@ export async function parseWithRetry<T>(
     repairMaxTokens?: number
     repairTimeoutMs?: number
     repairMaxRetries?: number
+    repairReasoning?: {
+      effort?: 'xhigh' | 'high' | 'medium' | 'low' | 'minimal' | 'none'
+      maxTokens?: number
+      exclude?: boolean
+      enabled?: boolean
+    }
   }
 ): Promise<T> {
   const maxRetries = options?.maxRetries ?? 1
@@ -241,6 +247,7 @@ ${options?.repairInstruction ? `${options.repairInstruction}\n\n` : ''}Perbaiki 
       maxTokens: options?.repairMaxTokens,
       timeoutMs: options?.repairTimeoutMs,
       maxRetries: options?.repairMaxRetries ?? 0,
+      reasoning: options?.repairReasoning,
     })
 
     return parseAIResponse(repairResponse.content, schema)

@@ -9,6 +9,18 @@ type DraftGeneratorResponse =
   | { success: true; data: GenerateFullDraftOutput; model: string }
   | { success: false; error: string }
 
+const OPTIONAL_BRIEF_LIMITS = {
+  keyword: 120,
+  angle: 280,
+  audience: 180,
+  notes: 1600,
+  outline: 3200,
+} as const
+
+function limitInput(value: string | undefined, maxLength: number): string {
+  return (value ?? '').slice(0, maxLength)
+}
+
 interface DraftGeneratorPanelInitialState {
   input?: Partial<GenerateFullDraftInput>
   result?: GenerateFullDraftOutput | null
@@ -49,11 +61,11 @@ export function DraftGeneratorPanel({
   onApplyMetadata,
   onApplyMobileStructure,
 }: DraftGeneratorPanelProps) {
-  const [keyword, setKeyword] = useState(initialState?.input?.keyword ?? '')
-  const [angle, setAngle] = useState(initialState?.input?.angle ?? '')
-  const [audience, setAudience] = useState(initialState?.input?.audience ?? '')
-  const [notes, setNotes] = useState(initialState?.input?.notes ?? '')
-  const [outline, setOutline] = useState(initialState?.input?.outline ?? '')
+  const [keyword, setKeyword] = useState(limitInput(initialState?.input?.keyword, OPTIONAL_BRIEF_LIMITS.keyword))
+  const [angle, setAngle] = useState(limitInput(initialState?.input?.angle, OPTIONAL_BRIEF_LIMITS.angle))
+  const [audience, setAudience] = useState(limitInput(initialState?.input?.audience, OPTIONAL_BRIEF_LIMITS.audience))
+  const [notes, setNotes] = useState(limitInput(initialState?.input?.notes, OPTIONAL_BRIEF_LIMITS.notes))
+  const [outline, setOutline] = useState(limitInput(initialState?.input?.outline, OPTIONAL_BRIEF_LIMITS.outline))
   const [showAdvanced, setShowAdvanced] = useState(
     Boolean(
       initialState?.input?.keyword ||
@@ -70,11 +82,11 @@ export function DraftGeneratorPanel({
   const [generationMessage, setGenerationMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    setKeyword(initialState?.input?.keyword ?? '')
-    setAngle(initialState?.input?.angle ?? '')
-    setAudience(initialState?.input?.audience ?? '')
-    setNotes(initialState?.input?.notes ?? '')
-    setOutline(initialState?.input?.outline ?? '')
+    setKeyword(limitInput(initialState?.input?.keyword, OPTIONAL_BRIEF_LIMITS.keyword))
+    setAngle(limitInput(initialState?.input?.angle, OPTIONAL_BRIEF_LIMITS.angle))
+    setAudience(limitInput(initialState?.input?.audience, OPTIONAL_BRIEF_LIMITS.audience))
+    setNotes(limitInput(initialState?.input?.notes, OPTIONAL_BRIEF_LIMITS.notes))
+    setOutline(limitInput(initialState?.input?.outline, OPTIONAL_BRIEF_LIMITS.outline))
     setShowAdvanced(
       Boolean(
         initialState?.input?.keyword ||
@@ -246,13 +258,15 @@ export function DraftGeneratorPanel({
           </label>
           <textarea
             value={notes}
-            onChange={(event) => setNotes(event.target.value)}
+            onChange={(event) => setNotes(limitInput(event.target.value, OPTIONAL_BRIEF_LIMITS.notes))}
             rows={4}
+            maxLength={OPTIONAL_BRIEF_LIMITS.notes}
             placeholder="Contoh: tekan sisi kontrol vs ketergantungan, gunakan simulasi balkon 2x1 meter, tone lebih tajam dan tenang, tutup dengan konsekuensi yang terasa."
             className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none resize-none text-sm"
           />
-          <p className="text-[11px] text-gray-500">
-            Kosongkan jika ingin AI mengikuti struktur default Arkara tanpa penguncian tambahan.
+          <p className="flex items-center justify-between gap-3 text-[11px] text-gray-500">
+            <span>Kosongkan jika ingin AI mengikuti struktur default Arkara tanpa penguncian tambahan.</span>
+            <span className="font-mono">{notes.length}/{OPTIONAL_BRIEF_LIMITS.notes}</span>
           </p>
         </div>
       </div>
@@ -284,7 +298,8 @@ export function DraftGeneratorPanel({
                 <input
                   type="text"
                   value={keyword}
-                  onChange={(event) => setKeyword(event.target.value)}
+                  onChange={(event) => setKeyword(limitInput(event.target.value, OPTIONAL_BRIEF_LIMITS.keyword))}
+                  maxLength={OPTIONAL_BRIEF_LIMITS.keyword}
                   placeholder="Opsional: keyword utama target"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none text-sm"
                 />
@@ -296,7 +311,8 @@ export function DraftGeneratorPanel({
                 <input
                   type="text"
                   value={angle}
-                  onChange={(event) => setAngle(event.target.value)}
+                  onChange={(event) => setAngle(limitInput(event.target.value, OPTIONAL_BRIEF_LIMITS.angle))}
+                  maxLength={OPTIONAL_BRIEF_LIMITS.angle}
                   placeholder="Opsional: tekanan harga, skenario urban, kontrol keluarga"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none text-sm"
                 />
@@ -308,7 +324,8 @@ export function DraftGeneratorPanel({
                 <input
                   type="text"
                   value={audience}
-                  onChange={(event) => setAudience(event.target.value)}
+                  onChange={(event) => setAudience(limitInput(event.target.value, OPTIONAL_BRIEF_LIMITS.audience))}
+                  maxLength={OPTIONAL_BRIEF_LIMITS.audience}
                   placeholder="Opsional: keluarga urban, pemula, rumah tangga apartemen"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none text-sm"
                 />
@@ -319,8 +336,9 @@ export function DraftGeneratorPanel({
                 </label>
                 <textarea
                   value={outline}
-                  onChange={(event) => setOutline(event.target.value)}
+                  onChange={(event) => setOutline(limitInput(event.target.value, OPTIONAL_BRIEF_LIMITS.outline))}
                   rows={4}
+                  maxLength={OPTIONAL_BRIEF_LIMITS.outline}
                   placeholder="Tempel outline hanya jika draft harus mengikuti struktur tertentu"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-arkara-amber/20 focus:border-arkara-amber outline-none resize-none text-sm"
                 />

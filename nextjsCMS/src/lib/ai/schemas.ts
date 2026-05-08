@@ -89,14 +89,14 @@ export type GenerateFullDraftInput = z.infer<typeof GenerateFullDraftInputSchema
 export const EditorialFormatSchema = z.enum(['legacy', 'mobile_reader', 'technical_guide'])
 
 export const MobileReaderFAQItemSchema = z.object({
-  question: z.string().trim().min(1).max(140),
-  answer: z.string().trim().min(1).max(280),
+  question: z.string().trim().min(1).max(220),
+  answer: z.string().trim().min(1).max(700),
 })
 
 export const GenerateFullDraftOutputSchema = z.object({
   content: z.string().trim().min(1),
-  quick_answer: z.string().trim().min(80).max(360),
-  key_takeaways: z.array(z.string().trim().min(1).max(150)).min(3).max(5),
+  quick_answer: z.string().trim().min(80).max(700),
+  key_takeaways: z.array(z.string().trim().min(1).max(280)).min(3).max(5),
   faq: z.array(MobileReaderFAQItemSchema).min(3).max(5),
   editorial_format: EditorialFormatSchema.optional().default('mobile_reader'),
   word_count: z.number().optional(),
@@ -114,8 +114,8 @@ export const GenerateMobileReaderStructureInputSchema = z.object({
 export type GenerateMobileReaderStructureInput = z.infer<typeof GenerateMobileReaderStructureInputSchema>
 
 export const GenerateMobileReaderStructureOutputSchema = z.object({
-  quick_answer: z.string().trim().min(80).max(360),
-  key_takeaways: z.array(z.string().trim().min(1).max(150)).min(3).max(5),
+  quick_answer: z.string().trim().min(80).max(700),
+  key_takeaways: z.array(z.string().trim().min(1).max(280)).min(3).max(5),
   faq: z.array(MobileReaderFAQItemSchema).min(3).max(5),
   editorial_format: z.enum(['mobile_reader', 'technical_guide']).default('mobile_reader'),
 })

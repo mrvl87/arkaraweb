@@ -31,6 +31,13 @@ interface OpenRouterWebSearchOptions {
   excludedDomains?: string[]
 }
 
+interface OpenRouterReasoningOptions {
+  effort?: 'xhigh' | 'high' | 'medium' | 'low' | 'minimal' | 'none'
+  maxTokens?: number
+  exclude?: boolean
+  enabled?: boolean
+}
+
 interface EmptyAIResponseDetails {
   model: string
   finishReason?: string
@@ -161,6 +168,7 @@ export async function callAI(
     maxTokens?: number
     timeoutMs?: number
     maxRetries?: number
+    reasoning?: OpenRouterReasoningOptions
     webSearch?: OpenRouterWebSearchOptions
   }
 ): Promise<AIResponse> {
@@ -205,6 +213,18 @@ export async function callAI(
       messages,
       temperature: options?.temperature ?? 0.7,
       ...(provider ? { provider } : {}),
+      ...(options?.reasoning
+        ? {
+            reasoning: {
+              ...(options.reasoning.effort ? { effort: options.reasoning.effort } : {}),
+              ...(typeof options.reasoning.maxTokens === 'number'
+                ? { max_tokens: options.reasoning.maxTokens }
+                : {}),
+              ...(typeof options.reasoning.exclude === 'boolean' ? { exclude: options.reasoning.exclude } : {}),
+              ...(typeof options.reasoning.enabled === 'boolean' ? { enabled: options.reasoning.enabled } : {}),
+            },
+          }
+        : {}),
       ...(webSearchTool ? { tools: [webSearchTool] } : {}),
       ...(options?.maxTokens && { max_tokens: options.maxTokens }),
     }),

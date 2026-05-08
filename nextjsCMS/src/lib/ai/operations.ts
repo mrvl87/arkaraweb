@@ -102,9 +102,22 @@ interface OperationAIOptions {
   repairMaxTokens?: number
   repairTimeoutMs?: number
   repairMaxRetries?: number
+  repairReasoning?: {
+    effort?: 'xhigh' | 'high' | 'medium' | 'low' | 'minimal' | 'none'
+    maxTokens?: number
+    exclude?: boolean
+    enabled?: boolean
+  }
   retryWithoutWebSearchOnEmpty?: boolean
   emptyResponseFallbackInstruction?: string
   emptyResponseFallbackTimeoutMs?: number
+  emptyResponseFallbackMaxTokens?: number
+  reasoning?: {
+    effort?: 'xhigh' | 'high' | 'medium' | 'low' | 'minimal' | 'none'
+    maxTokens?: number
+    exclude?: boolean
+    enabled?: boolean
+  }
   webSearch?: {
     enabled: boolean
     engine?: 'auto' | 'native' | 'exa' | 'firecrawl' | 'parallel'
@@ -114,9 +127,11 @@ interface OperationAIOptions {
   }
 }
 
-const FULL_DRAFT_MAX_TOKENS = 4800
+const FULL_DRAFT_MAX_TOKENS = 7000
+const FULL_DRAFT_FALLBACK_MAX_TOKENS = 9000
 const FULL_DRAFT_TIMEOUT_MS = 90000
 const FULL_DRAFT_REPAIR_TIMEOUT_MS = 45000
+const FULL_DRAFT_REASONING = { maxTokens: 512, exclude: true } as const
 const FULL_DRAFT_REPAIR_INSTRUCTION = `Struktur JSON wajib:
 {
   "content": "Markdown artikel lengkap tanpa H1",
@@ -140,6 +155,31 @@ const FULL_DRAFT_EMPTY_FALLBACK_INSTRUCTION = `Panggilan web search sebelumnya t
 
 function normalizeSingleLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
+}
+
+function limitSingleLine(value: string, maxLength: number): string {
+  const normalized = normalizeSingleLine(value)
+  if (normalized.length <= maxLength) {
+    return normalized
+  }
+
+  const suffix = '...'
+  const maxBodyLength = Math.max(1, maxLength - suffix.length)
+  const body = normalized.slice(0, maxBodyLength + 1)
+  const sentenceBreak = Math.max(
+    body.lastIndexOf('.'),
+    body.lastIndexOf('!'),
+    body.lastIndexOf('?')
+  )
+  const wordBreak = body.lastIndexOf(' ')
+  const cutIndex =
+    sentenceBreak >= Math.floor(maxBodyLength * 0.65)
+      ? sentenceBreak + 1
+      : wordBreak >= Math.floor(maxBodyLength * 0.65)
+        ? wordBreak
+        : maxBodyLength
+
+  return `${body.slice(0, cutIndex).trim()}${suffix}`
 }
 
 function normalizePromptText(value: string): string {
@@ -268,15 +308,15 @@ function normalizeClusterIdeasOutput(output: GenerateClusterIdeasOutput): Genera
 function normalizeFullDraftOutput(output: GenerateFullDraftOutput): GenerateFullDraftOutput {
   return {
     ...output,
-    quick_answer: output.quick_answer ? normalizeSingleLine(output.quick_answer) : '',
+    quick_answer: output.quick_answer ? limitSingleLine(output.quick_answer, 360) : '',
     key_takeaways: (output.key_takeaways ?? [])
-      .map((item) => normalizeSingleLine(item))
+      .map((item) => limitSingleLine(item, 150))
       .filter(Boolean)
       .slice(0, 5),
     faq: (output.faq ?? [])
       .map((item) => ({
-        question: normalizeSingleLine(item.question),
-        answer: normalizeSingleLine(item.answer),
+        question: limitSingleLine(item.question, 140),
+        answer: limitSingleLine(item.answer, 280),
       }))
       .filter((item) => item.question && item.answer)
       .slice(0, 5),
@@ -288,15 +328,15 @@ function normalizeMobileReaderStructureOutput(
   output: GenerateMobileReaderStructureOutput
 ): GenerateMobileReaderStructureOutput {
   return {
-    quick_answer: normalizeSingleLine(output.quick_answer),
+    quick_answer: limitSingleLine(output.quick_answer, 360),
     key_takeaways: output.key_takeaways
-      .map((item) => normalizeSingleLine(item))
+      .map((item) => limitSingleLine(item, 150))
       .filter(Boolean)
       .slice(0, 5),
     faq: output.faq
       .map((item) => ({
-        question: normalizeSingleLine(item.question),
-        answer: normalizeSingleLine(item.answer),
+        question: limitSingleLine(item.question, 140),
+        answer: limitSingleLine(item.answer, 280),
       }))
       .filter((item) => item.question && item.answer)
       .slice(0, 5),
@@ -448,9 +488,12 @@ export async function generateFullDraft(
     repairMaxTokens: FULL_DRAFT_MAX_TOKENS,
     repairTimeoutMs: FULL_DRAFT_REPAIR_TIMEOUT_MS,
     repairMaxRetries: 0,
+    repairReasoning: FULL_DRAFT_REASONING,
     retryWithoutWebSearchOnEmpty: true,
     emptyResponseFallbackInstruction: FULL_DRAFT_EMPTY_FALLBACK_INSTRUCTION,
     emptyResponseFallbackTimeoutMs: 60000,
+    emptyResponseFallbackMaxTokens: FULL_DRAFT_FALLBACK_MAX_TOKENS,
+    reasoning: FULL_DRAFT_REASONING,
     webSearch: {
       enabled: true,
       engine: 'auto',
@@ -687,10 +730,11 @@ async function runOperation<TInput extends Record<string, unknown>, TOutput exte
             },
           ],
           {
-            maxTokens: aiOptions.maxTokens,
+            maxTokens: aiOptions.emptyResponseFallbackMaxTokens ?? aiOptions.maxTokens,
             timeoutMs: aiOptions.emptyResponseFallbackTimeoutMs ?? aiOptions.timeoutMs,
             maxRetries: 0,
             temperature: 0.5,
+            reasoning: aiOptions.reasoning,
           }
         )
       } else {
@@ -705,6 +749,7 @@ async function runOperation<TInput extends Record<string, unknown>, TOutput exte
       repairMaxTokens: aiOptions?.repairMaxTokens,
       repairTimeoutMs: aiOptions?.repairTimeoutMs,
       repairMaxRetries: aiOptions?.repairMaxRetries,
+      repairReasoning: aiOptions?.repairReasoning,
     })
     const data = transformOutput ? transformOutput(parsedData) : parsedData
 

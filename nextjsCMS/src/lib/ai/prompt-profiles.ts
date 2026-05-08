@@ -23,6 +23,29 @@ export const PROMPT_VERSION = 'v14'
 
 export type AIContentProfile = 'post' | 'panduan' | 'workspace'
 
+const FULL_DRAFT_BRIEF_LIMITS = {
+  keyword: 120,
+  angle: 280,
+  audience: 180,
+  notes: 1600,
+  outline: 3200,
+} as const
+
+function limitPromptContext(value: string, maxLength: number): string {
+  const normalized = value
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+  if (normalized.length <= maxLength) {
+    return normalized
+  }
+
+  const suffix = '\n\n[Catatan dipotong otomatis agar prompt tetap hemat token.]'
+  return `${normalized.slice(0, Math.max(1, maxLength - suffix.length)).trim()}${suffix}`
+}
+
 function getProfileName(profile: AIContentProfile): string {
   switch (profile) {
     case 'post':
@@ -349,11 +372,11 @@ export function buildFullDraftPrompt(
 ): AIMessage[] {
   const currentDate = new Date().toISOString().slice(0, 10)
   const extras: string[] = []
-  if (input.keyword) extras.push(`Keyword target: ${input.keyword}`)
-  if (input.angle) extras.push(`Sudut pandang: ${input.angle}`)
-  if (input.audience) extras.push(`Audiens: ${input.audience}`)
-  if (input.notes) extras.push(`Catatan tambahan: ${input.notes}`)
-  if (input.outline) extras.push(`Outline yang harus diikuti:\n${input.outline}`)
+  if (input.keyword) extras.push(`Keyword target: ${limitPromptContext(input.keyword, FULL_DRAFT_BRIEF_LIMITS.keyword)}`)
+  if (input.angle) extras.push(`Sudut pandang: ${limitPromptContext(input.angle, FULL_DRAFT_BRIEF_LIMITS.angle)}`)
+  if (input.audience) extras.push(`Audiens: ${limitPromptContext(input.audience, FULL_DRAFT_BRIEF_LIMITS.audience)}`)
+  if (input.notes) extras.push(`Catatan tambahan: ${limitPromptContext(input.notes, FULL_DRAFT_BRIEF_LIMITS.notes)}`)
+  if (input.outline) extras.push(`Outline yang harus diikuti:\n${limitPromptContext(input.outline, FULL_DRAFT_BRIEF_LIMITS.outline)}`)
 
   const draftDirection =
     profile === 'panduan'
