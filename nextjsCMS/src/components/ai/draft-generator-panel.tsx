@@ -5,6 +5,10 @@ import { Sparkles, Loader2, Copy, Check, Wand2, PlusSquare, Replace, FilePenLine
 import type { GenerateFullDraftInput, GenerateFullDraftOutput } from '@/lib/ai/schemas'
 import { AIResultPreview } from './ai-result-preview'
 
+type DraftGeneratorResponse =
+  | { success: true; data: GenerateFullDraftOutput; model: string }
+  | { success: false; error: string }
+
 interface DraftGeneratorPanelInitialState {
   input?: Partial<GenerateFullDraftInput>
   result?: GenerateFullDraftOutput | null
@@ -23,7 +27,9 @@ interface DraftGeneratorPanelProps {
     audience?: string
     notes?: string
     outline?: string
-  }) => Promise<{ success: true; data: GenerateFullDraftOutput; model: string } | { success: false; error: string }>
+  }) => Promise<DraftGeneratorResponse>
+  streamTargetType?: 'post' | 'panduan'
+  streamTargetId?: string
   onReplaceContent: (markdown: string) => void
   onAppendContent: (markdown: string) => void
   onApplyMetadata: (data: GenerateFullDraftOutput) => void
@@ -36,6 +42,8 @@ export function DraftGeneratorPanel({
   entityLabel = 'artikel',
   initialState,
   generateDraft,
+  streamTargetType,
+  streamTargetId,
   onReplaceContent,
   onAppendContent,
   onApplyMetadata,
@@ -59,6 +67,7 @@ export function DraftGeneratorPanel({
   const [result, setResult] = useState<GenerateFullDraftOutput | null>(initialState?.result ?? null)
   const [copied, setCopied] = useState(false)
   const [showPreviewDetails, setShowPreviewDetails] = useState(false)
+  const [generationMessage, setGenerationMessage] = useState<string | null>(null)
 
   useEffect(() => {
     setKeyword(initialState?.input?.keyword ?? '')
@@ -78,19 +87,96 @@ export function DraftGeneratorPanel({
     setShowPreviewDetails(false)
   }, [initialState])
 
+  const generateDraftWithStream = async (input: GenerateFullDraftInput): Promise<DraftGeneratorResponse> => {
+    const response = await fetch('/cms/api/ai/full-draft', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        targetType: streamTargetType,
+        targetId: streamTargetId,
+        input,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(errorData?.error || `Server returned ${response.status}`)
+    }
+
+    if (!response.body) {
+      throw new Error('Server tidak mengirim stream hasil generate.')
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let finalResponse: DraftGeneratorResponse | null = null
+
+    const consumeLine = (line: string) => {
+      const trimmed = line.trim()
+      if (!trimmed) return
+
+      const event = JSON.parse(trimmed) as {
+        type?: string
+        message?: string
+        payload?: DraftGeneratorResponse
+      }
+
+      if (event.type === 'status' && event.message) {
+        setGenerationMessage(event.message)
+      }
+
+      if (event.type === 'result' && event.payload) {
+        finalResponse = event.payload
+      }
+    }
+
+    while (true) {
+      const { value, done } = await reader.read()
+
+      if (value) {
+        buffer += decoder.decode(value, { stream: !done })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        lines.forEach(consumeLine)
+      }
+
+      if (done) {
+        break
+      }
+    }
+
+    if (buffer.trim()) {
+      consumeLine(buffer)
+    }
+
+    if (!finalResponse) {
+      throw new Error('Server selesai tanpa mengirim hasil generate.')
+    }
+
+    return finalResponse
+  }
+
   const handleGenerate = async () => {
     setIsLoading(true)
     setError(null)
+    setGenerationMessage('Mengirim brief ke AI...')
 
     try {
-      const response = await generateDraft({
+      const input = {
         title,
         keyword: keyword || undefined,
         angle: angle || undefined,
         audience: audience || undefined,
         notes: notes || undefined,
         outline: outline || undefined,
-      })
+      }
+
+      const response = streamTargetType
+        ? await generateDraftWithStream(input)
+        : await generateDraft(input)
 
       if (response.success) {
         setResult(response.data)
@@ -99,9 +185,15 @@ export function DraftGeneratorPanel({
         setError(response.error)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal membuat draft.')
+      const message = err instanceof Error ? err.message : 'Gagal membuat draft.'
+      setError(
+        message.includes('Failed to fetch')
+          ? 'Koneksi generate draft terputus sebelum server mengirim hasil. Coba ulang; jika masih terjadi, kurangi brief tambahan.'
+          : message
+      )
     } finally {
       setIsLoading(false)
+      setGenerationMessage(null)
     }
   }
 
@@ -249,6 +341,12 @@ export function DraftGeneratorPanel({
           Generate Mobile Draft
         </button>
       </div>
+
+      {isLoading && generationMessage ? (
+        <div className="rounded-xl border border-amber-100 bg-white/70 px-4 py-3 text-xs font-semibold text-amber-800">
+          {generationMessage}
+        </div>
+      ) : null}
 
       {result && (
         <div className="rounded-2xl border border-emerald-100 bg-white/90 p-4 space-y-4 shadow-sm">

@@ -518,6 +518,8 @@ export function PostForm({ initialData, initialAIState, onSubmit, title }: PostF
                 title={titleValue}
                 entityLabel="artikel"
                 editorReady={isEditorReady}
+                streamTargetType="post"
+                streamTargetId={recordId}
                 initialState={initialAIState?.fullDraft ? {
                   input: initialAIState.fullDraft.input,
                   result: initialAIState.fullDraft.output,

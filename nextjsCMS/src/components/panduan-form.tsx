@@ -507,6 +507,8 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
                 title={titleValue}
                 entityLabel="panduan"
                 editorReady={isEditorReady}
+                streamTargetType="panduan"
+                streamTargetId={recordId}
                 initialState={initialAIState?.fullDraft ? {
                   input: initialAIState.fullDraft.input,
                   result: initialAIState.fullDraft.output,

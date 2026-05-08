@@ -200,7 +200,13 @@ export function parseAIResponse<T>(raw: string, schema: z.ZodType<T>): T {
 export async function parseWithRetry<T>(
   raw: string,
   schema: z.ZodType<T>,
-  options?: { maxRetries?: number }
+  options?: {
+    maxRetries?: number
+    repairInstruction?: string
+    repairMaxTokens?: number
+    repairTimeoutMs?: number
+    repairMaxRetries?: number
+  }
 ): Promise<T> {
   const maxRetries = options?.maxRetries ?? 1
 
@@ -226,11 +232,16 @@ ${error.rawContent}
 
 Error: ${error.message}
 
-Perbaiki dan balas HANYA dengan JSON yang valid sesuai struktur yang diminta.`,
+${options?.repairInstruction ? `${options.repairInstruction}\n\n` : ''}Perbaiki dan balas HANYA dengan JSON yang valid sesuai struktur yang diminta.`,
       },
     ]
 
-    const repairResponse = await callAI(repairMessages, { temperature: 0.2 })
+    const repairResponse = await callAI(repairMessages, {
+      temperature: 0.1,
+      maxTokens: options?.repairMaxTokens,
+      timeoutMs: options?.repairTimeoutMs,
+      maxRetries: options?.repairMaxRetries ?? 0,
+    })
 
     return parseAIResponse(repairResponse.content, schema)
   }

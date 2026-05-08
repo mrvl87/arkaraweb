@@ -58,13 +58,19 @@ function isRetryableOpenRouterError(error: unknown): boolean {
   )
 }
 
-async function fetchOpenRouter(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
+async function fetchOpenRouter(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  options?: { timeoutMs?: number; maxRetries?: number }
+): Promise<Response> {
   let attempt = 0
   let lastError: unknown
+  const timeoutMs = options?.timeoutMs ?? OPENROUTER_TIMEOUT_MS
+  const maxRetries = options?.maxRetries ?? OPENROUTER_MAX_RETRIES
 
-  while (attempt <= OPENROUTER_MAX_RETRIES) {
+  while (attempt <= maxRetries) {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS)
+    const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
     try {
       return await fetch(input, {
@@ -75,7 +81,7 @@ async function fetchOpenRouter(input: RequestInfo | URL, init: RequestInit): Pro
     } catch (error) {
       lastError = error
 
-      if (!isRetryableOpenRouterError(error) || attempt === OPENROUTER_MAX_RETRIES) {
+      if (!isRetryableOpenRouterError(error) || attempt === maxRetries) {
         throw error
       }
     } finally {
@@ -101,6 +107,8 @@ export async function callAI(
     model?: string
     temperature?: number
     maxTokens?: number
+    timeoutMs?: number
+    maxRetries?: number
     webSearch?: OpenRouterWebSearchOptions
   }
 ): Promise<AIResponse> {
@@ -148,6 +156,9 @@ export async function callAI(
       ...(webSearchTool ? { tools: [webSearchTool] } : {}),
       ...(options?.maxTokens && { max_tokens: options.maxTokens }),
     }),
+  }, {
+    timeoutMs: options?.timeoutMs,
+    maxRetries: options?.maxRetries,
   })
 
   if (!response.ok) {

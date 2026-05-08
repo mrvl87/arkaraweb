@@ -95,6 +95,13 @@ interface OperationContext {
 
 interface OperationAIOptions {
   maxTokens?: number
+  timeoutMs?: number
+  maxRetries?: number
+  parseMaxRetries?: number
+  repairInstruction?: string
+  repairMaxTokens?: number
+  repairTimeoutMs?: number
+  repairMaxRetries?: number
   webSearch?: {
     enabled: boolean
     engine?: 'auto' | 'native' | 'exa' | 'firecrawl' | 'parallel'
@@ -104,7 +111,24 @@ interface OperationAIOptions {
   }
 }
 
-const FULL_DRAFT_MAX_TOKENS = 6000
+const FULL_DRAFT_MAX_TOKENS = 4800
+const FULL_DRAFT_TIMEOUT_MS = 90000
+const FULL_DRAFT_REPAIR_TIMEOUT_MS = 45000
+const FULL_DRAFT_REPAIR_INSTRUCTION = `Struktur JSON wajib:
+{
+  "content": "Markdown artikel lengkap tanpa H1",
+  "quick_answer": "Jawaban langsung 2-3 kalimat, 120-320 karakter",
+  "key_takeaways": ["3-5 poin inti, masing-masing singkat"],
+  "faq": [
+    { "question": "Pertanyaan pembaca?", "answer": "Jawaban ringkas maksimal 2 kalimat." }
+  ],
+  "editorial_format": "mobile_reader atau technical_guide",
+  "word_count": 760,
+  "suggested_slug": "slug-disarankan",
+  "suggested_meta_title": "judul SEO maks 60 karakter",
+  "suggested_meta_desc": "deskripsi meta maks 155 karakter"
+}
+Jika input sebelumnya berupa artikel Markdown biasa, gunakan Markdown itu sebagai field content, lalu buat quick_answer, key_takeaways, faq, dan metadata dari isi yang sama. Jangan menambah klaim baru saat repair.`
 
 function normalizeSingleLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
@@ -409,12 +433,19 @@ export async function generateFullDraft(
     return prompts.buildFullDraftPrompt(input, internalLinks, profile)
   }, normalizeFullDraftOutput, ctx, {
     maxTokens: FULL_DRAFT_MAX_TOKENS,
+    timeoutMs: FULL_DRAFT_TIMEOUT_MS,
+    maxRetries: 0,
+    parseMaxRetries: 1,
+    repairInstruction: FULL_DRAFT_REPAIR_INSTRUCTION,
+    repairMaxTokens: FULL_DRAFT_MAX_TOKENS,
+    repairTimeoutMs: FULL_DRAFT_REPAIR_TIMEOUT_MS,
+    repairMaxRetries: 0,
     webSearch: {
       enabled: true,
       engine: 'auto',
-      maxResults: 5,
-      maxTotalResults: 10,
-      searchContextSize: 'medium',
+      maxResults: 3,
+      maxTotalResults: 5,
+      searchContextSize: 'low',
     },
   })
 }
@@ -632,7 +663,13 @@ async function runOperation<TInput extends Record<string, unknown>, TOutput exte
     const aiResponse = await callAI(messages, aiOptions)
 
     // 4. Parse and validate output with retry
-    const parsedData = await parseWithRetry(aiResponse.content, outputSchema)
+    const parsedData = await parseWithRetry(aiResponse.content, outputSchema, {
+      maxRetries: aiOptions?.parseMaxRetries ?? 1,
+      repairInstruction: aiOptions?.repairInstruction,
+      repairMaxTokens: aiOptions?.repairMaxTokens,
+      repairTimeoutMs: aiOptions?.repairTimeoutMs,
+      repairMaxRetries: aiOptions?.repairMaxRetries,
+    })
     const data = transformOutput ? transformOutput(parsedData) : parsedData
 
     // 5. Log success
