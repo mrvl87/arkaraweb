@@ -35,6 +35,14 @@ const {
 } = Astro.props;
 const siteTitle = title ? `${title} â€” ${siteName}` : `${siteName} â€” Survive with Knowledge`;
 const siteUrl = 'https://arkaraweb.com';
+const googleAnalyticsId = 'G-6Y19TY4DNY';
+const enableGoogleAnalytics = import.meta.env.PROD;
+const googleAnalyticsScript = `
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', '${googleAnalyticsId}');
+`;
 const canonicalUrl = new URL(canonicalHref || Astro.url.pathname, siteUrl);
 const currentPath = Astro.url.pathname;
 const footerData = await getFooterData();
@@ -150,6 +158,12 @@ if (Astro.response.status < 300) {
     <noscript>
       <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Share+Tech+Mono&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet" />
     </noscript>
+    {enableGoogleAnalytics && (
+      <>
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`}></script>
+        <script is:inline set:html={googleAnalyticsScript}></script>
+      </>
+    )}
   </head>
 
   <body>
