@@ -37,4 +37,8 @@ body {
   .input-premium {
     @apply w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37] transition-all outline-none bg-white/50 backdrop-blur-sm;
   }
+
+  .input-social {
+    @apply w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none transition-all focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400;
+  }
 }

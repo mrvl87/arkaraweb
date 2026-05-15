@@ -19,6 +19,10 @@ export const AI_OPERATIONS = [
   'generate_faq',
   'research_with_web',
   'verify_latest_facts',
+  'generate_facebook_weekly_plan',
+  'generate_facebook_post',
+  'generate_facebook_carousel',
+  'generate_facebook_visual_prompt',
 ] as const
 
 export type AIOperation = (typeof AI_OPERATIONS)[number]
@@ -166,6 +170,121 @@ export const GenerateClusterIdeasOutputSchema = z.object({
   ideas: z.array(ClusterIdeaSchema).min(1),
 })
 export type GenerateClusterIdeasOutput = z.infer<typeof GenerateClusterIdeasOutputSchema>
+
+// --- Facebook Social Tracker ---
+export const FacebookPostTypeSchema = z.enum([
+  'narrative',
+  'checklist',
+  'carousel',
+  'opinion',
+  'article_link',
+  'question',
+  'poll',
+  'recap',
+  'short_video',
+])
+
+export const FacebookObjectiveSchema = z.enum([
+  'awareness',
+  'trust_building',
+  'comment',
+  'share',
+  'save',
+  'website_traffic',
+  'audience_research',
+  'community_building',
+  'brand_positioning',
+])
+
+export const FacebookCarouselSlideDraftSchema = z.object({
+  slide_number: z.number().int().min(1).max(12),
+  purpose: z.string().trim().min(1).max(120),
+  title_text: z.string().trim().min(1).max(140),
+  paragraph_text: z.string().trim().max(360).optional().default(''),
+  visual_prompt: z.string().trim().min(1).max(2200),
+})
+export type FacebookCarouselSlideDraft = z.infer<typeof FacebookCarouselSlideDraftSchema>
+
+export const FacebookSocialPostDraftSchema = z.object({
+  day: z.string().trim().min(1).max(40),
+  scheduled_date: z.string().trim().min(1).max(20),
+  scheduled_time: z.string().trim().min(1).max(10),
+  post_type: FacebookPostTypeSchema,
+  title: z.string().trim().min(1).max(180),
+  hook: z.string().trim().min(1).max(320),
+  body: z.string().trim().min(1).max(5000),
+  cta: z.string().trim().min(1).max(500),
+  objective: z.string().trim().min(1).max(120),
+  content_pillar: z.string().trim().min(1).max(160),
+  visual_prompt: z.string().trim().max(2200).optional().default(''),
+  slides: z.array(FacebookCarouselSlideDraftSchema).max(10).optional().default([]),
+})
+export type FacebookSocialPostDraft = z.infer<typeof FacebookSocialPostDraftSchema>
+
+export const GenerateFacebookWeeklyPlanInputSchema = z.object({
+  campaign_title: z.string().trim().min(1, 'Campaign title is required').max(180),
+  theme: z.string().trim().min(1, 'Theme is required').max(1200),
+  start_date: z.string().trim().min(1, 'Start date is required').max(20),
+  end_date: z.string().trim().max(20).optional(),
+  primary_goal: z.string().trim().max(240).optional(),
+  content_pillar: z.string().trim().max(180).optional(),
+  tone_note: z.string().trim().max(500).optional(),
+  source_title: z.string().trim().max(180).optional(),
+  source_summary: z.string().trim().max(2200).optional(),
+  source_url: z.string().trim().max(500).optional(),
+})
+export type GenerateFacebookWeeklyPlanInput = z.infer<typeof GenerateFacebookWeeklyPlanInputSchema>
+
+export const GenerateFacebookWeeklyPlanOutputSchema = z.object({
+  campaign_summary: z.string().trim().min(1).max(500),
+  posts: z.array(FacebookSocialPostDraftSchema).min(7).max(7),
+})
+export type GenerateFacebookWeeklyPlanOutput = z.infer<typeof GenerateFacebookWeeklyPlanOutputSchema>
+
+export const GenerateFacebookPostInputSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required').max(180),
+  post_type: FacebookPostTypeSchema,
+  hook: z.string().trim().max(320).optional(),
+  source_title: z.string().trim().max(180).optional(),
+  source_summary: z.string().trim().max(2200).optional(),
+  source_url: z.string().trim().max(500).optional(),
+  primary_goal: z.string().trim().max(240).optional(),
+  content_pillar: z.string().trim().max(180).optional(),
+  tone_note: z.string().trim().max(500).optional(),
+})
+export type GenerateFacebookPostInput = z.infer<typeof GenerateFacebookPostInputSchema>
+
+export const GenerateFacebookPostOutputSchema = z.object({
+  title: z.string().trim().min(1).max(180),
+  hook: z.string().trim().min(1).max(320),
+  body: z.string().trim().min(1).max(5000),
+  cta: z.string().trim().min(1).max(500),
+  visual_prompt: z.string().trim().min(1).max(2200),
+})
+export type GenerateFacebookPostOutput = z.infer<typeof GenerateFacebookPostOutputSchema>
+
+export const GenerateFacebookCarouselInputSchema = GenerateFacebookPostInputSchema.extend({
+  slide_count: z.number().int().min(3).max(10).optional().default(7),
+})
+export type GenerateFacebookCarouselInput = z.infer<typeof GenerateFacebookCarouselInputSchema>
+
+export const GenerateFacebookCarouselOutputSchema = z.object({
+  slides: z.array(FacebookCarouselSlideDraftSchema).min(3).max(10),
+})
+export type GenerateFacebookCarouselOutput = z.infer<typeof GenerateFacebookCarouselOutputSchema>
+
+export const GenerateFacebookVisualPromptInputSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required').max(180),
+  context: z.string().trim().min(1, 'Context is required').max(2000),
+  layout_type: z.string().trim().max(120).optional(),
+  tone_note: z.string().trim().max(500).optional(),
+})
+export type GenerateFacebookVisualPromptInput = z.infer<typeof GenerateFacebookVisualPromptInputSchema>
+
+export const GenerateFacebookVisualPromptOutputSchema = z.object({
+  visual_prompt: z.string().trim().min(1).max(2200),
+})
+export type GenerateFacebookVisualPromptOutput = z.infer<typeof GenerateFacebookVisualPromptOutputSchema>
 
 // ─── Rewrite Section ─────────────────────────────────────────────
 export const RewriteSectionInputSchema = z.object({

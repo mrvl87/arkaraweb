@@ -10,7 +10,7 @@ import type { AIOperation } from './schemas'
 
 export interface LogGenerationParams {
   userId?: string | null
-  targetType?: 'post' | 'panduan' | 'workspace' | null
+  targetType?: 'post' | 'panduan' | 'workspace' | 'social' | null
   targetId?: string | null
   operation: AIOperation
   model: string
