@@ -36,6 +36,14 @@ import {
   GenerateImagePromptsOutputSchema,
   GenerateClusterIdeasInputSchema,
   GenerateClusterIdeasOutputSchema,
+  GenerateFacebookWeeklyPlanInputSchema,
+  GenerateFacebookWeeklyPlanOutputSchema,
+  GenerateFacebookPostInputSchema,
+  GenerateFacebookPostOutputSchema,
+  GenerateFacebookCarouselInputSchema,
+  GenerateFacebookCarouselOutputSchema,
+  GenerateFacebookVisualPromptInputSchema,
+  GenerateFacebookVisualPromptOutputSchema,
   RewriteSectionInputSchema,
   RewriteSectionOutputSchema,
   ExpandSectionInputSchema,
@@ -60,6 +68,14 @@ import {
   type GenerateImagePromptsOutput,
   type GenerateClusterIdeasInput,
   type GenerateClusterIdeasOutput,
+  type GenerateFacebookWeeklyPlanInput,
+  type GenerateFacebookWeeklyPlanOutput,
+  type GenerateFacebookPostInput,
+  type GenerateFacebookPostOutput,
+  type GenerateFacebookCarouselInput,
+  type GenerateFacebookCarouselOutput,
+  type GenerateFacebookVisualPromptInput,
+  type GenerateFacebookVisualPromptOutput,
   type RewriteSectionInput,
   type RewriteSectionOutput,
   type ExpandSectionInput,
@@ -89,7 +105,7 @@ export type OperationResponse<T> = OperationResult<T> | OperationError
 
 interface OperationContext {
   userId?: string | null
-  targetType?: 'post' | 'panduan' | 'workspace' | null
+  targetType?: 'post' | 'panduan' | 'workspace' | 'social' | null
   targetId?: string | null
 }
 
@@ -544,6 +560,70 @@ export async function generateClusterIdeas(
 ): Promise<OperationResponse<GenerateClusterIdeasOutput>> {
   const profile = resolveProfile(ctx?.targetType)
   return runOperation('generate_cluster_ideas', rawInput, GenerateClusterIdeasInputSchema, GenerateClusterIdeasOutputSchema, (input) => prompts.buildClusterIdeasPrompt(input, profile), normalizeClusterIdeasOutput, ctx)
+}
+
+export async function generateFacebookWeeklyPlan(
+  rawInput: GenerateFacebookWeeklyPlanInput,
+  ctx?: OperationContext
+): Promise<OperationResponse<GenerateFacebookWeeklyPlanOutput>> {
+  return runOperation(
+    'generate_facebook_weekly_plan',
+    rawInput,
+    GenerateFacebookWeeklyPlanInputSchema,
+    GenerateFacebookWeeklyPlanOutputSchema,
+    (input) => prompts.buildFacebookWeeklyPlanPrompt(input),
+    undefined,
+    ctx,
+    { maxTokens: 5000 }
+  )
+}
+
+export async function generateFacebookPost(
+  rawInput: GenerateFacebookPostInput,
+  ctx?: OperationContext
+): Promise<OperationResponse<GenerateFacebookPostOutput>> {
+  return runOperation(
+    'generate_facebook_post',
+    rawInput,
+    GenerateFacebookPostInputSchema,
+    GenerateFacebookPostOutputSchema,
+    (input) => prompts.buildFacebookPostPrompt(input),
+    undefined,
+    ctx,
+    { maxTokens: 2600 }
+  )
+}
+
+export async function generateFacebookCarousel(
+  rawInput: GenerateFacebookCarouselInput,
+  ctx?: OperationContext
+): Promise<OperationResponse<GenerateFacebookCarouselOutput>> {
+  return runOperation(
+    'generate_facebook_carousel',
+    rawInput,
+    GenerateFacebookCarouselInputSchema,
+    GenerateFacebookCarouselOutputSchema,
+    (input) => prompts.buildFacebookCarouselPrompt(input),
+    undefined,
+    ctx,
+    { maxTokens: 3600 }
+  )
+}
+
+export async function generateFacebookVisualPrompt(
+  rawInput: GenerateFacebookVisualPromptInput,
+  ctx?: OperationContext
+): Promise<OperationResponse<GenerateFacebookVisualPromptOutput>> {
+  return runOperation(
+    'generate_facebook_visual_prompt',
+    rawInput,
+    GenerateFacebookVisualPromptInputSchema,
+    GenerateFacebookVisualPromptOutputSchema,
+    (input) => prompts.buildFacebookVisualPrompt(input),
+    undefined,
+    ctx,
+    { maxTokens: 1200 }
+  )
 }
 
 // ─── Rewrite Section ─────────────────────────────────────────────

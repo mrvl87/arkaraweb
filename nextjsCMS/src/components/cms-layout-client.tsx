@@ -11,6 +11,7 @@ import {
   Image,
   Settings,
   Sparkles,
+  Megaphone,
   LogOut,
   Menu,
   X,
@@ -24,6 +25,7 @@ const navItems = [
   { icon: Image, label: 'Media', href: '/cms/media' },
   { icon: Settings, label: 'Settings', href: '/cms/settings' },
   { icon: Sparkles, label: 'AI Workspace', href: '/cms/ai' },
+  { icon: Megaphone, label: 'Social Tracker', href: '/cms/social' },
 ]
 
 interface CMSLayoutClientProps {
