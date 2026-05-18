@@ -36,3 +36,9 @@ pnpm-debug.log*
 # Backup
 src_backup/
 
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
