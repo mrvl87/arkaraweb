@@ -17,7 +17,7 @@ export default async function MediaPage() {
           </div>
           <div className="hidden md:flex items-center gap-2 text-xs font-bold text-gray-400 bg-gray-50 px-4 py-2 rounded-xl">
             <ImageIcon className="w-4 h-4" />
-            STORAGE: SUPABASE
+            STORAGE: CLOUDFLARE R2
           </div>
         </div>
 

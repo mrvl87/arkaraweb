@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import sharp from 'sharp';
-import { SUPABASE_PUBLIC_MEDIA_BASE } from '../../lib/media';
+import { PUBLIC_MEDIA_BASE } from '../../lib/media';
 
 const MEDIA_CACHE_CONTROL = 'public, max-age=31536000, s-maxage=31536000, immutable';
 const MEDIA_CACHE_EXPIRES = new Date(Date.now() + 31536000 * 1000).toUTCString();
@@ -76,7 +76,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     memoryMediaCache.delete(cacheKey);
   }
 
-  const upstreamUrl = new URL(upstreamPath, SUPABASE_PUBLIC_MEDIA_BASE);
+  const upstreamUrl = new URL(upstreamPath, PUBLIC_MEDIA_BASE);
   const upstreamResponse = await fetch(upstreamUrl, {
     headers: {
       Accept: request.headers.get('Accept') ?? 'image/avif,image/webp,image/*,*/*;q=0.8',

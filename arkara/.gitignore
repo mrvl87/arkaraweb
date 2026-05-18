@@ -29,10 +29,10 @@ pnpm-debug.log*
 
 # Output files
 *.log
+migration-reports/
 
 # Local storage (Keystatic)
 .keystatic/
 
 # Backup
 src_backup/
-

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Trash2, Copy, Check, Maximize2, Info } from 'lucide-react'
 import { deleteFile, updateAltText } from '@/app/cms/media/actions'
 import { DeleteDialog } from '@/components/delete-dialog'
+import { resolveMediaUrl } from '@/lib/media-url'
 
 interface MediaCardProps {
   item: any
@@ -13,9 +14,7 @@ export function MediaCard({ item }: MediaCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [copied, setCopied] = useState(false)
   
-  const publicUrl = item.file_path.startsWith('http') 
-    ? item.file_path 
-    : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${item.file_path}`
+  const publicUrl = resolveMediaUrl(item.file_path)
 
   const handleCopy = () => {
     navigator.clipboard.writeText(publicUrl)

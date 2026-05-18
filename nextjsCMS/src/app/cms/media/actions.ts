@@ -1,11 +1,16 @@
 "use server"
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { DeleteObjectsCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { revalidatePath } from 'next/cache'
 import sharp from 'sharp'
 
-const MEDIA_BUCKET = 'media'
-const TEMP_MEDIA_BUCKET = process.env.CMS_TEMP_MEDIA_BUCKET || 'media-ai-temp'
+const DEFAULT_PUBLIC_MEDIA_BASE = 'https://media.arkaraweb.com'
+const SUPABASE_MEDIA_PATH = '/storage/v1/object/public/media/'
+const R2_BUCKET =
+  process.env.R2_BUCKET || process.env.CLOUDFLARE_R2_BUCKET || 'arkara-media'
+
+let r2Client: S3Client | null = null
 
 const getAdminClient = () => {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -15,6 +20,115 @@ const getAdminClient = () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   )
+}
+
+function getPublicMediaBase() {
+  return (
+    process.env.MEDIA_PUBLIC_URL ||
+    process.env.NEXT_PUBLIC_MEDIA_PUBLIC_URL ||
+    DEFAULT_PUBLIC_MEDIA_BASE
+  ).replace(/\/+$/, '')
+}
+
+function getR2Endpoint() {
+  const endpoint = process.env.R2_ENDPOINT || process.env.CLOUDFLARE_R2_ENDPOINT
+  if (endpoint) return endpoint.replace(/\/+$/, '')
+
+  const accountId = process.env.R2_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID
+  if (accountId) return `https://${accountId}.r2.cloudflarestorage.com`
+
+  throw new Error('MISSING_ENV: R2_ENDPOINT atau R2_ACCOUNT_ID belum dikonfigurasi untuk upload Cloudflare R2.')
+}
+
+function getR2Client() {
+  if (r2Client) return r2Client
+
+  const accessKeyId =
+    process.env.R2_ACCESS_KEY_ID ||
+    process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ||
+    process.env.AWS_ACCESS_KEY_ID
+  const secretAccessKey =
+    process.env.R2_SECRET_ACCESS_KEY ||
+    process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY ||
+    process.env.AWS_SECRET_ACCESS_KEY
+
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error('MISSING_ENV: R2_ACCESS_KEY_ID dan R2_SECRET_ACCESS_KEY belum dikonfigurasi untuk upload Cloudflare R2.')
+  }
+
+  r2Client = new S3Client({
+    region: 'auto',
+    endpoint: getR2Endpoint(),
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+    forcePathStyle: true,
+  })
+
+  return r2Client
+}
+
+function getPublicMediaUrl(key: string) {
+  const encodedKey = key
+    .replace(/^\/+/, '')
+    .split('/')
+    .map((segment) => encodeURIComponent(decodeURIComponent(segment)))
+    .join('/')
+
+  return `${getPublicMediaBase()}/${encodedKey}`
+}
+
+async function uploadR2Object(
+  key: string,
+  body: Buffer,
+  contentType: string,
+  cacheSeconds = 31536000
+) {
+  await getR2Client().send(new PutObjectCommand({
+    Bucket: R2_BUCKET,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+    CacheControl: cacheSeconds >= 31536000
+      ? `public, max-age=${cacheSeconds}, immutable`
+      : `public, max-age=${cacheSeconds}`,
+  }))
+}
+
+async function deleteR2Objects(keys: string[]) {
+  const uniqueKeys = [...new Set(keys.map((key) => key.replace(/^\/+/, '')).filter(Boolean))]
+  if (uniqueKeys.length === 0) return
+
+  await getR2Client().send(new DeleteObjectsCommand({
+    Bucket: R2_BUCKET,
+    Delete: {
+      Objects: uniqueKeys.map((Key) => ({ Key })),
+      Quiet: true,
+    },
+  }))
+}
+
+function getR2ObjectKey(value: string | null | undefined) {
+  if (!value || value === 'true') return null
+
+  try {
+    const url = new URL(value)
+    const mediaHost = new URL(getPublicMediaBase()).hostname
+
+    if (url.hostname === mediaHost) {
+      return decodeURIComponent(url.pathname.replace(/^\/+/, ''))
+    }
+
+    const supabasePathIndex = url.pathname.indexOf(SUPABASE_MEDIA_PATH)
+    if (url.hostname.endsWith('.supabase.co') && supabasePathIndex >= 0) {
+      return decodeURIComponent(url.pathname.slice(supabasePathIndex + SUPABASE_MEDIA_PATH.length))
+    }
+
+    return null
+  } catch {
+    return value.replace(/^\/+/, '')
+  }
 }
 
 export async function getMedia() {
@@ -49,7 +163,7 @@ export async function processAndUploadImage({
   let finalBuffer = buffer;
   let fileExt = originalName.split('.').pop() || 'tmp';
   let isImage = mimeType.startsWith('image/');
-  let baseName = contextName.trim() ? contextName.trim().replace(/\s+/g, '-').toLowerCase() : Math.random().toString(36).substring(2);
+  let baseName = sanitizeBaseName(contextName) || Math.random().toString(36).substring(2);
   let fileName = `${baseName}-${Date.now()}`;
   
   let formatsObj: Record<string, string> = {};
@@ -57,6 +171,7 @@ export async function processAndUploadImage({
   let blurhash = '';
   let aspectRatio = '';
   let fileSize = buffer.length;
+  const uploadedPaths: string[] = [];
   
   if (isImage && !mimeType.includes('svg')) {
     try {
@@ -89,12 +204,9 @@ export async function processAndUploadImage({
             const sizeBuffer = await image.clone().resize({ width: size.width, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
             const sizePath = `uploads/${fileName}-${size.name}.webp`;
             
-            await supabase.storage.from(MEDIA_BUCKET).upload(sizePath, sizeBuffer, { 
-              contentType: 'image/webp',
-              cacheControl: '31536000'
-            });
-            const { data } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(sizePath);
-            formatsObj[size.name] = data.publicUrl;
+            await uploadR2Object(sizePath, sizeBuffer, 'image/webp');
+            uploadedPaths.push(sizePath);
+            formatsObj[size.name] = getPublicMediaUrl(sizePath);
           }
         }
       }
@@ -115,26 +227,19 @@ export async function processAndUploadImage({
 
   const filePath = `uploads/${fileName}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from(MEDIA_BUCKET)
-    .upload(filePath, finalBuffer, { 
-      contentType: mimeType,
-      cacheControl: '31536000'
-    });
-
-  if (uploadError) throw new Error(uploadError.message);
-  
-  const { data: publicUrlData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(filePath);
+  await uploadR2Object(filePath, finalBuffer, mimeType);
+  uploadedPaths.push(filePath);
+  const publicUrl = getPublicMediaUrl(filePath);
   
   if (Object.keys(formatsObj).length > 0) {
-      formatsObj['original'] = publicUrlData.publicUrl;
+      formatsObj['original'] = publicUrl;
   }
 
   const altText = contextName.trim() || originalName;
   
   const { error: dbError } = await supabase.from('media').insert({
     file_name: fileName,
-    file_path: publicUrlData.publicUrl,
+    file_path: publicUrl,
     file_type: mimeType,
     file_size: fileSize,
     alt_text: altText,
@@ -146,7 +251,11 @@ export async function processAndUploadImage({
   });
 
   if (dbError) {
-    await supabase.storage.from(MEDIA_BUCKET).remove([filePath]);
+    try {
+      await deleteR2Objects(uploadedPaths);
+    } catch (error) {
+      console.error('Failed to roll back R2 uploads after database insert error:', error);
+    }
     throw new Error(dbError.message);
   }
 }
@@ -198,7 +307,6 @@ function sanitizeBaseName(value: string) {
 }
 
 export async function uploadTemporaryReferenceImage(formData: FormData) {
-  const supabase = getAdminClient()
   const file = formData.get('file') as File | null
 
   if (!file) {
@@ -215,28 +323,12 @@ export async function uploadTemporaryReferenceImage(formData: FormData) {
   const baseName = sanitizeBaseName(file.name.replace(/\.[^.]+$/, '')) || 'reference'
   const objectPath = `references/${baseName}-${Date.now()}.${optimized.extension}`
 
-  const { error: uploadError } = await supabase.storage
-    .from(TEMP_MEDIA_BUCKET)
-    .upload(objectPath, optimized.buffer, {
-      contentType: optimized.mimeType,
-      cacheControl: '3600',
-      upsert: false,
-    })
-
-  if (uploadError) {
-    throw new Error(
-      uploadError.message.includes('Bucket not found')
-        ? `Bucket ${TEMP_MEDIA_BUCKET} belum tersedia. Buat bucket ini di Supabase untuk menyimpan reference image sementara.`
-        : uploadError.message
-    )
-  }
-
-  const { data } = supabase.storage.from(TEMP_MEDIA_BUCKET).getPublicUrl(objectPath)
+  await uploadR2Object(objectPath, optimized.buffer, optimized.mimeType, 3600)
 
   return {
-    bucket: TEMP_MEDIA_BUCKET,
+    bucket: R2_BUCKET,
     path: objectPath,
-    publicUrl: data.publicUrl,
+    publicUrl: getPublicMediaUrl(objectPath),
     mimeType: optimized.mimeType,
     size: optimized.buffer.length,
   }
@@ -245,10 +337,13 @@ export async function uploadTemporaryReferenceImage(formData: FormData) {
 export async function removeTemporaryReferenceImage(path: string) {
   if (!path) return
 
-  const supabase = getAdminClient()
-  const { error } = await supabase.storage.from(TEMP_MEDIA_BUCKET).remove([path])
-  if (error) {
-    console.error('Failed to remove temporary reference image:', error.message)
+  const key = getR2ObjectKey(path)
+  if (!key) return
+
+  try {
+    await deleteR2Objects([key])
+  } catch (error) {
+    console.error('Failed to remove temporary reference image:', error)
   }
 }
 
@@ -282,39 +377,30 @@ export async function deleteFile(id: string, filePath: string) {
   // 1. Get the media item first to check formats
   const { data: media } = await supabase.from('media').select('formats, file_path').eq('id', id).single()
 
-  // 2. Extract relative path from public URL if necessary
-  // Typically file_path is full URL now, so we need to extract 'uploads/...'
-  const getRelativePath = (url: string) => {
-      try {
-          const parts = url.split('/media/')
-          return parts[1] ? parts[1] : null
-      } catch (e) {
-          return url
-      }
-  }
-  
   const pathsToDelete: string[] = []
   
   if (media) {
-      const mainRelative = getRelativePath(media.file_path)
+      const mainRelative = getR2ObjectKey(media.file_path)
       if (mainRelative) pathsToDelete.push(mainRelative)
       
       if (media.formats) {
           Object.values(media.formats).forEach((url: any) => {
-              const rel = getRelativePath(url)
+              if (typeof url !== 'string') return
+              const rel = getR2ObjectKey(url)
               if (rel) pathsToDelete.push(rel)
           })
       }
   } else {
-      pathsToDelete.push(filePath)
+      const fallbackKey = getR2ObjectKey(filePath)
+      if (fallbackKey) pathsToDelete.push(fallbackKey)
   }
 
-  // 3. Delete from Storage
-  const { error: storageError } = await supabase.storage
-    .from(MEDIA_BUCKET)
-    .remove(pathsToDelete)
-
-  if (storageError) console.error("Storage delete errors:", storageError.message)
+  // 3. Delete from R2
+  try {
+    await deleteR2Objects(pathsToDelete)
+  } catch (error) {
+    console.error("R2 delete errors:", error)
+  }
 
   // 4. Delete from Database
   const { error: dbError } = await supabase

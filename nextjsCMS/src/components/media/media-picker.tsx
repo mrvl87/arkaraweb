@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Image as ImageIcon, Search, Loader2, X, Check } from 'lucide-react'
 import { getMedia } from '@/app/cms/media/actions'
+import { resolveMediaUrl } from '@/lib/media-url'
 
 interface MediaPickerProps {
   onSelect: (item: any) => void
@@ -39,9 +40,7 @@ export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar", value,
 
   const handleSelect = (item: any) => {
     // Generate the full object needed for Astro consumption
-    const publicUrl = item.file_path.startsWith('http') 
-        ? item.file_path 
-        : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${item.file_path}`
+    const publicUrl = resolveMediaUrl(item.file_path)
     
     // We pass the full item including formats, dominant_color, blurhash etc.
     const enrichedItem = {
@@ -127,9 +126,7 @@ export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar", value,
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {filteredMedia.map((item) => {
-                    const publicUrl = item.file_path.startsWith('http') 
-                        ? item.file_path 
-                        : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/${item.file_path}`
+                    const publicUrl = resolveMediaUrl(item.file_path)
                     
                     return (
                       <div 

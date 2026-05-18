@@ -1,3 +1,5 @@
+export const PUBLIC_MEDIA_BASE = 'https://media.arkaraweb.com/';
+
 export const SUPABASE_PUBLIC_MEDIA_BASE =
   'https://zythkkmygravwelxbwtf.supabase.co/storage/v1/object/public/media/';
 
@@ -10,14 +12,22 @@ type MediaVariantOptions = {
   quality?: number;
 };
 
-function toProxyPath(parsed: URL) {
-  const mediaPath = parsed.pathname
+function toMediaPath(parsed: URL) {
+  return parsed.pathname
     .slice(SUPABASE_PUBLIC_MEDIA_PATH.length)
     .split('/')
     .map((segment) => encodeURIComponent(decodeURIComponent(segment)))
     .join('/');
+}
+
+function toProxyPath(parsed: URL) {
+  const mediaPath = toMediaPath(parsed);
 
   return `/media-cache/${mediaPath}${parsed.search}`;
+}
+
+function toPublicMediaUrl(parsed: URL) {
+  return new URL(`${toMediaPath(parsed)}${parsed.search}`, PUBLIC_MEDIA_BASE).href;
 }
 
 function appendVariantParams(url: string, options: MediaVariantOptions = {}) {
@@ -43,6 +53,10 @@ export function rewriteMediaUrl(url: string, options: MediaVariantOptions = {}) 
       parsed.hostname.endsWith('.supabase.co') &&
       parsed.pathname.startsWith(SUPABASE_PUBLIC_MEDIA_PATH)
     ) {
+      if (!options.width && !options.quality) {
+        return toPublicMediaUrl(parsed);
+      }
+
       return appendVariantParams(toProxyPath(parsed), options);
     }
   } catch {
