@@ -22,7 +22,9 @@ import type {
 
 const SITE_URL = process.env.FRONTEND_SITE_URL || 'https://arkaraweb.com'
 const SOCIAL_PATH = '/cms/social'
-const CONTENT_LIMIT = 2200
+const SOURCE_SUMMARY_LIMIT = 2200
+const SOURCE_LIST_EXCERPT_LIMIT = 360
+const TRUNCATION_SUFFIX = '\n\n[Konten dipotong untuk efisiensi token.]'
 
 const campaignSchema = z.object({
   id: z.string().uuid().optional(),
@@ -115,7 +117,7 @@ async function requireUser() {
   return { supabase, user }
 }
 
-function compactContent(value?: string | null) {
+function compactContent(value?: string | null, limit = SOURCE_SUMMARY_LIMIT) {
   const content = (value ?? '')
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -123,9 +125,14 @@ function compactContent(value?: string | null) {
     .replace(/\s+/g, ' ')
     .trim()
 
-  return content.length > CONTENT_LIMIT
-    ? `${content.slice(0, CONTENT_LIMIT)}\n\n[Konten dipotong untuk efisiensi token.]`
-    : content
+  if (content.length <= limit) return content
+
+  const availableLength = Math.max(0, limit - TRUNCATION_SUFFIX.length)
+  return `${content.slice(0, availableLength).trimEnd()}${TRUNCATION_SUFFIX}`
+}
+
+function buildSourceSummary(parts: Array<string | null | undefined>, limit = SOURCE_SUMMARY_LIMIT) {
+  return compactContent(parts.filter(Boolean).join('\n\n'), limit) || undefined
 }
 
 function nullIfEmpty(value?: string | null) {
@@ -156,9 +163,59 @@ async function getSourceByPost(
 
   return {
     title: data.title as string,
-    summary: compactContent((data.description || data.quick_answer || data.content) as string | null),
+    summary: buildSourceSummary([
+      data.description as string | null,
+      data.quick_answer as string | null,
+      data.content as string | null,
+    ]),
     url: post.target_url || `${SITE_URL}${path}`,
   }
+}
+
+async function getPlanSourceById(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  sourceId?: string
+): Promise<SocialSourceOption | null> {
+  if (!sourceId) return null
+
+  const [{ data: post }, { data: panduan }] = await Promise.all([
+    supabase
+      .from('posts')
+      .select('id, title, slug, status, description, content')
+      .eq('id', sourceId)
+      .maybeSingle(),
+    supabase
+      .from('panduan')
+      .select('id, title, slug, status, meta_desc, content')
+      .eq('id', sourceId)
+      .maybeSingle(),
+  ])
+
+  if (post) {
+    return {
+      id: post.id as string,
+      type: 'post',
+      title: post.title as string,
+      slug: post.slug as string,
+      status: post.status as 'draft' | 'published',
+      description: compactContent(post.description as string | null, SOURCE_LIST_EXCERPT_LIMIT) || null,
+      content: compactContent(post.content as string | null),
+    }
+  }
+
+  if (panduan) {
+    return {
+      id: panduan.id as string,
+      type: 'panduan',
+      title: panduan.title as string,
+      slug: panduan.slug as string,
+      status: panduan.status as 'draft' | 'published',
+      description: compactContent(panduan.meta_desc as string | null, SOURCE_LIST_EXCERPT_LIMIT) || null,
+      content: compactContent(panduan.content as string | null),
+    }
+  }
+
+  return null
 }
 
 async function validateReadyState(params: {
@@ -218,12 +275,12 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
       .order('start_date', { ascending: false }),
     supabase
       .from('posts')
-      .select('id, title, slug, status, description, content')
+      .select('id, title, slug, status, description')
       .order('updated_at', { ascending: false, nullsFirst: false })
       .limit(80),
     supabase
       .from('panduan')
-      .select('id, title, slug, status, meta_desc, content')
+      .select('id, title, slug, status, meta_desc')
       .order('updated_at', { ascending: false, nullsFirst: false })
       .limit(80),
   ])
@@ -275,8 +332,8 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
       title: post.title,
       slug: post.slug,
       status: post.status,
-      description: post.description ?? null,
-      content: post.content ?? null,
+      description: compactContent(post.description ?? null, SOURCE_LIST_EXCERPT_LIMIT) || null,
+      content: null,
     })),
     ...((panduan ?? []) as Array<any>).map((item) => ({
       id: item.id,
@@ -284,8 +341,8 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
       title: item.title,
       slug: item.slug,
       status: item.status,
-      description: item.meta_desc ?? null,
-      content: item.content ?? null,
+      description: compactContent(item.meta_desc ?? null, SOURCE_LIST_EXCERPT_LIMIT) || null,
+      content: null,
     })),
   ]
 
@@ -648,11 +705,7 @@ export async function generateWeeklyFacebookPlan(campaignId: string, sourceId?: 
 
   if (error || !campaign) return { error: error?.message || 'Campaign tidak ditemukan.' }
 
-  let source: SocialSourceOption | null = null
-  if (sourceId) {
-    const dashboard = await getSocialDashboardData(campaignId)
-    source = dashboard.sources.find((item) => item.id === sourceId) ?? null
-  }
+  const source = await getPlanSourceById(supabase, sourceId)
 
   const sourceUrl =
     source?.type === 'post'
@@ -671,7 +724,7 @@ export async function generateWeeklyFacebookPlan(campaignId: string, sourceId?: 
       content_pillar: campaign.content_pillar || undefined,
       tone_note: campaign.tone_note || undefined,
       source_title: source?.title,
-      source_summary: compactContent(source?.description || source?.content),
+      source_summary: buildSourceSummary([source?.description, source?.content]),
       source_url: sourceUrl,
     },
     { userId: user.id, targetType: 'social', targetId: campaignId }
