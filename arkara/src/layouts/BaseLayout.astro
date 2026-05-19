@@ -22,6 +22,7 @@ interface Props {
   siteName?: string;
   type?: 'website' | 'article';
   robots?: string;
+  preloadImage?: string;
 }
 
 const {
@@ -32,7 +33,8 @@ const {
   canonicalHref,
   siteName = 'Arkara',
   type = 'website',
-  robots = 'index, follow'
+  robots = 'index, follow',
+  preloadImage
 } = Astro.props;
 const siteTitle = title ? `${title} â€” ${siteName}` : `${siteName} â€” Survive with Knowledge`;
 const siteUrl = 'https://arkaraweb.com';
@@ -46,6 +48,11 @@ const googleAnalyticsScript = `
 `;
 const canonicalUrl = new URL(canonicalHref || Astro.url.pathname, siteUrl);
 const socialImageUrl = image ? new URL(rewriteMediaUrl(image), siteUrl).href : undefined;
+const preloadedImageUrl = preloadImage
+  ? new URL(rewriteMediaUrl(preloadImage), siteUrl).href
+  : type === 'article'
+    ? socialImageUrl
+    : undefined;
 const currentPath = Astro.url.pathname;
 const footerData = await getFooterData();
 
@@ -136,6 +143,9 @@ if (Astro.response.status < 300) {
     <meta name="description" content={description} />
     <meta name="robots"      content={robots} />
     <link rel="canonical"    href={canonicalUrl.href} />
+    <link rel="preconnect" href="https://media.arkaraweb.com" />
+    <link rel="dns-prefetch" href="https://media.arkaraweb.com" />
+    {preloadedImageUrl && <link rel="preload" as="image" href={preloadedImageUrl} fetchpriority="high" />}
 
     <meta property="og:type"        content={type} />
     <meta property="og:url"         content={canonicalUrl.href} />

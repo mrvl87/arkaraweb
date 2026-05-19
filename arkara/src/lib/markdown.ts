@@ -28,6 +28,29 @@ function extractIdAttribute(attrs: string): string | null {
   return match?.[1] ?? null
 }
 
+function addBodyImageLoadingAttributes(html: string): string {
+  return html.replace(/<img\b[^>]*>/gi, (tag) => {
+    if (/^\s*<img\b[^>]*\bsrc\s*=\s*["']data:/i.test(tag)) {
+      return tag
+    }
+
+    const attributes = [
+      /\bloading\s*=/i.test(tag) ? '' : ' loading="lazy"',
+      /\bdecoding\s*=/i.test(tag) ? '' : ' decoding="async"',
+      /\bfetchpriority\s*=/i.test(tag) ? '' : ' fetchpriority="low"',
+    ].join('')
+
+    if (!attributes) {
+      return tag
+    }
+
+    return tag.replace(/\s*\/?>$/, (ending) => {
+      const close = ending.includes('/>') ? ' />' : '>'
+      return `${attributes}${close}`
+    })
+  })
+}
+
 export function renderContent(content: string): string {
   if (!content || content.trim() === '') return ''
   const trimmed = content.trim()
@@ -37,6 +60,7 @@ export function renderContent(content: string): string {
     : marked.parse(trimmed) as string
 
   html = rewriteHtmlMediaUrls(html)
+  html = addBodyImageLoadingAttributes(html)
 
   // Inject IDs into h2 and h3 tags for TOC navigation
   const seenHeadingIds = new Map<string, number>()
