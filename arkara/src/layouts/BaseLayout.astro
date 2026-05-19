@@ -10,6 +10,7 @@
  */
 import '../styles/global.css';
 import { getFooterData } from '../lib/content';
+import { rewriteMediaUrl } from '../lib/media';
 import SearchAutosuggest from '../components/SearchAutosuggest.astro';
 
 interface Props {
@@ -44,6 +45,7 @@ const googleAnalyticsScript = `
   gtag('config', '${googleAnalyticsId}');
 `;
 const canonicalUrl = new URL(canonicalHref || Astro.url.pathname, siteUrl);
+const socialImageUrl = image ? new URL(rewriteMediaUrl(image), siteUrl).href : undefined;
 const currentPath = Astro.url.pathname;
 const footerData = await getFooterData();
 
@@ -140,15 +142,15 @@ if (Astro.response.status < 300) {
     <meta property="og:site_name"   content={siteName} />
     <meta property="og:title"       content={siteTitle} />
     <meta property="og:description" content={description} />
-    {image && <meta property="og:image" content={new URL(image, siteUrl).href} />}
-    {image && <meta property="og:image:secure_url" content={new URL(image, siteUrl).href} />}
+    {socialImageUrl && <meta property="og:image" content={socialImageUrl} />}
+    {socialImageUrl && <meta property="og:image:secure_url" content={socialImageUrl} />}
     {imageAlt && <meta property="og:image:alt" content={imageAlt} />}
 
     <meta property="twitter:card"        content="summary_large_image" />
     <meta property="twitter:url"         content={canonicalUrl.href} />
     <meta property="twitter:title"       content={siteTitle} />
     <meta property="twitter:description" content={description} />
-    {image && <meta property="twitter:image" content={new URL(image, siteUrl).href} />}
+    {socialImageUrl && <meta property="twitter:image" content={socialImageUrl} />}
     {imageAlt && <meta property="twitter:image:alt" content={imageAlt} />}
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />

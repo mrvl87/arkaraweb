@@ -27,7 +27,6 @@ export default defineConfig({
     domains: [
       'arkara-media.fly.storage.tigris.dev',
       'media.arkaraweb.com',
-      'zythkkmygravwelxbwtf.supabase.co',
     ],
   },
 });
