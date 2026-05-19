@@ -5,6 +5,8 @@
  * Get it from: https://openrouter.ai
  */
 
+import { getServerEnv } from './server-env'
+
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1';
 
 export interface GenerateOptions {
@@ -16,10 +18,10 @@ export interface GenerateOptions {
 }
 
 export async function generateContent(opts: GenerateOptions): Promise<string> {
-  const apiKey = import.meta.env.OPENROUTER_API_KEY;
+  const apiKey = getServerEnv('OPENROUTER_API_KEY');
 
   if (!apiKey) {
-    throw new Error('OPENROUTER_API_KEY not configured. Set it in .env file.');
+    throw new Error('OPENROUTER_API_KEY not configured.');
   }
 
   const res = await fetch(`${OPENROUTER_BASE}/chat/completions`, {

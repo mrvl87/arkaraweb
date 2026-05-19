@@ -1,9 +1,10 @@
 import type { APIRoute } from 'astro'
+import { getServerEnv } from '../../lib/server-env'
 
 export const POST: APIRoute = async ({ request }) => {
   // Validasi secret — hanya CMS yang boleh trigger
   const secret = request.headers.get('x-revalidate-secret')
-  if (secret !== import.meta.env.REVALIDATE_SECRET) {
+  if (secret !== getServerEnv('REVALIDATE_SECRET')) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
       status: 401,
       headers: { 'Content-Type': 'application/json' }

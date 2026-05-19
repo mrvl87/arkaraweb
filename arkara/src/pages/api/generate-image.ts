@@ -1,21 +1,20 @@
 /**
  * API Endpoint: POST /api/generate-image
- * Generate images using Wavespeed (Nano Banana 2) and upload to S3
+ * Generate images using Wavespeed (Nano Banana 2)
  *
  * Request body:
  * {
  *   "prompt": "deskripsi gambar",
  *   "style": "line-art" | "semi-illustrative",
- *   "uploadToS3": true
+ *   "uploadToS3": false
  * }
  *
  * Response:
- * { "url": "image-url", "source": "s3" | "wavespeed" }
+ * { "url": "image-url", "source": "wavespeed" }
  */
 
 import type { APIRoute } from 'astro';
 import { generateImage } from '../../lib/wavespeed';
-import { uploadToStorage } from '../../lib/storage';
 
 interface RequestPayload {
   prompt: string;
@@ -45,16 +44,13 @@ export const POST: APIRoute = async ({ request }) => {
       height: height || 576,
     });
 
-    // Optionally upload to S3 bucket
     if (uploadToS3) {
-      const s3Url = await uploadToStorage(
-        imageUrl,
-        `generated/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.webp`
+      return new Response(
+        JSON.stringify({
+          error: 'Image uploads are handled by the CMS and Cloudflare R2.',
+        }),
+        { status: 410, headers: { 'Content-Type': 'application/json' } }
       );
-
-      return new Response(JSON.stringify({ url: s3Url, source: 's3' }), {
-        headers: { 'Content-Type': 'application/json' },
-      });
     }
 
     // Return Wavespeed URL

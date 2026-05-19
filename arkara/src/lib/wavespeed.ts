@@ -5,6 +5,8 @@
  * Get it from: https://app.wavespeed.ai
  */
 
+import { getServerEnv } from './server-env'
+
 const WAVESPEED_BASE = 'https://api.wavespeed.ai/api/v3';
 
 export interface ImageGenOptions {
@@ -16,10 +18,10 @@ export interface ImageGenOptions {
 }
 
 export async function generateImage(opts: ImageGenOptions): Promise<string> {
-  const apiKey = import.meta.env.WAVESPEED_API_KEY;
+  const apiKey = getServerEnv('WAVESPEED_API_KEY');
 
   if (!apiKey) {
-    throw new Error('WAVESPEED_API_KEY not configured. Set it in .env file.');
+    throw new Error('WAVESPEED_API_KEY not configured.');
   }
 
   // Submit generation job
