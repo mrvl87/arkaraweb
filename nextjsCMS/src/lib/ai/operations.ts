@@ -54,6 +54,8 @@ import {
   ResearchWithWebOutputSchema,
   VerifyLatestFactsInputSchema,
   VerifyLatestFactsOutputSchema,
+  GenerateSeoRepairPlanInputSchema,
+  GenerateSeoRepairPlanOutputSchema,
   type GenerateSlugInput,
   type GenerateSlugOutput,
   type GenerateSEOPackInput,
@@ -86,6 +88,8 @@ import {
   type ResearchWithWebOutput,
   type VerifyLatestFactsInput,
   type VerifyLatestFactsOutput,
+  type GenerateSeoRepairPlanInput,
+  type GenerateSeoRepairPlanOutput,
   type AIOperation,
 } from './schemas'
 
@@ -766,6 +770,31 @@ export async function verifyLatestFacts(
 
     return { success: false, error: errorMessage }
   }
+}
+
+export async function generateSeoRepairPlan(
+  rawInput: GenerateSeoRepairPlanInput,
+  ctx?: OperationContext
+): Promise<OperationResponse<GenerateSeoRepairPlanOutput>> {
+  const profile = resolveProfile(ctx?.targetType)
+
+  return runOperation(
+    'generate_seo_repair_plan',
+    rawInput,
+    GenerateSeoRepairPlanInputSchema,
+    GenerateSeoRepairPlanOutputSchema,
+    (input) => prompts.buildSeoRepairPlanPrompt(input, profile),
+    undefined,
+    ctx,
+    {
+      maxTokens: 5000,
+      timeoutMs: 75000,
+      parseMaxRetries: 1,
+      repairMaxTokens: 5000,
+      repairTimeoutMs: 45000,
+      reasoning: { maxTokens: 384, exclude: true },
+    }
+  )
 }
 
 // ─── Generic operation runner ────────────────────────────────────

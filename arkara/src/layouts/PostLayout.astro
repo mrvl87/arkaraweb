@@ -67,6 +67,7 @@ const readerLabel = isTechnicalGuide ? 'Prosedur Cepat' : 'Jawaban Singkat';
 const takeawayLabel = isTechnicalGuide ? 'Checklist Lapangan' : 'Inti Artikel';
 const tocLabel = isTechnicalGuide ? 'Urutan Prosedur' : 'Isi Artikel';
 const faqLabel = isTechnicalGuide ? 'Pertanyaan Operasional' : 'FAQ';
+const siteUrl = 'https://arkaraweb.com';
 
 function resolveSocialImage(image: any): string | undefined {
   if (!image) return undefined;
@@ -80,13 +81,93 @@ function resolveSocialImage(image: any): string | undefined {
     || undefined;
 }
 
+function toAbsoluteSiteUrl(pathOrUrl?: string): string | undefined {
+  if (!pathOrUrl) return undefined;
+
+  try {
+    return new URL(pathOrUrl, siteUrl).href;
+  } catch {
+    return undefined;
+  }
+}
+
+function cleanSchemaText(value?: string | null): string | undefined {
+  const cleaned = value
+    ?.replace(/<[^>]*>/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[#*_`>~|-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return cleaned || undefined;
+}
+
 const ogImageUrl = resolveSocialImage(coverImage);
 const ogImageAlt = typeof coverImage === 'string'
   ? title
   : coverImage?.alt_text || title;
-const readerImageUrl = ogImageUrl ? rewriteMediaUrl(ogImageUrl, { width: 240, quality: 70 }) : undefined;
 const readerType = contentType === 'panduan' ? 'panduan' : 'blog';
 const readerHref = canonicalHref || (currentSlug ? `/${readerType === 'panduan' ? 'panduan' : 'blog'}/${currentSlug}` : '#');
+const articleUrl = toAbsoluteSiteUrl(canonicalHref || readerHref);
+const schemaImageUrl = ogImageUrl ? toAbsoluteSiteUrl(rewriteMediaUrl(ogImageUrl)) : undefined;
+const schemaDescription = cleanSchemaText(description || cleanQuickAnswer || content)?.slice(0, 320);
+const schemaArticle = {
+  '@context': 'https://schema.org',
+  '@type': contentType === 'panduan' ? 'TechArticle' : 'BlogPosting',
+  headline: title,
+  description: schemaDescription,
+  mainEntityOfPage: articleUrl,
+  url: articleUrl,
+  image: schemaImageUrl ? [schemaImageUrl] : undefined,
+  datePublished: publishDate,
+  dateModified: publishDate,
+  author: {
+    '@type': 'Organization',
+    name: 'Arkara',
+    url: siteUrl,
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: 'Arkara',
+    url: siteUrl,
+  },
+  articleSection: category,
+  keywords: cleanTakeaways.length ? cleanTakeaways : undefined,
+};
+const schemaFaq = cleanFaq.length
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: cleanFaq.map((item) => ({
+        '@type': 'Question',
+        name: item.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: item.answer,
+        },
+      })),
+    }
+  : null;
+const howToSteps = headings
+  .filter((heading) => heading.depth === 2 && heading.text && heading.slug)
+  .slice(0, 12);
+const schemaHowTo = contentType === 'panduan' && isTechnicalGuide && howToSteps.length >= 2
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'HowTo',
+      name: title,
+      description: schemaDescription,
+      image: schemaImageUrl,
+      step: howToSteps.map((heading, index) => ({
+        '@type': 'HowToStep',
+        position: index + 1,
+        name: heading.text,
+        url: articleUrl ? `${articleUrl}#${heading.slug}` : undefined,
+      })),
+    }
+  : null;
+const structuredData = [schemaArticle, schemaFaq, schemaHowTo].filter(Boolean);
+const readerImageUrl = ogImageUrl ? rewriteMediaUrl(ogImageUrl, { width: 240, quality: 70 }) : undefined;
 const readerMeta = {
   id: `${readerType}:${currentSlug || title}`,
   type: readerType,
@@ -109,6 +190,7 @@ const readerMetaJson = JSON.stringify(readerMeta).replace(/</g, '\\u003c');
   preloadImage={ogImageUrl}
   canonicalHref={canonicalHref}
   type="article"
+  structuredData={structuredData}
 >
 
   <!-- â”€â”€ POST HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->

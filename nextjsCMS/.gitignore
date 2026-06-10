@@ -26,6 +26,7 @@ yarn-debug.log*
 yarn-error.log*
 .codex-dev*.log
 .codex-dev-webpack-*.log
+.codex-*.log
 
 # local env files
 .env*.local

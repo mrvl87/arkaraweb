@@ -3,7 +3,6 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { DeleteObjectsCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { revalidatePath } from 'next/cache'
-import sharp from 'sharp'
 
 const DEFAULT_PUBLIC_MEDIA_BASE = 'https://media.arkaraweb.com'
 const SUPABASE_MEDIA_PATH = '/storage/v1/object/public/media/'
@@ -11,6 +10,9 @@ const R2_BUCKET =
   process.env.R2_BUCKET || process.env.CLOUDFLARE_R2_BUCKET || 'arkara-media'
 
 let r2Client: S3Client | null = null
+type SharpModule = typeof import('sharp')
+
+let sharpLoader: Promise<SharpModule> | null = null
 
 const getAdminClient = () => {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -77,6 +79,44 @@ function getPublicMediaUrl(key: string) {
     .join('/')
 
   return `${getPublicMediaBase()}/${encodedKey}`
+}
+
+async function getSharp() {
+  if (!sharpLoader) {
+    sharpLoader = import('sharp').then((module) => {
+      const resolved = (module as { default?: SharpModule }).default
+      return resolved ?? (module as unknown as SharpModule)
+    })
+  }
+
+  try {
+    return await sharpLoader
+  } catch (error) {
+    sharpLoader = null
+    throw error
+  }
+}
+
+function getExtensionFromMimeType(mimeType: string) {
+  const normalized = mimeType.toLowerCase()
+
+  switch (normalized) {
+    case 'image/jpeg':
+    case 'image/jpg':
+      return 'jpg'
+    case 'image/png':
+      return 'png'
+    case 'image/webp':
+      return 'webp'
+    case 'image/gif':
+      return 'gif'
+    case 'image/avif':
+      return 'avif'
+    case 'image/svg+xml':
+      return 'svg'
+    default:
+      return 'bin'
+  }
 }
 
 async function uploadR2Object(
@@ -175,6 +215,7 @@ export async function processAndUploadImage({
   
   if (isImage && !mimeType.includes('svg')) {
     try {
+      const sharp = await getSharp()
       const image = sharp(buffer);
       const metadata = await image.metadata();
       
@@ -217,7 +258,7 @@ export async function processAndUploadImage({
       fileSize = finalBuffer.length;
       fileName = `${fileName}.webp`;
     } catch (err) {
-      console.error('Error processing image:', err);
+      console.error('Error processing image with sharp, fallback to original asset:', err);
       // Fallback
       fileName = `${fileName}.${fileExt}`;
     }
@@ -273,28 +314,39 @@ async function optimizeTemporaryReferenceImage(buffer: Buffer, mimeType: string)
     }
   }
 
-  const image = sharp(buffer)
-  const metadata = await image.metadata()
-  const resized = image.resize({
-    width: metadata.width && metadata.width > 1024 ? 1024 : undefined,
-    height: metadata.height && metadata.height > 1024 ? 1024 : undefined,
-    fit: 'inside',
-    withoutEnlargement: true,
-  })
+  try {
+    const sharp = await getSharp()
+    const image = sharp(buffer)
+    const metadata = await image.metadata()
+    const resized = image.resize({
+      width: metadata.width && metadata.width > 1024 ? 1024 : undefined,
+      height: metadata.height && metadata.height > 1024 ? 1024 : undefined,
+      fit: 'inside',
+      withoutEnlargement: true,
+    })
 
-  const hasAlpha = metadata.hasAlpha ?? false
-  if (hasAlpha) {
-    return {
-      buffer: await resized.webp({ quality: 72, alphaQuality: 72 }).toBuffer(),
-      mimeType: 'image/webp',
-      extension: 'webp',
+    const hasAlpha = metadata.hasAlpha ?? false
+    if (hasAlpha) {
+      return {
+        buffer: await resized.webp({ quality: 72, alphaQuality: 72 }).toBuffer(),
+        mimeType: 'image/webp',
+        extension: 'webp',
+      }
     }
-  }
 
-  return {
-    buffer: await resized.jpeg({ quality: 78, mozjpeg: true }).toBuffer(),
-    mimeType: 'image/jpeg',
-    extension: 'jpg',
+    return {
+      buffer: await resized.jpeg({ quality: 78, mozjpeg: true }).toBuffer(),
+      mimeType: 'image/jpeg',
+      extension: 'jpg',
+    }
+  } catch (error) {
+    console.error('Failed to optimize temporary reference image with sharp, using original file:', error)
+
+    return {
+      buffer,
+      mimeType,
+      extension: getExtensionFromMimeType(mimeType),
+    }
   }
 }
 

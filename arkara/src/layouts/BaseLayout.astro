@@ -23,6 +23,7 @@ interface Props {
   type?: 'website' | 'article';
   robots?: string;
   preloadImage?: string;
+  structuredData?: Record<string, unknown> | Array<Record<string, unknown>>;
 }
 
 const {
@@ -34,7 +35,8 @@ const {
   siteName = 'Arkara',
   type = 'website',
   robots = 'index, follow',
-  preloadImage
+  preloadImage,
+  structuredData
 } = Astro.props;
 const siteTitle = title ? `${title} â€” ${siteName}` : `${siteName} â€” Survive with Knowledge`;
 const siteUrl = 'https://arkaraweb.com';
@@ -55,6 +57,14 @@ const preloadedImageUrl = preloadImage
     : undefined;
 const currentPath = Astro.url.pathname;
 const footerData = await getFooterData();
+const structuredDataItems = structuredData
+  ? Array.isArray(structuredData)
+    ? structuredData
+    : [structuredData]
+  : [];
+const structuredDataJson = structuredDataItems.map((item) =>
+  JSON.stringify(item).replace(/</g, '\\u003c')
+);
 
 const navLinks = [
   { label: 'BLOG',    href: '/blog' },
@@ -162,6 +172,9 @@ if (Astro.response.status < 300) {
     <meta property="twitter:description" content={description} />
     {socialImageUrl && <meta property="twitter:image" content={socialImageUrl} />}
     {imageAlt && <meta property="twitter:image:alt" content={imageAlt} />}
+    {structuredDataJson.map((json) => (
+      <script type="application/ld+json" set:html={json}></script>
+    ))}
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

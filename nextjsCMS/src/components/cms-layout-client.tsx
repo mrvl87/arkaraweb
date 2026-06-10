@@ -12,6 +12,7 @@ import {
   Settings,
   Sparkles,
   Megaphone,
+  Radar,
   LogOut,
   Menu,
   X,
@@ -25,6 +26,7 @@ const navItems = [
   { icon: Image, label: 'Media', href: '/cms/media' },
   { icon: Settings, label: 'Settings', href: '/cms/settings' },
   { icon: Sparkles, label: 'AI Workspace', href: '/cms/ai' },
+  { icon: Radar, label: 'SEO Cockpit', href: '/cms/seo' },
   { icon: Megaphone, label: 'Social Tracker', href: '/cms/social' },
 ]
 

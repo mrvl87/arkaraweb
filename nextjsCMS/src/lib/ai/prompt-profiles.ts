@@ -21,9 +21,10 @@ import type {
   GenerateFAQInput,
   ResearchWithWebInput,
   VerifyLatestFactsInput,
+  GenerateSeoRepairPlanInput,
 } from './schemas'
 
-export const PROMPT_VERSION = 'v14'
+export const PROMPT_VERSION = 'v15'
 
 export type AIContentProfile = 'post' | 'panduan' | 'workspace'
 
@@ -149,6 +150,29 @@ function getArkaraWritingRules(profile: AIContentProfile): string {
   return common
 }
 
+function getAISearchAnswerStructure(profile: AIContentProfile): string {
+  if (profile === 'panduan') {
+    return `Struktur jawaban AI search untuk panduan:
+- Jawaban inti harus muncul di bagian paling atas, sebelum penjelasan panjang
+- Setelah jawaban inti, susun isi seperti urutan kerja: konteks singkat, keputusan praktis, langkah inti, variasi skenario, batas aman, dan FAQ
+- Setiap section harus menjawab pertanyaan turunan nyata yang mungkin diajukan pembaca setelah melihat jawaban awal
+- Hindari pembukaan editorial yang menunda jawaban; pembaca harus paham keputusan dasar dalam beberapa detik pertama`
+  }
+
+  if (profile === 'post') {
+    return `Struktur jawaban AI search untuk blog post:
+- Jawaban inti harus muncul di bagian paling atas, sebelum narasi, analisis, atau scene pembuka
+- Setelah jawaban inti, susun isi menjadi modul yang mudah diambil AI: konteks singkat, jawaban praktis, pemisahan skenario, risiko/failure mode, tindakan yang paling masuk akal, dan FAQ
+- Setiap section harus bisa berdiri sendiri untuk menjawab follow-up query tanpa butuh konteks penuh artikel
+- Hindari pembukaan yang berputar; pembaca harus mendapat posisi editorial dan keputusan dasar sejak awal`
+  }
+
+  return `Struktur jawaban AI search:
+- Jawaban inti harus muncul di bagian paling atas
+- Setelah itu, pecah isi menjadi modul singkat yang menjawab pertanyaan utama dan pertanyaan turunannya
+- Setiap section harus mudah dipindai, mudah diambil AI, dan tidak bergantung pada pembukaan panjang`
+}
+
 function buildSystemPrompt(profile: AIContentProfile): string {
   return `Anda adalah AI editorial copilot untuk Arkara - platform pengetahuan survival Indonesia.
 Anda membantu editor menyusun konten yang akurat, praktis, tajam, dan sulit digantikan blog lain.
@@ -161,11 +185,16 @@ Aturan ketat:
 5. Arkara bukan lifestyle blog, bukan blog motivasi, dan bukan edukasi umum yang aman.
 6. Prioritaskan simulasi nyata, keputusan taktis, dan system thinking dibanding teori panjang.
 7. Jangan menenangkan pembaca dengan basa-basi. Bantu pembaca melihat kondisi dengan jernih.
+8. Tulis untuk era AI search: jawaban inti harus muncul cepat, lalu dipecah menjadi modul yang menjawab pertanyaan lanjutan.
+9. Hindari commodity content. Setiap output harus punya sudut, keputusan, simulasi, atau batasan yang sulit digantikan ringkasan generik.
+10. Bedakan dengan jujur antara fakta tersumber, estimasi konservatif, dan penilaian editorial.
 
 Jenis konten saat ini: ${getProfileName(profile)}
 ${getProfileDirective(profile)}
 
 ${getArkaraEditorialFramework(profile)}
+
+${getAISearchAnswerStructure(profile)}
 
 ${getArkaraWritingRules(profile)}`
 }
@@ -276,10 +305,10 @@ export function buildSEOPackPrompt(
   const seoDirection =
     profile === 'panduan'
       ? `- Meta title dan description harus terasa teknis, jelas, trustworthy, dan berbasis skenario nyata
-- Excerpt harus terasa seperti ringkasan panduan praktis dengan stakes yang jelas
+- Excerpt harus terasa seperti ringkasan jawaban AI: langsung, deskriptif, dan membantu pembaca memahami keputusan dasar
 - Hindari headline generik seperti tutorial umum atau panduan pemula yang hambar`
       : `- Meta title dan description harus spesifik, kompetitif, dan punya tekanan situasional tanpa clickbait kosong
-- Excerpt harus menciptakan urgensi tenang: pembaca merasa topik ini penting sekarang
+- Excerpt harus berfungsi seperti search summary untuk AI search: langsung menjawab inti topik dalam 2-3 kalimat
 - Hindari judul SEO yang terlalu sopan, terlalu umum, atau terasa bisa dipakai blog mana saja
 - Jika cocok, biarkan judul atau excerpt memuat konsekuensi, batasan, atau perubahan sistem yang langsung terasa`
 
@@ -293,9 +322,9 @@ Judul: "${input.title}"${contentContext}${descContext}
 
 Balas dalam JSON format ini:
 {
-  "meta_title": "judul SEO maks 60 karakter, mengandung keyword utama, menarik klik",
-  "meta_desc": "deskripsi meta maks 155 karakter, merangkum isi, mengandung CTA implisit",
-  "excerpt": "ringkasan 2-3 kalimat untuk kartu artikel, menarik dan informatif",
+  "meta_title": "judul SEO maks 60 karakter, mengandung keyword utama, jelas dan kuat",
+  "meta_desc": "deskripsi meta maks 155 karakter, langsung menjelaskan nilai artikel",
+  "excerpt": "ringkasan 2-3 kalimat yang menjawab intent utama dan cocok menjadi search summary",
   "focus_keyword": "keyword utama target",
   "secondary_keywords": ["keyword-2", "keyword-3", "keyword-4"]
 }
@@ -304,7 +333,8 @@ Aturan tambahan:
 ${seoDirection}
 - Jangan gunakan formula generik "Tips/Trik/Cara Mudah" kecuali benar-benar tak terhindarkan
 - Jika memungkinkan, masukkan elemen skenario, durasi, risiko, atau konsekuensi yang membuat artikel terasa penting
-- Fokus keyword harus realistis, tetapi hasil akhir tetap harus punya ciri khas Arkara: tajam, spesifik, dan tidak hambar`,
+- Fokus keyword harus realistis, tetapi hasil akhir tetap harus punya ciri khas Arkara: tajam, spesifik, dan tidak hambar
+- Jangan mengorbankan kejelasan demi clickbait. Prioritaskan keterpahaman AI search dan manusia daripada gimmick CTR.`,
     },
   ]
 }
@@ -322,10 +352,12 @@ export function buildOutlinePrompt(
 
   const outlineDirection =
     profile === 'panduan'
-      ? `- Prioritaskan urutan langkah, checklist, peringatan, keputusan praktis, dan batasan nyata
+      ? `- Outline WAJIB dimulai dengan section jawaban inti di atas fold, lalu lanjut ke konteks singkat, keputusan praktis, langkah inti, skenario/variasi, batas aman atau failure mode, dan FAQ
+- Prioritaskan urutan langkah, checklist, peringatan, keputusan praktis, dan batasan nyata
 - Heading harus terasa seperti panduan kerja yang operasional, bukan artikel penjelasan umum
 - Jika relevan, pastikan ada section tentang simulasi, kapasitas, validasi konservatif, dan failure mode`
-      : `- Outline WAJIB mengikuti ritme Arkara: hook gangguan, reality check, reframe, keputusan taktis, simulasi, failure mode, system integration, closing
+      : `- Outline WAJIB dimulai dengan section jawaban inti di atas fold, lalu lanjut ke konteks singkat, jawaban praktis, pemisahan skenario, risiko/failure mode, tindakan, FAQ, dan closing singkat
+- Outline tetap harus membawa ritme Arkara: reality check, reframe, keputusan taktis, simulasi, failure mode, system integration, closing
 - Heading harus spesifik, keras, dan terasa penting, bukan nyaman atau generik
 - Jika topiknya tidak memungkinkan semua section literal, pertahankan logika Arkara semaksimal mungkin
 - Pastikan ada satu section atau note yang memaksa scene konkret rumah tangga/ruang/aktivitas agar artikel tidak melayang terlalu abstrak
@@ -358,10 +390,11 @@ Balas dalam JSON format ini:
 }
 
 Aturan:
-- Minimal 5 bagian (sections)
-- Sertakan Pendahuluan dan Kesimpulan
+- Minimal 6 bagian (sections)
 - Setiap heading harus spesifik, bukan generik
 - Hindari heading seperti "Apa Itu...", "Pengertian...", atau "Manfaat..." kecuali benar-benar penting
+- Section pertama WAJIB berupa jawaban inti atau keputusan dasar yang langsung menjawab query utama
+- Setelah section pertama, susun urutan yang terasa seperti jawaban AI: konteks singkat, penjelasan utama, skenario berbeda, risiko/batasan, tindakan/keputusan, dan FAQ
 - Untuk Arkara, outline harus mendorong artikel ke simulasi, keputusan, dan risiko nyata
 - Jika artikel menyentuh kapasitas, produksi, panen, stok, atau durasi, minta note section yang memaksa angka atau estimasi konservatif
 ${outlineDirection}`,
@@ -385,12 +418,15 @@ export function buildFullDraftPrompt(
   const draftDirection =
     profile === 'panduan'
       ? `- Susun tulisan seperti panduan teknis Arkara: operasional, realistis, dan mudah diikuti dalam keterbatasan rumah tangga urban Indonesia
+- Mulai dengan jawaban inti 2-3 kalimat yang langsung menyebut keputusan dasar atau batas utama topik
+- Setelah itu, pecah isi menjadi modul: konteks singkat, keputusan praktis, langkah inti, skenario yang berbeda, batas aman/failure mode, dan FAQ
 - Gunakan kalimat yang lugas, langsung ke tindakan, dan tidak berputar-putar
 - Jika relevan, gunakan urutan langkah, checklist, parameter, kapasitas, durasi, atau peringatan keras
 - Hindari pembukaan panjang, teori umum, atau promosi yang tidak membantu keputusan pembaca
 - Jika memakai simulasi, gunakan framing yang jujur: estimasi konservatif, skenario kecil, atau asumsi operasional yang jelas`
       : `- Susun tulisan seperti artikel editorial Arkara: tenang, tajam, realistis, dan terasa lebih serius daripada blog umum
-- Gunakan hook yang mendorong pembaca masuk ke skenario, lalu bangun argumen dengan ritme yang kuat
+- Mulai dengan jawaban inti 2-3 kalimat yang langsung menjawab query utama sebelum narasi atau analisis
+- Setelah itu, pecah isi menjadi modul: konteks singkat, jawaban praktis, pemisahan skenario, risiko/failure mode, tindakan yang paling masuk akal, FAQ, lalu closing singkat
 - Boleh persuasif, tetapi harus terasa seperti koreksi mental model, bukan copywriting manis
 - Artikel harus meninggalkan satu kesimpulan taktis yang jelas dan terasa penting
 - Gunakan sedikit scene rumah tangga atau momen konkret agar pembaca bisa membayangkan hidup di dalam skenario, bukan hanya memahaminya secara abstrak
@@ -412,6 +448,7 @@ ${extras.join('\n')}${linksContext}
 Kontrak utama:
 - Satu eksekusi ini WAJIB menghasilkan paket lengkap: isi artikel, Jawaban Singkat, Inti Artikel, FAQ, dan metadata SEO dasar.
 - Jangan menulis artikel panjang gaya desktop. Prioritaskan pembaca mobile yang membaca cepat, scan heading, lalu berhenti pada bagian yang paling berguna.
+- Konten harus terasa seperti jawaban AI yang diperluas: jawab dulu, jelaskan sesudahnya.
 - Isi artikel harus tetap informatif, tetapi dibuat lebih padat: keputusan, batasan, simulasi, dan tindakan praktis lebih penting daripada penjelasan panjang.
 - Field quick_answer, key_takeaways, dan faq harus diturunkan dari draft yang sama, bukan terasa seperti modul terpisah.
 - Jangan mengulang semua isi quick_answer dan key_takeaways mentah-mentah di paragraf pembuka.
@@ -458,9 +495,11 @@ Aturan penulisan:
 - Format Markdown dengan heading H2 dan H3
 - Bahasa Indonesia yang rapi, tegas, dan mudah dipahami
 - Target 650-900 kata untuk blog post, atau 550-850 kata untuk panduan. Lebih penting padat, modular, dan nyaman discan di HP daripada panjang.
+- Mulai field content dengan blok jawaban inti paling atas dalam format blockquote Markdown, misalnya '> Jawaban singkat: ...', sebelum heading H2 pertama.
 - Gunakan 4-6 heading H2 yang spesifik; H3 hanya jika benar-benar membantu scan-read.
 - Paragraf ideal 2-3 kalimat pendek. Hindari paragraf panjang yang melelahkan di layar HP.
-- Setiap section harus menjawab satu fungsi jelas: konteks, keputusan, langkah, risiko, simulasi, atau penutup.
+- Setelah blockquote jawaban inti, urutan isi harus terasa seperti jawaban AI: konteks singkat, penjelasan utama, skenario berbeda, risiko/batasan, tindakan yang paling masuk akal, dan FAQ/penutup singkat.
+- Setiap section harus menjawab satu fungsi jelas: konteks, keputusan, langkah, risiko, simulasi, skenario, atau tindakan.
 - Sertakan tips praktis dan langkah-langkah yang actionable
 - Sisipkan internal link ke artikel terkait secara natural jika data tersedia
 - JANGAN sertakan heading H1 (judul akan diset terpisah)
@@ -468,6 +507,7 @@ Aturan penulisan:
 - Field key_takeaways wajib berisi 3-5 poin paling penting, masing-masing maksimal 140 karakter dan bisa dipahami tanpa membuka artikel penuh.
 - Field faq wajib berisi 3-5 tanya jawab nyata yang melengkapi artikel, bukan mengulang persis isi pembuka. Jawaban maksimal 2 kalimat.
 - Field editorial_format harus bernilai "${profile === 'panduan' ? 'technical_guide' : 'mobile_reader'}".
+- Jangan menahan jawaban utama sampai pertengahan artikel. Pembaca harus tahu posisi dan keputusan dasar sejak layar pertama.
 - Hindari definisi umum, sejarah panjang, atau penjelasan textbook kecuali benar-benar membantu keputusan pembaca
 - WAJIB ada elemen simulasi, estimasi, kapasitas, durasi, frekuensi, ruang, biaya, atau angka nyata jika topik memungkinkan
 - Jika sebuah klaim menyangkut kapasitas, kebutuhan, output, atau durasi, usahakan beri unit atau parameter yang konkret
@@ -1086,8 +1126,10 @@ export function buildResearchWithWebPrompt(
   const profileDirection =
     profile === 'panduan'
       ? `- Prioritaskan query tentang prosedur, standar, risiko, alat, regulasi, dan langkah teknis
+- Pastikan ada query untuk jawaban inti, query untuk variasi skenario, dan query untuk batas aman/failure mode
 - Hindari agenda riset yang terlalu editorial jika tidak membantu akurasi panduan`
       : `- Prioritaskan query tentang statistik, perkembangan terbaru, konteks publik, tren, regulasi, dan data pendukung
+- Pastikan ada query untuk jawaban inti, query follow-up, query perbandingan skenario, dan query risiko/batasan
 - Sisakan ruang untuk angle editorial selama tetap berfungsi sebagai riset faktual`
 
   const extractionContext = extraction
@@ -1147,6 +1189,7 @@ Aturan:
 - Prioritaskan klaim sensitif waktu: regulasi, statistik, harga, produk, standar, kebijakan, risiko keselamatan, kesehatan, dan berita terbaru
 - Jangan mengklaim hasil pencarian atau menyebut sumber tertentu jika belum diberikan
 - Gunakan query pencarian yang realistis dan siap dipakai editor atau agent verifier
+- Usahakan query tidak hanya mengejar keyword utama; pecah juga follow-up intent, comparison intent, dan risk intent
 - Minimal 3 recommended queries dan 3 research agenda items
 ${profileDirection}`,
     },
@@ -1244,6 +1287,120 @@ Aturan:
 - Jangan mengarang URL sumber; biarkan "sources" kosong jika belum ada
 - Biarkan "checked_at" sebagai string kosong
 ${profileDirection}`,
+    },
+  ]
+}
+
+export function buildSeoRepairPlanPrompt(
+  input: GenerateSeoRepairPlanInput,
+  profile: AIContentProfile = 'workspace'
+): AIMessage[] {
+  const contentWindow = input.current_content
+    ? limitPromptContext(input.current_content, 9000)
+    : ''
+  const issueBlock = input.issues
+    .map((issue, index) => `${index + 1}. [${issue.severity}] ${issue.code}: ${issue.label}`)
+    .join('\n')
+  const keywordBlock = input.keyword_opportunities.length > 0
+    ? input.keyword_opportunities
+        .map((item, index) => {
+          const competitorLine = item.topCompetitors.length
+            ? `Kompetitor: ${item.topCompetitors.join(', ')}`
+            : 'Kompetitor: belum ada data'
+          const paaLine = [...item.peopleAlsoAsk, ...item.relatedSearches].slice(0, 6).length
+            ? `PAA/related: ${[...item.peopleAlsoAsk, ...item.relatedSearches].slice(0, 6).join(' | ')}`
+            : 'PAA/related: belum ada data'
+          const rankLine = item.arkaraRank ? `Rank Arkara: ${item.arkaraRank}` : 'Rank Arkara: belum masuk top result'
+          return `${index + 1}. Query: ${item.query}\n   ${rankLine}\n   ${competitorLine}\n   ${paaLine}`
+        })
+        .join('\n')
+    : 'Belum ada data Serper. Gunakan issue audit internal sebagai dasar.'
+  const faqContext = input.current_faq.length > 0
+    ? input.current_faq
+        .map((item, index) => `${index + 1}. Q: ${item.question}\n   A: ${item.answer}`)
+        .join('\n')
+    : 'Belum ada FAQ.'
+
+  const repairDirection =
+    input.content_type === 'panduan'
+      ? `- Untuk panduan, prioritaskan prosedur, batas aman, alat/bahan, urutan langkah, dan failure mode.
+- Jika perlu content_patch, gunakan mode "append_section" untuk menambahkan bagian praktis pendek, bukan rewrite total.`
+      : `- Untuk blog, prioritaskan jawaban langsung, konteks risiko, langkah praktis, dan angle Arkara yang tenang.
+- Jika perlu content_patch, gunakan mode "append_section" atau "replace_intro" secara terbatas.`
+
+  return [
+    {
+      role: 'system',
+      content: `${buildSystemPrompt(profile)}
+
+Anda adalah SEO repair agent untuk Arkara.
+Tugas Anda membuat proposal perbaikan yang bisa ditinjau editor sebelum diterapkan.
+Jangan mengubah fakta menjadi lebih pasti daripada sumber yang tersedia.
+Gunakan data Serper hanya untuk intent, gap, PAA, dan arah kompetisi; bukan sebagai sumber kebenaran final.
+Jika ada klaim angka, harga, regulasi, standar keselamatan, medis, atau data terbaru, masukkan catatan di fact_check_notes.`,
+    },
+    {
+      role: 'user',
+      content: `Buat proposal perbaikan SEO untuk konten berikut.
+
+Jenis konten: ${input.content_type}
+Judul: ${input.title}
+Slug: ${input.slug}
+Kategori: ${input.category || '-'}
+Editorial format sekarang: ${input.current_editorial_format || '-'}
+
+Metadata sekarang:
+- Description: ${input.current_description || '-'}
+- Meta title: ${input.current_meta_title || '-'}
+- Meta desc: ${input.current_meta_desc || '-'}
+- Quick answer: ${input.current_quick_answer || '-'}
+- Key takeaways: ${input.current_key_takeaways.length ? input.current_key_takeaways.join(' | ') : '-'}
+
+FAQ sekarang:
+${faqContext}
+
+Issue audit:
+${issueBlock}
+
+Data Serper:
+${keywordBlock}
+
+Konten sekarang:
+"""${contentWindow}"""
+
+Balas hanya JSON valid:
+{
+  "summary": "ringkasan perubahan yang diusulkan",
+  "priority": "high",
+  "target_keyword": "keyword utama yang paling layak",
+  "secondary_keywords": ["keyword pendukung"],
+  "proposed_meta_title": "maks 70 karakter",
+  "proposed_meta_desc": "maks 170 karakter",
+  "proposed_quick_answer": "jawaban langsung 2-3 kalimat",
+  "proposed_key_takeaways": ["3-5 poin inti"],
+  "proposed_faq": [
+    { "question": "pertanyaan pembaca", "answer": "jawaban ringkas" }
+  ],
+  "content_patch": {
+    "mode": "append_section",
+    "markdown": "Markdown tambahan atau intro baru",
+    "placement_note": "di mana editor sebaiknya meletakkan patch"
+  },
+  "internal_link_notes": ["saran internal link"],
+  "fact_check_notes": ["klaim yang perlu diverifikasi sebelum approve"],
+  "approval_notes": ["hal yang harus dicek editor sebelum apply"]
+}
+
+Aturan:
+- Output adalah proposal, bukan final publish.
+- Jangan rewrite total artikel.
+- Jangan menghapus angle Arkara.
+- Jika tidak perlu mengubah body, gunakan content_patch.mode = "no_content_change" dan markdown = "".
+- FAQ minimal 3 item dan harus melengkapi PAA/related Serper.
+- Quick answer harus langsung menjawab intent utama, bukan intro panjang.
+- Meta title jelas, tidak clickbait, dan memuat target keyword jika natural.
+- Meta desc harus informatif, bukan sensasional.
+${repairDirection}`,
     },
   ]
 }

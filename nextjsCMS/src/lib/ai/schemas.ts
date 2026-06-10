@@ -19,6 +19,7 @@ export const AI_OPERATIONS = [
   'generate_faq',
   'research_with_web',
   'verify_latest_facts',
+  'generate_seo_repair_plan',
   'generate_facebook_weekly_plan',
   'generate_facebook_post',
   'generate_facebook_carousel',
@@ -428,6 +429,64 @@ export const VerifyLatestFactsOutputSchema = z.object({
   claims: z.array(VerifiedClaimSchema).min(1).max(8),
 })
 export type VerifyLatestFactsOutput = z.infer<typeof VerifyLatestFactsOutputSchema>
+
+// --- SEO Repair Plan ---
+export const SeoRepairContentTypeSchema = z.enum(['post', 'panduan'])
+
+export const SeoRepairIssueSchema = z.object({
+  code: z.string().trim().min(1).max(80),
+  label: z.string().trim().min(1).max(240),
+  severity: z.enum(['critical', 'warning', 'info']).default('warning'),
+})
+
+export const SeoRepairKeywordOpportunitySchema = z.object({
+  query: z.string().trim().min(1).max(180),
+  arkaraRank: z.number().int().positive().nullable().optional(),
+  topCompetitors: z.array(z.string().trim().min(1).max(180)).max(5).default([]),
+  peopleAlsoAsk: z.array(z.string().trim().min(1).max(240)).max(6).default([]),
+  relatedSearches: z.array(z.string().trim().min(1).max(240)).max(6).default([]),
+})
+
+export const GenerateSeoRepairPlanInputSchema = z.object({
+  content_type: SeoRepairContentTypeSchema,
+  title: z.string().trim().min(1).max(220),
+  slug: z.string().trim().min(1).max(220),
+  category: z.string().trim().max(80).optional(),
+  current_content: z.string().trim().max(16000).optional(),
+  current_description: z.string().trim().max(500).optional(),
+  current_meta_title: z.string().trim().max(160).optional(),
+  current_meta_desc: z.string().trim().max(320).optional(),
+  current_quick_answer: z.string().trim().max(900).optional(),
+  current_key_takeaways: z.array(z.string().trim().min(1).max(280)).max(8).default([]),
+  current_faq: z.array(MobileReaderFAQItemSchema).max(12).default([]),
+  current_editorial_format: EditorialFormatSchema.optional(),
+  issues: z.array(SeoRepairIssueSchema).min(1).max(10),
+  keyword_opportunities: z.array(SeoRepairKeywordOpportunitySchema).max(8).default([]),
+})
+export type GenerateSeoRepairPlanInput = z.infer<typeof GenerateSeoRepairPlanInputSchema>
+
+export const SeoRepairContentPatchSchema = z.object({
+  mode: z.enum(['append_section', 'replace_intro', 'no_content_change']),
+  markdown: z.string().trim().max(7000).default(''),
+  placement_note: z.string().trim().max(240).optional(),
+})
+
+export const GenerateSeoRepairPlanOutputSchema = z.object({
+  summary: z.string().trim().min(1).max(500),
+  priority: z.enum(['high', 'medium', 'low']).default('medium'),
+  target_keyword: z.string().trim().min(1).max(160),
+  secondary_keywords: z.array(z.string().trim().min(1).max(160)).max(8).default([]),
+  proposed_meta_title: z.string().trim().min(1).max(70),
+  proposed_meta_desc: z.string().trim().min(1).max(170),
+  proposed_quick_answer: z.string().trim().min(80).max(700),
+  proposed_key_takeaways: z.array(z.string().trim().min(1).max(220)).min(3).max(5),
+  proposed_faq: z.array(MobileReaderFAQItemSchema).min(3).max(6),
+  content_patch: SeoRepairContentPatchSchema,
+  internal_link_notes: z.array(z.string().trim().min(1).max(240)).max(5).default([]),
+  fact_check_notes: z.array(z.string().trim().min(1).max(240)).max(5).default([]),
+  approval_notes: z.array(z.string().trim().min(1).max(240)).max(5).default([]),
+})
+export type GenerateSeoRepairPlanOutput = z.infer<typeof GenerateSeoRepairPlanOutputSchema>
 
 export const VerifyLatestFactsResponseJsonSchema = {
   type: 'object',
