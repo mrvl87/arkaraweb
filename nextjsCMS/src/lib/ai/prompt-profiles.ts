@@ -22,6 +22,7 @@ import type {
   ResearchWithWebInput,
   VerifyLatestFactsInput,
   GenerateSeoRepairPlanInput,
+  GenerateGapDraftInput,
 } from './schemas'
 
 export const PROMPT_VERSION = 'v15'
@@ -1401,6 +1402,86 @@ Aturan:
 - Meta title jelas, tidak clickbait, dan memuat target keyword jika natural.
 - Meta desc harus informatif, bukan sensasional.
 ${repairDirection}`,
+    },
+  ]
+}
+
+export function buildGapDraftPrompt(
+  input: GenerateGapDraftInput,
+  profile: AIContentProfile = 'workspace'
+): AIMessage[] {
+  const currentDate = new Date().toISOString().slice(0, 10)
+  const competitorLine = input.top_competitors.length
+    ? input.top_competitors.join(', ')
+    : 'Belum ada data kompetitor.'
+  const intentSignals = [...input.people_also_ask, ...input.related_searches]
+  const intentLine = intentSignals.length
+    ? intentSignals.map((item, index) => `${index + 1}. ${item}`).join('\n')
+    : 'Belum ada PAA/related search.'
+  const existingTitles = input.existing_titles.length
+    ? input.existing_titles.map((title, index) => `${index + 1}. ${title}`).join('\n')
+    : 'Belum ada daftar judul pembanding.'
+  const typeDirection = input.content_type === 'panduan'
+    ? `- Bentuk akhir adalah panduan teknis. Fokus pada langkah, alat/bahan, batas aman, checklist, dan failure mode.
+- editorial_format wajib "technical_guide".`
+    : `- Bentuk akhir adalah artikel blog Arkara. Fokus pada jawaban langsung, konteks keluarga Indonesia, risiko, dan keputusan praktis.
+- editorial_format wajib "mobile_reader".`
+
+  return [
+    {
+      role: 'system',
+      content: `${buildSystemPrompt(profile)}
+
+Anda adalah gap-to-draft agent untuk Arkara.
+Tugas Anda mengubah keyword gap menjadi draft CMS siap edit, bukan langsung publish.
+Gunakan data Serper untuk memahami intent pencarian, PAA, related query, dan tipe kompetitor.
+Jangan mengutip kompetitor sebagai sumber fakta.
+Jika topik membutuhkan data terbaru, gunakan web search dan beri sitasi Markdown di content.`,
+    },
+    {
+      role: 'user',
+      content: `Buat draft baru untuk Arkara berdasarkan keyword gap berikut.
+
+Tanggal kerja: ${currentDate}
+Jenis konten: ${input.content_type}
+Cluster: ${input.cluster}
+Keyword utama: ${input.query}
+
+Kompetitor SERP:
+${competitorLine}
+
+PAA / related search:
+${intentLine}
+
+Judul yang sudah ada, jangan duplikasi:
+${existingTitles}
+
+Balas hanya JSON valid:
+{
+  "title": "judul final CMS",
+  "slug": "slug-final",
+  "content": "Markdown lengkap tanpa H1",
+  "quick_answer": "jawaban langsung 2-3 kalimat",
+  "key_takeaways": ["3-5 poin inti"],
+  "faq": [
+    { "question": "pertanyaan pembaca", "answer": "jawaban ringkas" }
+  ],
+  "editorial_format": "${input.content_type === 'panduan' ? 'technical_guide' : 'mobile_reader'}",
+  "meta_title": "maks 70 karakter",
+  "meta_desc": "maks 170 karakter",
+  "draft_notes": ["catatan untuk editor sebelum publish"]
+}
+
+Aturan:
+${typeDirection}
+- Jangan buat konten survival ekstrem atau menakut-nakuti. Framing Arkara: persiapan rasional keluarga Indonesia.
+- Mulai content dengan blockquote jawaban inti: "> Jawaban singkat: ...".
+- Gunakan 4-6 heading H2 yang spesifik.
+- Target 650-950 kata, padat dan mobile-first.
+- Masukkan internal-link placeholder hanya jika natural, format Markdown [anchor](/blog/slug) atau [anchor](/panduan/slug).
+- Jika ada angka/harga/regulasi/medis/keselamatan yang sensitif waktu, pakai framing konservatif dan sitasi sumber.
+- Jangan duplikasi judul yang sudah ada.
+- Slug harus pendek, lowercase, dan pakai tanda hubung.`,
     },
   ]
 }

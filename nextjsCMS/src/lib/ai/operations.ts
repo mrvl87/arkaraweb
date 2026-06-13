@@ -56,6 +56,8 @@ import {
   VerifyLatestFactsOutputSchema,
   GenerateSeoRepairPlanInputSchema,
   GenerateSeoRepairPlanOutputSchema,
+  GenerateGapDraftInputSchema,
+  GenerateGapDraftOutputSchema,
   type GenerateSlugInput,
   type GenerateSlugOutput,
   type GenerateSEOPackInput,
@@ -90,6 +92,8 @@ import {
   type VerifyLatestFactsOutput,
   type GenerateSeoRepairPlanInput,
   type GenerateSeoRepairPlanOutput,
+  type GenerateGapDraftInput,
+  type GenerateGapDraftOutput,
   type AIOperation,
 } from './schemas'
 
@@ -361,6 +365,33 @@ function normalizeMobileReaderStructureOutput(
       .filter((item) => item.question && item.answer)
       .slice(0, 5),
     editorial_format: output.editorial_format || 'mobile_reader',
+  }
+}
+
+function normalizeGapDraftOutput(output: GenerateGapDraftOutput): GenerateGapDraftOutput {
+  return {
+    ...output,
+    title: limitSingleLine(output.title, 180),
+    slug: normalizeSingleLine(output.slug).toLowerCase(),
+    quick_answer: limitSingleLine(output.quick_answer, 360),
+    key_takeaways: (output.key_takeaways ?? [])
+      .map((item) => limitSingleLine(item, 150))
+      .filter(Boolean)
+      .slice(0, 5),
+    faq: (output.faq ?? [])
+      .map((item) => ({
+        question: limitSingleLine(item.question, 140),
+        answer: limitSingleLine(item.answer, 280),
+      }))
+      .filter((item) => item.question && item.answer)
+      .slice(0, 6),
+    editorial_format: output.editorial_format,
+    meta_title: limitSingleLine(output.meta_title, 70),
+    meta_desc: limitSingleLine(output.meta_desc, 170),
+    draft_notes: (output.draft_notes ?? [])
+      .map((item) => limitSingleLine(item, 220))
+      .filter(Boolean)
+      .slice(0, 5),
   }
 }
 
@@ -798,6 +829,38 @@ export async function generateSeoRepairPlan(
 }
 
 // ─── Generic operation runner ────────────────────────────────────
+export async function generateGapDraft(
+  rawInput: GenerateGapDraftInput,
+  ctx?: OperationContext
+): Promise<OperationResponse<GenerateGapDraftOutput>> {
+  const profile = resolveProfile(ctx?.targetType)
+
+  return runOperation(
+    'generate_gap_draft',
+    rawInput,
+    GenerateGapDraftInputSchema,
+    GenerateGapDraftOutputSchema,
+    (input) => prompts.buildGapDraftPrompt(input, profile),
+    normalizeGapDraftOutput,
+    ctx,
+    {
+      maxTokens: FULL_DRAFT_MAX_TOKENS,
+      timeoutMs: FULL_DRAFT_TIMEOUT_MS,
+      parseMaxRetries: 1,
+      repairMaxTokens: FULL_DRAFT_MAX_TOKENS,
+      repairTimeoutMs: FULL_DRAFT_REPAIR_TIMEOUT_MS,
+      reasoning: FULL_DRAFT_REASONING,
+      webSearch: {
+        enabled: true,
+        engine: 'auto',
+        maxResults: 3,
+        maxTotalResults: 5,
+        searchContextSize: 'low',
+      },
+    }
+  )
+}
+
 async function runOperation<TInput extends Record<string, unknown>, TOutput extends Record<string, unknown>>(
   operation: AIOperation,
   rawInput: TInput,

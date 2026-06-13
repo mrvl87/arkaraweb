@@ -20,6 +20,7 @@ export const AI_OPERATIONS = [
   'research_with_web',
   'verify_latest_facts',
   'generate_seo_repair_plan',
+  'generate_gap_draft',
   'generate_facebook_weekly_plan',
   'generate_facebook_post',
   'generate_facebook_carousel',
@@ -487,6 +488,32 @@ export const GenerateSeoRepairPlanOutputSchema = z.object({
   approval_notes: z.array(z.string().trim().min(1).max(240)).max(5).default([]),
 })
 export type GenerateSeoRepairPlanOutput = z.infer<typeof GenerateSeoRepairPlanOutputSchema>
+
+// --- SEO Gap Draft ---
+export const GenerateGapDraftInputSchema = z.object({
+  content_type: SeoRepairContentTypeSchema,
+  cluster: z.enum(['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas']),
+  query: z.string().trim().min(1).max(180),
+  top_competitors: z.array(z.string().trim().min(1).max(180)).max(5).default([]),
+  people_also_ask: z.array(z.string().trim().min(1).max(240)).max(6).default([]),
+  related_searches: z.array(z.string().trim().min(1).max(240)).max(6).default([]),
+  existing_titles: z.array(z.string().trim().min(1).max(220)).max(80).default([]),
+})
+export type GenerateGapDraftInput = z.infer<typeof GenerateGapDraftInputSchema>
+
+export const GenerateGapDraftOutputSchema = z.object({
+  title: z.string().trim().min(1).max(180),
+  slug: z.string().trim().min(1).max(180),
+  content: z.string().trim().min(500).max(60000),
+  quick_answer: z.string().trim().min(80).max(700),
+  key_takeaways: z.array(z.string().trim().min(1).max(220)).min(3).max(5),
+  faq: z.array(MobileReaderFAQItemSchema).min(3).max(6),
+  editorial_format: z.enum(['mobile_reader', 'technical_guide']),
+  meta_title: z.string().trim().min(1).max(70),
+  meta_desc: z.string().trim().min(1).max(170),
+  draft_notes: z.array(z.string().trim().min(1).max(240)).max(5).default([]),
+})
+export type GenerateGapDraftOutput = z.infer<typeof GenerateGapDraftOutputSchema>
 
 export const VerifyLatestFactsResponseJsonSchema = {
   type: 'object',

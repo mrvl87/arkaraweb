@@ -7,6 +7,7 @@ import { triggerFrontendRevalidate } from '@/lib/revalidate'
 import { notifyGoogleIndexing } from '@/lib/google-indexing'
 import { escapeRegex, getPostPath, getSlugSimilarityScore, normalizeSlug } from '@/lib/slugs'
 import { findInternalLinkOpportunities } from '@/lib/internal-link-opportunities'
+import { enqueueSeoIndexingUrl } from '@/lib/seo/indexing-queue'
 
 import type { MediaObject } from '@/types/content'
 
@@ -587,6 +588,14 @@ export async function createPost(formData: z.infer<typeof postSchema>) {
 
   if (restFormData.status === 'published') {
     notifyGoogleIndexing(`${SITE_URL}${getPostPath(restFormData.slug)}`, 'URL_UPDATED')
+    await enqueueSeoIndexingUrl({
+      contentType: 'post',
+      contentId: postId || null,
+      title: restFormData.title,
+      slug: restFormData.slug,
+      source: 'content_publish',
+      userId: authorId,
+    })
   }
 
   return { success: true }
@@ -676,6 +685,13 @@ export async function updatePost(id: string, formData: z.infer<typeof postSchema
 
   if (restFormData.status === 'published') {
     notifyGoogleIndexing(newUrl, 'URL_UPDATED')
+    await enqueueSeoIndexingUrl({
+      contentType: 'post',
+      contentId: id,
+      title: restFormData.title,
+      slug: restFormData.slug,
+      source: existingPost.status === 'published' ? 'content_update' : 'content_publish',
+    })
   }
 
   return { success: true }

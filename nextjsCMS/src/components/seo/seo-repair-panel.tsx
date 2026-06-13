@@ -22,6 +22,8 @@ type ApplyResult = {
   editPath: string
   updatedAt: string
   appliedFields: string[]
+  indexingQueued: boolean
+  indexingQueueError?: string
 } | null
 type FixedLink = NonNullable<ApplyResult> & {
   id: string
@@ -337,6 +339,7 @@ export function SeoRepairPanel({ repairItems, keywordOpportunities }: SeoRepairP
       {applyResult ? (
         <div className="m-5 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
           Proposal sudah diterapkan ke "{applyResult.title}". Field: {applyResult.appliedFields.join(', ')}.
+          {applyResult.indexingQueued ? ' URL masuk indexing queue.' : applyResult.indexingQueueError ? ` Indexing queue: ${applyResult.indexingQueueError}` : ''}
         </div>
       ) : null}
 

@@ -15,6 +15,9 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { getSeoCockpitData, type SeoAuditItem, type SeoClusterStatus, type SeoIssue } from '@/lib/seo/content-audit'
 import { SeoRepairPanel } from '@/components/seo/seo-repair-panel'
+import { SeoGapDraftButton } from '@/components/seo/seo-gap-draft-button'
+import { SeoIndexingQueuePanel } from '@/components/seo/seo-indexing-queue-panel'
+import { getSeoIndexingQueue } from '@/lib/seo/indexing-queue'
 
 const formatter = new Intl.NumberFormat('id-ID')
 
@@ -167,7 +170,10 @@ function FixRow({ item }: { item: SeoAuditItem }) {
 }
 
 export default async function SEOCockpitPage() {
-  const data = await getSeoCockpitData()
+  const [data, indexingQueue] = await Promise.all([
+    getSeoCockpitData(),
+    getSeoIndexingQueue(),
+  ])
 
   return (
     <div className="space-y-8 pb-16">
@@ -234,7 +240,7 @@ export default async function SEOCockpitPage() {
             const related = visibleItems([...item.peopleAlsoAsk, ...item.relatedSearches], 2)
 
             return (
-              <div key={`${item.cluster}:${item.query}`} className="grid gap-3 px-5 py-3 xl:grid-cols-[minmax(240px,0.85fr)_minmax(0,1.15fr)] xl:items-center">
+              <div key={`${item.cluster}:${item.query}`} className="grid gap-3 px-5 py-3 xl:grid-cols-[minmax(240px,0.8fr)_minmax(0,1fr)_auto] xl:items-center">
                 <div className="min-w-0">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <span className="rounded-md bg-arkara-green/10 px-2 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-arkara-green">
@@ -288,6 +294,14 @@ export default async function SEOCockpitPage() {
                     ) : null}
                   </div>
                 </div>
+                <SeoGapDraftButton
+                  cluster={item.cluster}
+                  query={item.query}
+                  topCompetitors={item.topCompetitors}
+                  peopleAlsoAsk={item.peopleAlsoAsk}
+                  relatedSearches={item.relatedSearches}
+                  disabled={item.source === 'missing-key' || item.source === 'error'}
+                />
               </div>
             )
           })}
@@ -297,6 +311,11 @@ export default async function SEOCockpitPage() {
       <SeoRepairPanel
         repairItems={data.topFixes}
         keywordOpportunities={data.keywordOpportunities}
+      />
+
+      <SeoIndexingQueuePanel
+        items={indexingQueue.items}
+        error={indexingQueue.error}
       />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_0.75fr]">

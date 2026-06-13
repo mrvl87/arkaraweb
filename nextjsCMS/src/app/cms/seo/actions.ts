@@ -3,11 +3,13 @@
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { generateSeoRepairPlan } from '@/lib/ai/operations'
+import { generateGapDraft, generateSeoRepairPlan } from '@/lib/ai/operations'
 import { triggerFrontendRevalidate } from '@/lib/revalidate'
-import { getPanduanPath, getPostPath } from '@/lib/slugs'
+import { getPanduanPath, getPostPath, normalizeSlug } from '@/lib/slugs'
+import { enqueueSeoIndexingUrl, getContentPath, getContentUrl } from '@/lib/seo/indexing-queue'
 import { GenerateSeoRepairPlanOutputSchema } from '@/lib/ai/schemas'
 import type {
+  GenerateGapDraftOutput,
   GenerateSeoRepairPlanInput,
   GenerateSeoRepairPlanOutput,
   SeoRepairKeywordOpportunitySchema,
@@ -41,6 +43,15 @@ const applyRepairInputSchema = z.object({
   proposal: GenerateSeoRepairPlanOutputSchema,
   baseUpdatedAt: z.string().nullable().optional(),
   approved: z.literal(true),
+})
+
+const generateGapDraftInputSchema = z.object({
+  cluster: z.enum(['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas']),
+  query: z.string().trim().min(1).max(180),
+  contentType: z.enum(['post', 'panduan', 'auto']).default('auto'),
+  topCompetitors: z.array(z.string().trim().min(1).max(180)).max(5).default([]),
+  peopleAlsoAsk: z.array(z.string().trim().min(1).max(240)).max(6).default([]),
+  relatedSearches: z.array(z.string().trim().min(1).max(240)).max(6).default([]),
 })
 
 type RepairKeywordOpportunityInput = z.infer<typeof SeoRepairKeywordOpportunitySchema>
@@ -251,6 +262,67 @@ function getPublicPath(contentType: 'post' | 'panduan', slug: string): string {
   return contentType === 'post' ? getPostPath(slug) : getPanduanPath(slug)
 }
 
+function inferGapContentType(query: string): 'post' | 'panduan' {
+  const normalized = query.toLowerCase()
+  return /\b(cara|panduan|langkah|checklist|daftar|menyimpan|membuat|menghitung|memasang|filter|stok)\b/.test(normalized)
+    ? 'panduan'
+    : 'post'
+}
+
+function titleFromQuery(query: string): string {
+  return query
+    .split(/\s+/)
+    .map((word) => word ? `${word.charAt(0).toUpperCase()}${word.slice(1)}` : '')
+    .join(' ')
+    .trim()
+}
+
+async function loadExistingContentTitles(): Promise<string[]> {
+  const supabase = await createClient()
+  const [posts, panduan] = await Promise.all([
+    supabase.from('posts').select('title').order('updated_at', { ascending: false }).limit(120),
+    supabase.from('panduan').select('title').order('updated_at', { ascending: false }).limit(120),
+  ])
+
+  return [
+    ...((posts.data ?? []) as Array<{ title?: string | null }>).map((item) => item.title ?? ''),
+    ...((panduan.data ?? []) as Array<{ title?: string | null }>).map((item) => item.title ?? ''),
+  ].map((title) => title.trim()).filter(Boolean)
+}
+
+async function slugExists(slug: string): Promise<boolean> {
+  const supabase = await createClient()
+  const [post, panduan] = await Promise.all([
+    supabase.from('posts').select('id').eq('slug', slug).maybeSingle(),
+    supabase.from('panduan').select('id').eq('slug', slug).maybeSingle(),
+  ])
+
+  return Boolean(post.data || panduan.data)
+}
+
+async function ensureUniqueContentSlug(rawSlug: string, fallbackTitle: string): Promise<string> {
+  const base = normalizeSlug(rawSlug) || normalizeSlug(fallbackTitle)
+  let candidate = base || `draft-${Date.now()}`
+  let suffix = 2
+
+  while (await slugExists(candidate)) {
+    candidate = `${base}-${suffix}`
+    suffix += 1
+  }
+
+  return candidate
+}
+
+function normalizeDraftFaq(items: GenerateGapDraftOutput['faq']) {
+  return items
+    .map((item) => ({
+      question: item.question.trim(),
+      answer: item.answer.trim(),
+    }))
+    .filter((item) => item.question && item.answer)
+    .slice(0, 6)
+}
+
 export async function actionGenerateSeoRepairPlan(
   rawInput: unknown
 ): Promise<OperationResponse<GenerateSeoRepairPlanOutput>> {
@@ -305,6 +377,134 @@ export async function actionGenerateSeoRepairPlan(
   }
 }
 
+export async function actionGenerateGapDraft(rawInput: unknown): Promise<{
+  success: boolean
+  error?: string
+  data?: {
+    id: string
+    title: string
+    slug: string
+    contentType: 'post' | 'panduan'
+    editPath: string
+    publicPath: string
+    publicUrl: string
+    draftNotes: string[]
+  }
+}> {
+  const parsed = generateGapDraftInputSchema.safeParse(rawInput)
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues.map((issue) => issue.message).join('; '),
+    }
+  }
+
+  const input = parsed.data
+
+  try {
+    const supabase = await createClient()
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !userData.user) {
+      return { success: false, error: 'Unauthorized.' }
+    }
+
+    const contentType = input.contentType === 'auto'
+      ? inferGapContentType(input.query)
+      : input.contentType
+    const existingTitles = await loadExistingContentTitles()
+    const draft = await generateGapDraft(
+      {
+        content_type: contentType,
+        cluster: input.cluster,
+        query: input.query,
+        top_competitors: input.topCompetitors,
+        people_also_ask: input.peopleAlsoAsk,
+        related_searches: input.relatedSearches,
+        existing_titles: existingTitles,
+      },
+      {
+        targetType: contentType,
+        targetId: null,
+        userId: userData.user.id,
+      }
+    )
+
+    if (!draft.success) {
+      return { success: false, error: draft.error }
+    }
+
+    const title = draft.data.title.trim() || titleFromQuery(input.query)
+    const slug = await ensureUniqueContentSlug(draft.data.slug, title)
+    const now = new Date().toISOString()
+    const baseData = {
+      title,
+      slug,
+      content: draft.data.content,
+      quick_answer: draft.data.quick_answer,
+      key_takeaways: normalizeTakeaways(draft.data.key_takeaways),
+      faq: normalizeDraftFaq(draft.data.faq),
+      editorial_format: draft.data.editorial_format,
+      meta_title: draft.data.meta_title,
+      meta_desc: draft.data.meta_desc,
+      status: 'draft',
+      author_id: userData.user.id,
+      updated_at: now,
+    }
+
+    const insertResult = contentType === 'post'
+      ? await supabase
+          .from('posts')
+          .insert({
+            ...baseData,
+            description: draft.data.meta_desc,
+            category: input.cluster,
+            ai_generated: true,
+          })
+          .select('id')
+          .single()
+      : await supabase
+          .from('panduan')
+          .insert(baseData)
+          .select('id')
+          .single()
+
+    if (insertResult.error || !insertResult.data) {
+      return { success: false, error: insertResult.error?.message ?? 'Gagal membuat draft.' }
+    }
+
+    const id = insertResult.data.id as string
+    const editPath = contentType === 'post'
+      ? `/cms/posts/${id}/edit`
+      : `/cms/panduan/${id}/edit`
+    const publicPath = getContentPath(contentType, slug)
+
+    revalidatePath('/cms/seo')
+    revalidatePath(contentType === 'post' ? '/cms/posts' : '/cms/panduan')
+    revalidatePath('/cms/dashboard')
+
+    return {
+      success: true,
+      data: {
+        id,
+        title,
+        slug,
+        contentType,
+        editPath,
+        publicPath,
+        publicUrl: getContentUrl(contentType, slug),
+        draftNotes: draft.data.draft_notes,
+      },
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Gagal membuat draft dari gap.',
+    }
+  }
+}
+
 export async function actionApplySeoRepairPlan(rawInput: unknown): Promise<{
   success: boolean
   error?: string
@@ -315,6 +515,8 @@ export async function actionApplySeoRepairPlan(rawInput: unknown): Promise<{
     editPath: string
     updatedAt: string
     appliedFields: string[]
+    indexingQueued: boolean
+    indexingQueueError?: string
   }
 }> {
   const parsed = applyRepairInputSchema.safeParse(rawInput)
@@ -385,6 +587,16 @@ export async function actionApplySeoRepairPlan(rawInput: unknown): Promise<{
     revalidatePath(input.contentType === 'post' ? '/cms/posts' : '/cms/panduan')
     revalidatePath('/cms/dashboard')
     await triggerFrontendRevalidate({ type: input.contentType, slug: row.slug })
+    const indexingResult = row.status === 'published'
+      ? await enqueueSeoIndexingUrl({
+          contentType: input.contentType,
+          contentId: input.contentId,
+          title: row.title,
+          slug: row.slug,
+          source: 'seo_repair_apply',
+          userId: userData.user.id,
+        })
+      : { success: false, error: 'Konten masih draft, tidak masuk queue indexing.' }
 
     return {
       success: true,
@@ -403,6 +615,8 @@ export async function actionApplySeoRepairPlan(rawInput: unknown): Promise<{
           'faq',
           input.proposal.content_patch.mode === 'no_content_change' ? '' : 'content',
         ].filter(Boolean),
+        indexingQueued: indexingResult.success,
+        indexingQueueError: indexingResult.success ? undefined : indexingResult.error,
       },
     }
   } catch (error) {

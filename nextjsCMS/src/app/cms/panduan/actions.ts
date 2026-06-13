@@ -7,6 +7,7 @@ import { triggerFrontendRevalidate } from '@/lib/revalidate'
 import { notifyGoogleIndexing } from '@/lib/google-indexing'
 import { escapeRegex, getPanduanPath, getSlugSimilarityScore, normalizeSlug } from '@/lib/slugs'
 import { findInternalLinkOpportunities } from '@/lib/internal-link-opportunities'
+import { enqueueSeoIndexingUrl } from '@/lib/seo/indexing-queue'
 
 const SITE_URL = process.env.FRONTEND_SITE_URL || 'https://arkaraweb.com'
 const SLUG_SIMILARITY_THRESHOLD = 0.72
@@ -570,6 +571,14 @@ export async function createPanduan(formData: z.infer<typeof panduanSchema>) {
 
   if (restFormData.status === 'published') {
     notifyGoogleIndexing(`${SITE_URL}${getPanduanPath(restFormData.slug)}`, 'URL_UPDATED')
+    await enqueueSeoIndexingUrl({
+      contentType: 'panduan',
+      contentId: panduanId || null,
+      title: restFormData.title,
+      slug: restFormData.slug,
+      source: 'content_publish',
+      userId: authorId,
+    })
   }
 }
 
@@ -649,6 +658,13 @@ export async function updatePanduan(id: string, formData: z.infer<typeof panduan
 
   if (restFormData.status === 'published') {
     notifyGoogleIndexing(newUrl, 'URL_UPDATED')
+    await enqueueSeoIndexingUrl({
+      contentType: 'panduan',
+      contentId: id,
+      title: restFormData.title,
+      slug: restFormData.slug,
+      source: existing.status === 'published' ? 'content_update' : 'content_publish',
+    })
   }
 }
 
