@@ -31,6 +31,31 @@ type FixedLink = NonNullable<ApplyResult> & {
 }
 
 const FIXED_LINKS_STORAGE_KEY = 'arkara.seo.recent-fixed-links'
+const PUBLIC_SITE_URL = normalizePublicOrigin(process.env.NEXT_PUBLIC_FRONTEND_SITE_URL || 'https://arkaraweb.com')
+
+function normalizePublicOrigin(value: string): string {
+  try {
+    return new URL(value).origin
+  } catch {
+    return 'https://arkaraweb.com'
+  }
+}
+
+function normalizePublicPath(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return '/'
+
+  try {
+    const url = new URL(trimmed, PUBLIC_SITE_URL)
+    return `${url.pathname}${url.search}${url.hash}` || '/'
+  } catch {
+    return trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+  }
+}
+
+function toCanonicalPublicUrl(value: string): string {
+  return new URL(normalizePublicPath(value), PUBLIC_SITE_URL).href
+}
 
 function getRelevantKeywordOpportunities(
   item: SeoAuditItem | null,
@@ -72,7 +97,15 @@ function loadFixedLinks(): FixedLink[] {
     const raw = window.localStorage.getItem(FIXED_LINKS_STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.slice(0, 8) : []
+    if (!Array.isArray(parsed)) return []
+
+    return parsed
+      .filter((item): item is FixedLink => Boolean(item?.id && item?.type && item?.publicPath))
+      .map((item) => ({
+        ...item,
+        publicPath: normalizePublicPath(item.publicPath),
+      }))
+      .slice(0, 8)
   } catch {
     return []
   }
@@ -110,7 +143,9 @@ export function SeoRepairPanel({ repairItems, keywordOpportunities }: SeoRepairP
   )
 
   useEffect(() => {
-    setFixedLinks(loadFixedLinks())
+    const storedLinks = loadFixedLinks()
+    setFixedLinks(storedLinks)
+    saveFixedLinks(storedLinks)
   }, [])
 
   useEffect(() => {
@@ -267,7 +302,7 @@ export function SeoRepairPanel({ repairItems, keywordOpportunities }: SeoRepairP
               <div key={`${item.type}:${item.id}:${item.updatedAt}`} className="flex items-center justify-between gap-3 rounded-md border border-emerald-100 bg-white px-3 py-2">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-black text-arkara-green">{item.title}</p>
-                  <p className="text-xs font-semibold text-gray-500">{item.publicPath}</p>
+                  <p className="truncate text-xs font-semibold text-gray-500">{toCanonicalPublicUrl(item.publicPath)}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Link
@@ -278,7 +313,7 @@ export function SeoRepairPanel({ repairItems, keywordOpportunities }: SeoRepairP
                     <Save className="h-4 w-4" />
                   </Link>
                   <a
-                    href={item.publicPath}
+                    href={toCanonicalPublicUrl(item.publicPath)}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-100 bg-white text-arkara-green hover:border-arkara-amber hover:text-arkara-amber"
