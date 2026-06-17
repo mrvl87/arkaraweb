@@ -21,6 +21,7 @@ import { extractClaimsForVerification } from './claim-extractor'
 import { callGroundedJSON, extractGroundedSources } from './verifier-client'
 import { PROMPT_VERSION, type AIContentProfile } from './prompt-profiles'
 import * as prompts from './prompt-profiles'
+import { getSeoKeywordSignalContext } from '../seo/keyword-signals'
 import {
   GenerateSlugInputSchema,
   GenerateSlugOutputSchema,
@@ -506,7 +507,10 @@ export async function generateSeoPack(
   ctx?: OperationContext
 ): Promise<OperationResponse<GenerateSEOPackOutput>> {
   const profile = resolveProfile(ctx?.targetType)
-  return runOperation('generate_seo_pack', rawInput, GenerateSEOPackInputSchema, GenerateSEOPackOutputSchema, (input) => prompts.buildSEOPackPrompt(input, profile), undefined, ctx)
+  return runOperation('generate_seo_pack', rawInput, GenerateSEOPackInputSchema, GenerateSEOPackOutputSchema, async (input) => {
+    const keywordSignals = await getSeoKeywordSignalContext([input.title, input.description ?? ''].join(' '))
+    return prompts.buildSEOPackPrompt(input, profile, keywordSignals)
+  }, undefined, ctx)
 }
 
 // ─── Generate Outline ────────────────────────────────────────────
@@ -516,8 +520,11 @@ export async function generateOutline(
 ): Promise<OperationResponse<GenerateOutlineOutput>> {
   const profile = resolveProfile(ctx?.targetType)
   return runOperation('generate_outline', rawInput, GenerateOutlineInputSchema, GenerateOutlineOutputSchema, async (input) => {
-    const internalLinks = await getInternalLinksContext(input)
-    return prompts.buildOutlinePrompt(input, internalLinks, profile)
+    const [internalLinks, keywordSignals] = await Promise.all([
+      getInternalLinksContext(input),
+      getSeoKeywordSignalContext([input.title, input.keyword ?? '', input.angle ?? ''].join(' ')),
+    ])
+    return prompts.buildOutlinePrompt(input, internalLinks, profile, keywordSignals)
   }, undefined, ctx)
 }
 
@@ -528,8 +535,11 @@ export async function generateFullDraft(
 ): Promise<OperationResponse<GenerateFullDraftOutput>> {
   const profile = resolveProfile(ctx?.targetType)
   return runOperation('generate_full_draft', rawInput, GenerateFullDraftInputSchema, GenerateFullDraftOutputSchema, async (input) => {
-    const internalLinks = await getInternalLinksContext(input)
-    return prompts.buildFullDraftPrompt(input, internalLinks, profile)
+    const [internalLinks, keywordSignals] = await Promise.all([
+      getInternalLinksContext(input),
+      getSeoKeywordSignalContext([input.title, input.keyword ?? '', input.angle ?? '', input.notes ?? ''].join(' ')),
+    ])
+    return prompts.buildFullDraftPrompt(input, internalLinks, profile, keywordSignals)
   }, normalizeFullDraftOutput, ctx, {
     maxTokens: FULL_DRAFT_MAX_TOKENS,
     timeoutMs: FULL_DRAFT_TIMEOUT_MS,
@@ -594,7 +604,24 @@ export async function generateClusterIdeas(
   ctx?: OperationContext
 ): Promise<OperationResponse<GenerateClusterIdeasOutput>> {
   const profile = resolveProfile(ctx?.targetType)
-  return runOperation('generate_cluster_ideas', rawInput, GenerateClusterIdeasInputSchema, GenerateClusterIdeasOutputSchema, (input) => prompts.buildClusterIdeasPrompt(input, profile), normalizeClusterIdeasOutput, ctx)
+  return runOperation(
+    'generate_cluster_ideas',
+    rawInput,
+    GenerateClusterIdeasInputSchema,
+    GenerateClusterIdeasOutputSchema,
+    async (input) => {
+      const keywordSignals = await getSeoKeywordSignalContext([
+        input.topic,
+        input.source_title ?? '',
+        input.source_description ?? '',
+        input.source_category ?? '',
+      ].join(' '))
+
+      return prompts.buildClusterIdeasPrompt(input, profile, keywordSignals)
+    },
+    normalizeClusterIdeasOutput,
+    ctx
+  )
 }
 
 export async function generateFacebookWeeklyPlan(
@@ -814,7 +841,15 @@ export async function generateSeoRepairPlan(
     rawInput,
     GenerateSeoRepairPlanInputSchema,
     GenerateSeoRepairPlanOutputSchema,
-    (input) => prompts.buildSeoRepairPlanPrompt(input, profile),
+    async (input) => {
+      const keywordSignals = await getSeoKeywordSignalContext([
+        input.title,
+        input.slug,
+        input.category ?? '',
+        input.keyword_opportunities.map((item) => item.query).join(' '),
+      ].join(' '))
+      return prompts.buildSeoRepairPlanPrompt(input, profile, keywordSignals)
+    },
     undefined,
     ctx,
     {
@@ -840,7 +875,10 @@ export async function generateGapDraft(
     rawInput,
     GenerateGapDraftInputSchema,
     GenerateGapDraftOutputSchema,
-    (input) => prompts.buildGapDraftPrompt(input, profile),
+    async (input) => {
+      const keywordSignals = await getSeoKeywordSignalContext([input.query, input.cluster].join(' '))
+      return prompts.buildGapDraftPrompt(input, profile, keywordSignals)
+    },
     normalizeGapDraftOutput,
     ctx,
     {

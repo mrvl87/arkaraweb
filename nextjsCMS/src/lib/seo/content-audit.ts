@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getSerperConfig, getSerperKeywordOpportunity, type SerperKeywordOpportunity } from './serper'
+import { getSeoKeywordSignals, type SeoKeywordSignal } from './keyword-signals'
 
 export const SEO_CLUSTERS = [
   {
@@ -152,6 +153,7 @@ export interface SeoCockpitData {
   contentItems: SeoAuditItem[]
   visibilityPrompts: VisibilityPromptSet[]
   keywordOpportunities: SerperKeywordOpportunity[]
+  keywordSignals: SeoKeywordSignal[]
   serper: {
     configured: boolean
     gl: string
@@ -163,6 +165,7 @@ export interface SeoCockpitData {
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
 const CLUSTER_SLUGS = new Set<string>(SEO_CLUSTERS.map((cluster) => cluster.slug))
+const SEO_OPPORTUNITY_TIMEOUT_MS = 6000
 
 const VISIBILITY_PROMPTS: VisibilityPromptSet[] = [
   { cluster: 'energi', prompt: 'Apa yang harus disiapkan jika listrik mati 3 hari?' },
@@ -404,11 +407,46 @@ function coverage(items: SeoAuditItem[], predicate: (item: SeoAuditItem) => bool
   return Math.round((items.filter(predicate).length / items.length) * 100)
 }
 
+function timeoutOpportunity(cluster: SeoClusterSlug, query: string): SerperKeywordOpportunity {
+  return {
+    cluster,
+    query,
+    arkaraRank: null,
+    topCompetitors: [],
+    peopleAlsoAsk: [],
+    relatedSearches: [],
+    source: 'error',
+    checkedAt: null,
+    error: 'Scan keyword timeout. Halaman dirender tanpa menunggu Serper.',
+  }
+}
+
+async function getSerperKeywordOpportunitySafe(
+  cluster: SeoClusterSlug,
+  query: string
+): Promise<SerperKeywordOpportunity> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  const timeout = new Promise<SerperKeywordOpportunity>((resolve) => {
+    timeoutId = setTimeout(() => resolve(timeoutOpportunity(cluster, query)), SEO_OPPORTUNITY_TIMEOUT_MS)
+  })
+
+  try {
+    return await Promise.race([
+      getSerperKeywordOpportunity(cluster, query),
+      timeout,
+    ])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
+}
+
 export async function getSeoCockpitData(): Promise<SeoCockpitData> {
   const supabase = await createClient()
-  const [posts, panduan] = await Promise.all([
+  const [posts, panduan, keywordSignals] = await Promise.all([
     loadPosts(supabase),
     loadPanduan(supabase),
+    getSeoKeywordSignals({ limit: 80 }),
   ])
 
   const contentItems = [
@@ -441,7 +479,7 @@ export async function getSeoCockpitData(): Promise<SeoCockpitData> {
     await Promise.all(
       SEO_CLUSTERS.flatMap((cluster) =>
         cluster.seedKeywords.map((keyword) =>
-          getSerperKeywordOpportunity(cluster.slug, keyword)
+          getSerperKeywordOpportunitySafe(cluster.slug, keyword)
         )
       )
     )
@@ -473,6 +511,7 @@ export async function getSeoCockpitData(): Promise<SeoCockpitData> {
     contentItems,
     visibilityPrompts: VISIBILITY_PROMPTS,
     keywordOpportunities,
+    keywordSignals,
     serper,
   }
 }

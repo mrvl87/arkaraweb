@@ -17,6 +17,7 @@ import { getSeoCockpitData, type SeoAuditItem, type SeoClusterStatus, type SeoIs
 import { SeoRepairPanel } from '@/components/seo/seo-repair-panel'
 import { SeoGapDraftButton } from '@/components/seo/seo-gap-draft-button'
 import { SeoIndexingQueuePanel } from '@/components/seo/seo-indexing-queue-panel'
+import { SeoKeywordSignalsPanel } from '@/components/seo/seo-keyword-signals-panel'
 import { getSeoIndexingQueue } from '@/lib/seo/indexing-queue'
 
 const formatter = new Intl.NumberFormat('id-ID')
@@ -317,6 +318,8 @@ export default async function SEOCockpitPage() {
         items={indexingQueue.items}
         error={indexingQueue.error}
       />
+
+      <SeoKeywordSignalsPanel items={data.keywordSignals} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_0.75fr]">
         <section className="rounded-lg border border-gray-100 bg-white shadow-sm">

@@ -3,6 +3,7 @@ import type { SeoClusterSlug } from './content-audit'
 
 const SERPER_ENDPOINT = 'https://google.serper.dev/search'
 const DEFAULT_CACHE_HOURS = 24
+const DEFAULT_SERPER_TIMEOUT_MS = 4500
 const DEFAULT_GL = 'id'
 const DEFAULT_HL = 'id'
 const ARKARA_DOMAIN = 'arkaraweb.com'
@@ -63,6 +64,11 @@ interface CachedSnapshot {
 function getCacheHours(): number {
   const parsed = Number(process.env.SERPER_CACHE_HOURS)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_CACHE_HOURS
+}
+
+function getSerperTimeoutMs(): number {
+  const parsed = Number(process.env.SERPER_TIMEOUT_MS)
+  return Number.isFinite(parsed) && parsed >= 1000 ? parsed : DEFAULT_SERPER_TIMEOUT_MS
 }
 
 export function getSerperConfig() {
@@ -207,27 +213,42 @@ async function callSerper(input: SerperQueryInput): Promise<SerperSearchResponse
     throw new Error('SERPER_API_KEY belum dikonfigurasi.')
   }
 
-  const response = await fetch(SERPER_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'X-API-KEY': apiKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      q: input.query,
-      gl: input.gl,
-      hl: input.hl,
-      num: input.num,
-    }),
-    next: { revalidate: 0 },
-  })
+  const timeoutMs = getSerperTimeoutMs()
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    throw new Error(`Serper gagal: ${response.status} ${response.statusText}${text ? ` - ${text.slice(0, 240)}` : ''}`)
+  try {
+    const response = await fetch(SERPER_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        q: input.query,
+        gl: input.gl,
+        hl: input.hl,
+        num: input.num,
+      }),
+      next: { revalidate: 0 },
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '')
+      throw new Error(`Serper gagal: ${response.status} ${response.statusText}${text ? ` - ${text.slice(0, 240)}` : ''}`)
+    }
+
+    return response.json() as Promise<SerperSearchResponse>
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Serper timeout setelah ${timeoutMs}ms.`)
+    }
+
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
   }
-
-  return response.json() as Promise<SerperSearchResponse>
 }
 
 export async function getSerperKeywordOpportunity(

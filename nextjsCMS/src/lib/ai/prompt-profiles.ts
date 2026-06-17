@@ -294,13 +294,17 @@ Aturan slug:
 
 export function buildSEOPackPrompt(
   input: GenerateSEOPackInput,
-  profile: AIContentProfile = 'workspace'
+  profile: AIContentProfile = 'workspace',
+  seoKeywordSignalContext?: string
 ): AIMessage[] {
   const contentContext = input.content
     ? `\n\nKonten artikel (ringkasan):\n"${input.content.substring(0, 2000)}"`
     : ''
   const descContext = input.description
     ? `\n\nDeskripsi yang ada:\n"${input.description}"`
+    : ''
+  const keywordSignalContext = seoKeywordSignalContext
+    ? `\n\nData keyword internal dari Google Search Console / Bing Webmaster:\n${seoKeywordSignalContext}`
     : ''
 
   const seoDirection =
@@ -319,7 +323,7 @@ export function buildSEOPackPrompt(
       role: 'user',
       content: `Buatkan paket SEO lengkap untuk artikel ini.
 
-Judul: "${input.title}"${contentContext}${descContext}
+Judul: "${input.title}"${contentContext}${descContext}${keywordSignalContext}
 
 Balas dalam JSON format ini:
 {
@@ -335,6 +339,7 @@ ${seoDirection}
 - Jangan gunakan formula generik "Tips/Trik/Cara Mudah" kecuali benar-benar tak terhindarkan
 - Jika memungkinkan, masukkan elemen skenario, durasi, risiko, atau konsekuensi yang membuat artikel terasa penting
 - Fokus keyword harus realistis, tetapi hasil akhir tetap harus punya ciri khas Arkara: tajam, spesifik, dan tidak hambar
+- Jika data keyword internal tersedia, prioritaskan query dengan impresi/click nyata sebagai acuan focus_keyword dan secondary_keywords.
 - Jangan mengorbankan kejelasan demi clickbait. Prioritaskan keterpahaman AI search dan manusia daripada gimmick CTR.`,
     },
   ]
@@ -343,7 +348,8 @@ ${seoDirection}
 export function buildOutlinePrompt(
   input: GenerateOutlineInput,
   internalLinks?: string,
-  profile: AIContentProfile = 'workspace'
+  profile: AIContentProfile = 'workspace',
+  seoKeywordSignalContext?: string
 ): AIMessage[] {
   const extras: string[] = []
   if (input.keyword) extras.push(`Keyword target: ${input.keyword}`)
@@ -367,6 +373,9 @@ export function buildOutlinePrompt(
   const linksContext = internalLinks
     ? `\n\nBerikut adalah daftar artikel yang sudah ada di website. Jika ada topik yang relevan, tandai di catatan bahwa kita bisa menambahkan internal link ke artikel tersebut:\n${internalLinks}`
     : ''
+  const keywordSignalContext = seoKeywordSignalContext
+    ? `\n\nData keyword internal dari Google Search Console / Bing Webmaster. Gunakan sebagai acuan intent dan prioritas heading:\n${seoKeywordSignalContext}`
+    : ''
 
   return [
     { role: 'system', content: buildSystemPrompt(profile) },
@@ -375,7 +384,7 @@ export function buildOutlinePrompt(
       content: `Buatkan outline/kerangka artikel yang terstruktur baik.
 
 Judul: "${input.title}"
-${extras.join('\n')}${linksContext}
+${extras.join('\n')}${linksContext}${keywordSignalContext}
 
 Balas dalam JSON format ini:
 {
@@ -406,7 +415,8 @@ ${outlineDirection}`,
 export function buildFullDraftPrompt(
   input: GenerateFullDraftInput,
   internalLinks?: string,
-  profile: AIContentProfile = 'workspace'
+  profile: AIContentProfile = 'workspace',
+  seoKeywordSignalContext?: string
 ): AIMessage[] {
   const currentDate = new Date().toISOString().slice(0, 10)
   const extras: string[] = []
@@ -436,6 +446,9 @@ export function buildFullDraftPrompt(
   const linksContext = internalLinks
     ? `\n\nBerikut adalah daftar artikel yang sudah ada di website Arkara. Sisipkan internal link secara natural menggunakan format Markdown [teks anchor](/blog/slug-artikel) ke artikel yang relevan dengan pembahasan. Jangan paksakan link jika tidak relevan.\n${internalLinks}`
     : ''
+  const keywordSignalContext = seoKeywordSignalContext
+    ? `\n\nData keyword internal dari Google Search Console / Bing Webmaster. Gunakan sebagai acuan intent, prioritas subtopik, FAQ, dan metadata SEO. Jangan memaksakan semua keyword jika tidak natural:\n${seoKeywordSignalContext}`
+    : ''
 
   return [
     { role: 'system', content: buildSystemPrompt(profile) },
@@ -444,7 +457,7 @@ export function buildFullDraftPrompt(
       content: `Tulis draft mobile-first dalam format Markdown berdasarkan brief berikut.
 
 Judul: "${input.title}"
-${extras.join('\n')}${linksContext}
+${extras.join('\n')}${linksContext}${keywordSignalContext}
 
 Kontrak utama:
 - Satu eksekusi ini WAJIB menghasilkan paket lengkap: isi artikel, Jawaban Singkat, Inti Artikel, FAQ, dan metadata SEO dasar.
@@ -726,7 +739,8 @@ Aturan prompt:
 
 export function buildClusterIdeasPrompt(
   input: GenerateClusterIdeasInput,
-  profile: AIContentProfile = 'workspace'
+  profile: AIContentProfile = 'workspace',
+  keywordSignals = ''
 ): AIMessage[] {
   const existingContext = input.existing_titles?.length
     ? `\n\nArtikel yang sudah ada (jangan duplikasi):\n${input.existing_titles.map((t) => `- ${t}`).join('\n')}`
@@ -741,6 +755,10 @@ Deskripsi: ${input.source_description || '-'}
 Konten:
 ${input.source_content || '-'}`
     : ''
+  const keywordSignalContext = keywordSignals.trim()
+    ? `\n\nKeyword signal dari GSC/Bing/Manual yang harus dipertimbangkan sebagai bukti demand:
+${keywordSignals.trim()}`
+    : ''
 
   return [
     { role: 'system', content: buildSystemPrompt(profile) },
@@ -748,7 +766,7 @@ ${input.source_content || '-'}`
       role: 'user',
       content: `Buatkan cluster ide konten Arkara berdasarkan artikel sumber atau topik pillar berikut.
 
-Topik: "${input.topic}"${sourceContext}${existingContext}
+Topik: "${input.topic}"${sourceContext}${keywordSignalContext}${existingContext}
 
 Balas dalam JSON format ini:
 {
@@ -771,6 +789,8 @@ Aturan:
 - Judul harus kuat SEO, spesifik, long-tail, dan terasa Arkara: tenang, tajam, realistis, urgent, tidak generik
 - Judul harus jelas menargetkan rumah tangga urban Indonesia, ruang terbatas, sumber daya terbatas, atau skenario krisis bila relevan
 - Fokus pada low-to-mid competition keyword yang realistis: household survival, urban resilience, buffer, distribusi, kontrol, krisis, pangan, air, energi, medis, keamanan, komunitas, atau tema turunan sesuai artikel
+- Jika keyword signal tersedia, prioritaskan ide yang menjawab query ber-impression tinggi, posisi rendah, CTR rendah, atau intent yang belum tercakup
+- Gunakan keyword signal sebagai arah demand; jangan membuat judul duplikat hanya karena query-nya sama
 - Hindari judul clickbait kosong seperti "tips mudah", "cara praktis", atau "rahasia sukses"
 - Hindari duplikasi dengan daftar artikel yang sudah ada
 - target_keyword harus berupa keyword utama yang bisa dicari, bukan slogan`,
@@ -1294,7 +1314,8 @@ ${profileDirection}`,
 
 export function buildSeoRepairPlanPrompt(
   input: GenerateSeoRepairPlanInput,
-  profile: AIContentProfile = 'workspace'
+  profile: AIContentProfile = 'workspace',
+  seoKeywordSignalContext?: string
 ): AIMessage[] {
   const contentWindow = input.current_content
     ? limitPromptContext(input.current_content, 9000)
@@ -1321,6 +1342,7 @@ export function buildSeoRepairPlanPrompt(
         .map((item, index) => `${index + 1}. Q: ${item.question}\n   A: ${item.answer}`)
         .join('\n')
     : 'Belum ada FAQ.'
+  const keywordSignalBlock = seoKeywordSignalContext || 'Belum ada data keyword internal.'
 
   const repairDirection =
     input.content_type === 'panduan'
@@ -1366,6 +1388,9 @@ ${issueBlock}
 Data Serper:
 ${keywordBlock}
 
+Data keyword internal GSC/Bing:
+${keywordSignalBlock}
+
 Konten sekarang:
 """${contentWindow}"""
 
@@ -1398,6 +1423,7 @@ Aturan:
 - Jangan menghapus angle Arkara.
 - Jika tidak perlu mengubah body, gunakan content_patch.mode = "no_content_change" dan markdown = "".
 - FAQ minimal 3 item dan harus melengkapi PAA/related Serper.
+- Jika ada data keyword internal GSC/Bing, prioritaskan keyword dengan impresi/click nyata selama tetap relevan dengan konten.
 - Quick answer harus langsung menjawab intent utama, bukan intro panjang.
 - Meta title jelas, tidak clickbait, dan memuat target keyword jika natural.
 - Meta desc harus informatif, bukan sensasional.
@@ -1408,7 +1434,8 @@ ${repairDirection}`,
 
 export function buildGapDraftPrompt(
   input: GenerateGapDraftInput,
-  profile: AIContentProfile = 'workspace'
+  profile: AIContentProfile = 'workspace',
+  seoKeywordSignalContext?: string
 ): AIMessage[] {
   const currentDate = new Date().toISOString().slice(0, 10)
   const competitorLine = input.top_competitors.length
@@ -1421,6 +1448,7 @@ export function buildGapDraftPrompt(
   const existingTitles = input.existing_titles.length
     ? input.existing_titles.map((title, index) => `${index + 1}. ${title}`).join('\n')
     : 'Belum ada daftar judul pembanding.'
+  const keywordSignalBlock = seoKeywordSignalContext || 'Belum ada data keyword internal.'
   const typeDirection = input.content_type === 'panduan'
     ? `- Bentuk akhir adalah panduan teknis. Fokus pada langkah, alat/bahan, batas aman, checklist, dan failure mode.
 - editorial_format wajib "technical_guide".`
@@ -1453,6 +1481,9 @@ ${competitorLine}
 PAA / related search:
 ${intentLine}
 
+Data keyword internal GSC/Bing:
+${keywordSignalBlock}
+
 Judul yang sudah ada, jangan duplikasi:
 ${existingTitles}
 
@@ -1476,6 +1507,7 @@ Aturan:
 ${typeDirection}
 - Jangan buat konten survival ekstrem atau menakut-nakuti. Framing Arkara: persiapan rasional keluarga Indonesia.
 - Mulai content dengan blockquote jawaban inti: "> Jawaban singkat: ...".
+- Gunakan data keyword internal sebagai acuan prioritas subtopik, FAQ, dan secondary keyword jika relevan.
 - Gunakan 4-6 heading H2 yang spesifik.
 - Target 650-950 kata, padat dan mobile-first.
 - Masukkan internal-link placeholder hanya jika natural, format Markdown [anchor](/blog/slug) atau [anchor](/panduan/slug).

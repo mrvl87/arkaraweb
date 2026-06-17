@@ -7,6 +7,16 @@ import { generateGapDraft, generateSeoRepairPlan } from '@/lib/ai/operations'
 import { triggerFrontendRevalidate } from '@/lib/revalidate'
 import { getPanduanPath, getPostPath, normalizeSlug } from '@/lib/slugs'
 import { enqueueSeoIndexingUrl, getContentPath, getContentUrl } from '@/lib/seo/indexing-queue'
+import {
+  deleteSeoKeywordSignal,
+  parseKeywordSignalPaste,
+  updateSeoKeywordSignal,
+  upsertSeoKeywordSignals,
+  SEO_KEYWORD_SIGNAL_CLUSTERS,
+  SEO_KEYWORD_SIGNAL_PRIORITIES,
+  SEO_KEYWORD_SIGNAL_SOURCES,
+  SEO_KEYWORD_SIGNAL_STATUSES,
+} from '@/lib/seo/keyword-signals'
 import { GenerateSeoRepairPlanOutputSchema } from '@/lib/ai/schemas'
 import type {
   GenerateGapDraftOutput,
@@ -52,6 +62,34 @@ const generateGapDraftInputSchema = z.object({
   topCompetitors: z.array(z.string().trim().min(1).max(180)).max(5).default([]),
   peopleAlsoAsk: z.array(z.string().trim().min(1).max(240)).max(6).default([]),
   relatedSearches: z.array(z.string().trim().min(1).max(240)).max(6).default([]),
+})
+
+const nullableClusterSchema = z.enum(SEO_KEYWORD_SIGNAL_CLUSTERS).nullable().optional()
+
+const importKeywordSignalsInputSchema = z.object({
+  source: z.enum(SEO_KEYWORD_SIGNAL_SOURCES).default('google_search_console'),
+  cluster: nullableClusterSchema,
+  rawText: z.string().trim().min(1, 'Tempel minimal 1 keyword.').max(180000),
+})
+
+const updateKeywordSignalInputSchema = z.object({
+  id: z.string().uuid(),
+  query: z.string().trim().min(1).max(220),
+  source: z.enum(SEO_KEYWORD_SIGNAL_SOURCES),
+  cluster: nullableClusterSchema,
+  landingPage: z.string().trim().max(500).optional().default(''),
+  impressions: z.coerce.number().int().min(0).max(100000000).default(0),
+  clicks: z.coerce.number().int().min(0).max(100000000).default(0),
+  ctr: z.coerce.number().min(0).max(1).nullable().optional(),
+  averagePosition: z.coerce.number().min(0).max(1000).nullable().optional(),
+  intent: z.string().trim().max(120).nullable().optional(),
+  priority: z.enum(SEO_KEYWORD_SIGNAL_PRIORITIES).default('medium'),
+  status: z.enum(SEO_KEYWORD_SIGNAL_STATUSES).default('active'),
+  notes: z.string().trim().max(1000).nullable().optional(),
+})
+
+const deleteKeywordSignalInputSchema = z.object({
+  id: z.string().uuid(),
 })
 
 type RepairKeywordOpportunityInput = z.infer<typeof SeoRepairKeywordOpportunitySchema>
@@ -321,6 +359,126 @@ function normalizeDraftFaq(items: GenerateGapDraftOutput['faq']) {
     }))
     .filter((item) => item.question && item.answer)
     .slice(0, 6)
+}
+
+export async function actionImportSeoKeywordSignals(rawInput: unknown): Promise<{
+  success: boolean
+  error?: string
+  data?: {
+    importedCount: number
+  }
+}> {
+  const parsed = importKeywordSignalsInputSchema.safeParse(rawInput)
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues.map((issue) => issue.message).join('; '),
+    }
+  }
+
+  try {
+    const supabase = await createClient()
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !userData.user) {
+      return { success: false, error: 'Unauthorized.' }
+    }
+
+    const drafts = parseKeywordSignalPaste(parsed.data.rawText, {
+      source: parsed.data.source,
+      cluster: parsed.data.cluster ?? null,
+    })
+
+    if (drafts.length === 0) {
+      return { success: false, error: 'Tidak ada keyword valid yang bisa disimpan.' }
+    }
+
+    const rows = await upsertSeoKeywordSignals(drafts, userData.user.id)
+
+    revalidatePath('/cms/seo')
+
+    return {
+      success: true,
+      data: {
+        importedCount: rows.length,
+      },
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Gagal menyimpan keyword signal.',
+    }
+  }
+}
+
+export async function actionUpdateSeoKeywordSignal(rawInput: unknown): Promise<{
+  success: boolean
+  error?: string
+}> {
+  const parsed = updateKeywordSignalInputSchema.safeParse(rawInput)
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues.map((issue) => issue.message).join('; '),
+    }
+  }
+
+  try {
+    const supabase = await createClient()
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !userData.user) {
+      return { success: false, error: 'Unauthorized.' }
+    }
+
+    const { id, ...patch } = parsed.data
+    await updateSeoKeywordSignal(id, patch)
+
+    revalidatePath('/cms/seo')
+
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Gagal update keyword signal.',
+    }
+  }
+}
+
+export async function actionDeleteSeoKeywordSignal(rawInput: unknown): Promise<{
+  success: boolean
+  error?: string
+}> {
+  const parsed = deleteKeywordSignalInputSchema.safeParse(rawInput)
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues.map((issue) => issue.message).join('; '),
+    }
+  }
+
+  try {
+    const supabase = await createClient()
+    const { data: userData, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !userData.user) {
+      return { success: false, error: 'Unauthorized.' }
+    }
+
+    await deleteSeoKeywordSignal(parsed.data.id)
+
+    revalidatePath('/cms/seo')
+
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Gagal hapus keyword signal.',
+    }
+  }
 }
 
 export async function actionGenerateSeoRepairPlan(
