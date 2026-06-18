@@ -1,6 +1,6 @@
 ﻿---
 /**
- * PostLayout.astro â€” Retro Survival Manual 2.0
+ * PostLayout.astro - Retro Survival Manual 2.0
  * Props: unchanged (backward compatible with blog/[slug] and panduan/[slug])
  * Changes:
  *   - Removed rounded-3xl/shadow-2xl/gradient-br modern aesthetics
@@ -193,7 +193,7 @@ const readerMetaJson = JSON.stringify(readerMeta).replace(/</g, '\\u003c');
   structuredData={structuredData}
 >
 
-  <!-- â”€â”€ POST HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <!-- POST HEADER -->
   <header class="post-hero" style="
     background: var(--ink);
     border-bottom: 3px solid var(--green-terminal);
@@ -227,11 +227,11 @@ const readerMetaJson = JSON.stringify(readerMeta).replace(/</g, '\\u003c');
         {category ? `KATEGORI: ${category.toUpperCase()}` : 'ARTIKEL'}
         {publishDate && (
           <span style="color: var(--warm-grey);">
-            â€” {new Date(publishDate).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' })}
+            &mdash; {new Date(publishDate).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' })}
           </span>
         )}
         {readingTime > 0 && (
-          <span style="color: var(--warm-grey);">â€” {readingTime} MIN</span>
+          <span style="color: var(--warm-grey);">&mdash; {readingTime} MIN</span>
         )}
       </div>
 
@@ -262,7 +262,7 @@ const readerMetaJson = JSON.stringify(readerMeta).replace(/</g, '\\u003c');
     </div>
   </header>
 
-  <!-- â”€â”€ ARTICLE BODY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <!-- ARTICLE BODY -->
   <div class="post-shell" style="max-width: 1200px; margin: 0 auto; padding: 0 2rem 5rem; margin-top: -2rem; position: relative; z-index: 10;">
     <div style="display: grid; grid-template-columns: 1fr 300px; gap: 2rem; align-items: start;" class="post-grid">
 
@@ -396,7 +396,7 @@ const readerMetaJson = JSON.stringify(readerMeta).replace(/</g, '\\u003c');
             "
             onmouseover="this.style.background='var(--green-dark)'"
             onmouseout="this.style.background=''"
-            >â† KEMBALI KE {contentType === 'panduan' ? 'PANDUAN' : 'BLOG'}</a>
+            >&larr; KEMBALI KE {contentType === 'panduan' ? 'PANDUAN' : 'BLOG'}</a>
           </div>
 
           <!-- Related Posts Section -->

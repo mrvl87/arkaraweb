@@ -1,6 +1,6 @@
 ﻿---
 /**
- * BaseLayout.astro â€” Arkara Retro Survival Manual 2.0
+ * BaseLayout.astro - Arkara Retro Survival Manual 2.0
  * Replaces: old Playfair/sand/forest modern layout
  * Changes:
  *   - Nav: ink background, terminal cursor blink, mono font, sharp borders
@@ -103,7 +103,7 @@ const navLinks = [
 const footerTagline = footerData?.tagline?.trim()
   || 'Membangun ketangguhan bangsa melalui pengetahuan yang bisa diakses dan dipraktekkan siapa saja.';
 const footerCopyright = footerData?.copyright_text?.trim()
-  || 'Â© 2026 ARKARA â€” SURVIVE WITH KNOWLEDGE';
+  || 'Copyright 2026 ARKARA - SURVIVE WITH KNOWLEDGE';
 
 function normalizePlatform(platform?: string) {
   return platform === 'twitter' ? 'x' : platform;
@@ -167,6 +167,7 @@ const footerSocialLinks = (footerData?.social_links ?? [])
 
 if (Astro.response.status < 300) {
   const htmlCacheControl = 'public, max-age=0, s-maxage=600, stale-while-revalidate=86400';
+  Astro.response.headers.set('Content-Type', 'text/html; charset=utf-8');
   Astro.response.headers.set('Cache-Control', htmlCacheControl);
   Astro.response.headers.set('CDN-Cache-Control', htmlCacheControl);
 }
@@ -226,7 +227,7 @@ if (Astro.response.status < 300) {
     <div class="vfx-grid"   aria-hidden="true"></div>
     <div class="vfx-bg"     aria-hidden="true"></div>
 
-    <!-- â”€â”€ NAVIGATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <!-- NAVIGATION -->
     <nav id="main-nav" style="
       position: sticky; top: 0; z-index: 100;
       background: var(--ink);
@@ -245,7 +246,7 @@ if (Astro.response.status < 300) {
         display: flex; align-items: center; gap: 0.75rem;
       ">
         <span class="nav-cursor" aria-hidden="true"></span>
-        ARKARA_OS â€” SURVIVAL MANUAL
+        ARKARA_OS &mdash; SURVIVAL MANUAL
       </a>
 
       <!-- Desktop links -->
@@ -334,12 +335,12 @@ if (Astro.response.status < 300) {
       </a>
     </nav>
 
-    <!-- â”€â”€ MAIN CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <!-- MAIN CONTENT -->
     <main>
       <slot />
     </main>
 
-    <!-- â”€â”€ FOOTER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <!-- FOOTER -->
     <footer style="
       background: var(--ink);
       border-top: 3px solid var(--green-terminal);
@@ -487,10 +488,10 @@ if (Astro.response.status < 300) {
             {footerCopyright}
           </p>
           <p aria-hidden="true" style="display:none;font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:var(--warm-grey-dark);">
-            Â© 2026 ARKARA â€” SURVIVE WITH KNOWLEDGE
+            Copyright 2026 ARKARA - SURVIVE WITH KNOWLEDGE
           </p>
           <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:var(--warm-grey-dark);">
-            BUILD: 2026.01 â€” RAILWAY DEPLOY
+            BUILD: 2026.01 - RAILWAY DEPLOY
           </p>
         </div>
       </div>
