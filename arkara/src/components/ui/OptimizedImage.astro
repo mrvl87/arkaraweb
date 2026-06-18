@@ -47,7 +47,9 @@ const isStringUrl = typeof image === 'string';
 let src = rewriteMediaUrl(isStringUrl ? image : image.url || '');
 let srcSet = '';
 let mobileSrcSet = '';
-let altText = isStringUrl ? alt : (image.alt_text || alt);
+let altText = isStringUrl ? alt : (alt || image.alt_text || image.title || image.filename || '');
+altText = String(altText).replace(/\s+/g, ' ').trim();
+const imageTitle = altText || 'Gambar Arkara';
 let blurhash = !isStringUrl && image.blurhash ? image.blurhash : '';
 let dominantColor = !isStringUrl && image.dominant_color ? image.dominant_color : '';
 let hasFormats = !isStringUrl && image.formats && Object.keys(image.formats).length > 0;
@@ -125,11 +127,10 @@ const showBlurhash = !isTransparent && blurhash;
   <div class={`relative overflow-hidden ${aspectRatio} ${className}`} style={placeholderStyle}>
     {/* Optional Blurhash Background (very lightweight base64) */}
     {showBlurhash && (
-      <img 
-        src={blurhash} 
-        alt="" 
+      <span
         class={`absolute inset-0 w-full h-full ${objectFit} blur-xl opacity-50 scale-110`}
-        aria-hidden="true" 
+        style={`background-image: url("${blurhash}"); background-size: cover; background-position: center;`}
+        aria-hidden="true"
       />
     )}
     
@@ -144,6 +145,7 @@ const showBlurhash = !isTransparent && blurhash;
          <img
            src={src}
            alt={altText}
+           title={imageTitle}
            loading={loading}
            decoding={loading === 'eager' ? 'sync' : 'async'}
            fetchpriority={fetchpriority}
@@ -154,6 +156,7 @@ const showBlurhash = !isTransparent && blurhash;
       <img
         src={src}
         alt={altText}
+        title={imageTitle}
         loading={loading}
         decoding={loading === 'eager' ? 'sync' : 'async'}
         fetchpriority={fetchpriority}

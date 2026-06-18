@@ -28,23 +28,62 @@ function extractIdAttribute(attrs: string): string | null {
   return match?.[1] ?? null
 }
 
+function getImageAttribute(tag: string, name: string): string {
+  const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*["']([^"']*)["']`, 'i'))
+  return match?.[1]?.trim() ?? ''
+}
+
+function escapeAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+function humanizeImageSrc(src: string): string {
+  const fileName = src.split(/[?#]/)[0]?.split('/').pop() ?? ''
+
+  return fileName
+    .replace(/\.[a-z0-9]+$/i, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\d{6,}\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function addBodyImageLoadingAttributes(html: string): string {
   return html.replace(/<img\b[^>]*>/gi, (tag) => {
     if (/^\s*<img\b[^>]*\bsrc\s*=\s*["']data:/i.test(tag)) {
       return tag
     }
 
+    const altText = getImageAttribute(tag, 'alt')
+    const titleText = getImageAttribute(tag, 'title')
+    const fallbackText = altText || titleText || humanizeImageSrc(getImageAttribute(tag, 'src')) || 'Gambar Arkara'
+    let nextTag = tag
+
+    if (/\balt\s*=/i.test(nextTag)) {
+      nextTag = nextTag.replace(/\balt\s*=\s*["'][^"']*["']/i, `alt="${escapeAttribute(fallbackText)}"`)
+    }
+
+    if (/\btitle\s*=/i.test(nextTag)) {
+      nextTag = nextTag.replace(/\btitle\s*=\s*["'][^"']*["']/i, `title="${escapeAttribute(titleText || fallbackText)}"`)
+    }
+
     const attributes = [
-      /\bloading\s*=/i.test(tag) ? '' : ' loading="lazy"',
-      /\bdecoding\s*=/i.test(tag) ? '' : ' decoding="async"',
-      /\bfetchpriority\s*=/i.test(tag) ? '' : ' fetchpriority="low"',
+      /\balt\s*=/i.test(nextTag) ? '' : ` alt="${escapeAttribute(fallbackText)}"`,
+      /\btitle\s*=/i.test(nextTag) ? '' : ` title="${escapeAttribute(titleText || fallbackText)}"`,
+      /\bloading\s*=/i.test(nextTag) ? '' : ' loading="lazy"',
+      /\bdecoding\s*=/i.test(nextTag) ? '' : ' decoding="async"',
+      /\bfetchpriority\s*=/i.test(nextTag) ? '' : ' fetchpriority="low"',
     ].join('')
 
     if (!attributes) {
-      return tag
+      return nextTag
     }
 
-    return tag.replace(/\s*\/?>$/, (ending) => {
+    return nextTag.replace(/\s*\/?>$/, (ending) => {
       const close = ending.includes('/>') ? ' />' : '>'
       return `${attributes}${close}`
     })

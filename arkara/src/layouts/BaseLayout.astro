@@ -38,7 +38,36 @@ const {
   preloadImage,
   structuredData
 } = Astro.props;
-const siteTitle = title ? `${title} â€” ${siteName}` : `${siteName} â€” Survive with Knowledge`;
+const MAX_SEO_TITLE_LENGTH = 70;
+
+function normalizeTitle(value: string) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function shortenTitle(value: string, maxLength = MAX_SEO_TITLE_LENGTH) {
+  const normalized = normalizeTitle(value);
+  if (normalized.length <= maxLength) return normalized;
+
+  const clipped = normalized.slice(0, maxLength + 1);
+  const lastSpace = clipped.lastIndexOf(' ');
+  const base = lastSpace > 40 ? clipped.slice(0, lastSpace) : normalized.slice(0, maxLength);
+
+  return base.replace(/[,:;|&\-\s]+$/g, '').trim();
+}
+
+function buildSeoTitle(pageTitle?: string) {
+  if (!pageTitle) return `${siteName} | Survive with Knowledge`;
+
+  const normalizedTitle = normalizeTitle(pageTitle);
+  const branded = `${normalizedTitle} | ${siteName}`;
+
+  if (branded.length <= MAX_SEO_TITLE_LENGTH) return branded;
+  if (normalizedTitle.length <= MAX_SEO_TITLE_LENGTH) return normalizedTitle;
+
+  return shortenTitle(normalizedTitle);
+}
+
+const siteTitle = buildSeoTitle(title);
 const siteUrl = 'https://arkaraweb.com';
 const googleAnalyticsId = 'G-6Y19TY4DNY';
 const enableGoogleAnalytics = import.meta.env.PROD;
