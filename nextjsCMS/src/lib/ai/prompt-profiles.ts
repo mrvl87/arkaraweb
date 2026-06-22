@@ -1401,7 +1401,7 @@ Balas hanya JSON valid:
   "target_keyword": "keyword utama yang paling layak",
   "secondary_keywords": ["keyword pendukung"],
   "proposed_meta_title": "maks 70 karakter",
-  "proposed_meta_desc": "maks 170 karakter",
+  "proposed_meta_desc": "maks 155-170 karakter, satu kalimat ringkas",
   "proposed_quick_answer": "jawaban langsung 2-3 kalimat",
   "proposed_key_takeaways": ["3-5 poin inti"],
   "proposed_faq": [
@@ -1413,8 +1413,8 @@ Balas hanya JSON valid:
     "placement_note": "di mana editor sebaiknya meletakkan patch"
   },
   "internal_link_notes": ["saran internal link"],
-  "fact_check_notes": ["klaim yang perlu diverifikasi sebelum approve"],
-  "approval_notes": ["hal yang harus dicek editor sebelum apply"]
+  "fact_check_notes": ["catatan singkat, tiap item maks 240 karakter"],
+  "approval_notes": ["catatan singkat, tiap item maks 240 karakter"]
 }
 
 Aturan:
@@ -1427,6 +1427,8 @@ Aturan:
 - Quick answer harus langsung menjawab intent utama, bukan intro panjang.
 - Meta title jelas, tidak clickbait, dan memuat target keyword jika natural.
 - Meta desc harus informatif, bukan sensasional.
+- Batas panjang wajib: proposed_meta_desc <= 170 karakter; setiap item internal_link_notes, fact_check_notes, approval_notes <= 240 karakter.
+- Jika catatan panjang, ringkas menjadi frasa singkat, bukan paragraf.
 ${repairDirection}`,
     },
   ]

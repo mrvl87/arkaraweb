@@ -472,20 +472,50 @@ export const SeoRepairContentPatchSchema = z.object({
   placement_note: z.string().trim().max(240).optional(),
 })
 
+function compactRepairText(value: string, maxLength: number) {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (normalized.length <= maxLength) return normalized
+
+  const clipped = normalized.slice(0, maxLength + 1)
+  const lastSpace = clipped.lastIndexOf(' ')
+  const base = lastSpace > Math.floor(maxLength * 0.6)
+    ? clipped.slice(0, lastSpace)
+    : normalized.slice(0, maxLength)
+
+  return base.replace(/[,:;|&\-\s]+$/g, '').trim()
+}
+
+const repairTextSchema = (minLength: number, maxLength: number) =>
+  z.preprocess(
+    (value) => typeof value === 'string' ? compactRepairText(value, maxLength) : value,
+    z.string().trim().min(minLength).max(maxLength)
+  )
+
+const repairTextArraySchema = (maxItemLength: number, maxItems: number, minItems = 0) =>
+  z.preprocess(
+    (value) => Array.isArray(value)
+      ? value
+          .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+          .map((item) => compactRepairText(item, maxItemLength))
+          .slice(0, maxItems)
+      : value,
+    z.array(repairTextSchema(1, maxItemLength)).min(minItems).max(maxItems)
+  )
+
 export const GenerateSeoRepairPlanOutputSchema = z.object({
-  summary: z.string().trim().min(1).max(500),
+  summary: repairTextSchema(1, 500),
   priority: z.enum(['high', 'medium', 'low']).default('medium'),
-  target_keyword: z.string().trim().min(1).max(160),
-  secondary_keywords: z.array(z.string().trim().min(1).max(160)).max(8).default([]),
-  proposed_meta_title: z.string().trim().min(1).max(70),
-  proposed_meta_desc: z.string().trim().min(1).max(170),
-  proposed_quick_answer: z.string().trim().min(80).max(700),
-  proposed_key_takeaways: z.array(z.string().trim().min(1).max(220)).min(3).max(5),
+  target_keyword: repairTextSchema(1, 160),
+  secondary_keywords: repairTextArraySchema(160, 8).default([]),
+  proposed_meta_title: repairTextSchema(1, 70),
+  proposed_meta_desc: repairTextSchema(1, 170),
+  proposed_quick_answer: repairTextSchema(80, 700),
+  proposed_key_takeaways: repairTextArraySchema(220, 5, 3),
   proposed_faq: z.array(MobileReaderFAQItemSchema).min(3).max(6),
   content_patch: SeoRepairContentPatchSchema,
-  internal_link_notes: z.array(z.string().trim().min(1).max(240)).max(5).default([]),
-  fact_check_notes: z.array(z.string().trim().min(1).max(240)).max(5).default([]),
-  approval_notes: z.array(z.string().trim().min(1).max(240)).max(5).default([]),
+  internal_link_notes: repairTextArraySchema(240, 5).default([]),
+  fact_check_notes: repairTextArraySchema(240, 5).default([]),
+  approval_notes: repairTextArraySchema(240, 5).default([]),
 })
 export type GenerateSeoRepairPlanOutput = z.infer<typeof GenerateSeoRepairPlanOutputSchema>
 
