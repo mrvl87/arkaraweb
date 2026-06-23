@@ -300,6 +300,10 @@ function getPublicPath(contentType: 'post' | 'panduan', slug: string): string {
   return contentType === 'post' ? getPostPath(slug) : getPanduanPath(slug)
 }
 
+function getRepairEditorialFormat(contentType: 'post' | 'panduan') {
+  return contentType === 'panduan' ? 'technical_guide' : 'mobile_reader'
+}
+
 function inferGapContentType(query: string): 'post' | 'panduan' {
   const normalized = query.toLowerCase()
   return /\b(cara|panduan|langkah|checklist|daftar|menyimpan|membuat|menghitung|memasang|filter|stok)\b/.test(normalized)
@@ -718,6 +722,7 @@ export async function actionApplySeoRepairPlan(rawInput: unknown): Promise<{
       quick_answer: input.proposal.proposed_quick_answer.trim(),
       key_takeaways: normalizeTakeaways(input.proposal.proposed_key_takeaways),
       faq: normalizeProposalFaq(input.proposal.proposed_faq),
+      editorial_format: getRepairEditorialFormat(input.contentType),
       content,
       updated_at: updatedAt,
     }
@@ -771,6 +776,7 @@ export async function actionApplySeoRepairPlan(rawInput: unknown): Promise<{
           'quick_answer',
           'key_takeaways',
           'faq',
+          'editorial_format',
           input.proposal.content_patch.mode === 'no_content_change' ? '' : 'content',
         ].filter(Boolean),
         indexingQueued: indexingResult.success,
