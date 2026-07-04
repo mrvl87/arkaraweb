@@ -1,10 +1,6 @@
 import type { SeoClusterStatus } from '@/lib/seo/content-audit'
+import { readinessClass } from './seo-style-utils'
 
-function scoreClass(score: number): string {
-  if (score >= 85) return 'text-emerald-700 bg-emerald-50 border-emerald-200'
-  if (score >= 70) return 'text-amber-700 bg-amber-50 border-amber-200'
-  return 'text-red-700 bg-red-50 border-red-200'
-}
 
 interface ClusterPanelProps {
   cluster: SeoClusterStatus
@@ -18,7 +14,7 @@ export function ClusterPanel({ cluster }: ClusterPanelProps) {
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Cluster</p>
           <h3 className="mt-1 text-lg font-black uppercase tracking-tight text-arkara-green">{cluster.label}</h3>
         </div>
-        <span className={`rounded-md border px-2.5 py-1 text-xs font-black ${scoreClass(cluster.averageScore)}`}>
+        <span className={`rounded-md border px-2.5 py-1 text-xs font-black ${readinessClass(cluster.averageScore)}`}>
           {cluster.averageScore}
         </span>
       </div>

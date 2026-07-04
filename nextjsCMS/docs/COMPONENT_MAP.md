@@ -1,4 +1,4 @@
-﻿# Arkara CMS Component Map
+# Arkara CMS Component Map
 
 Daftar komponen foundation baru dan cara pakainya.
 
@@ -114,15 +114,16 @@ Lokasi: `src/app/cms/seo/_components`.
 - `content-fix-row.tsx`: baris audit konten dengan issue, word count, FAQ, internal link, score readiness, dan link edit.
 - `cluster-panel.tsx`: kartu status cluster Arkara dan seed keyword.
 - `seo-pipeline.tsx`: visual urutan kerja SEO berikutnya.
+- `todays-seo-actions.tsx`: panel prioritas kerja harian dari repair critical, keyword gap, indexing queue, dan high priority keyword signal.
+- `seo-style-utils.ts`: helper class visual untuk score/readiness agar badge readiness konsisten di SEO Cockpit.
 
 Pemakaian utama:
 
 ```tsx
 <SeoPageHeader />
 <SeoMetricCard label="SEO Readiness" value={averageScore} icon={Gauge} />
+<TodaysSeoActions data={data} indexingQueue={indexingQueue} />
 <KeywordGapSection opportunities={keywordOpportunities} serper={serper} />
 <ContentFixSection items={topFixes} visibilityPrompts={visibilityPrompts} publishedContent={published} draftContent={draft} />
 <SeoPipeline />
 ```
-
-

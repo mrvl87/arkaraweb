@@ -39,6 +39,7 @@ function getCriticalRepairActions(data: SeoCockpitData): DailySeoAction[] {
     .sort((left, right) => left.score - right.score || right.issues.length - left.issues.length)
     .slice(0, 2)
     .map((item) => {
+      const firstCriticalIssue = item.issues.find((issue) => issue.severity === 'critical')
       const criticalCount = item.issues.filter((issue) => issue.severity === 'critical').length
 
       return {
@@ -46,7 +47,7 @@ function getCriticalRepairActions(data: SeoCockpitData): DailySeoAction[] {
         icon: AlertTriangle,
         label: 'Repair critical',
         title: item.title,
-        description: item.issues[0]?.label ?? 'Konten punya issue critical yang perlu diperbaiki.',
+        description: firstCriticalIssue?.label ?? 'Konten punya issue critical yang perlu diperbaiki.',
         meta: [
           item.type,
           `${criticalCount} critical`,

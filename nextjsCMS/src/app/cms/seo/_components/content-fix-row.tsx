@@ -1,14 +1,10 @@
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
 import type { SeoAuditItem, SeoIssue } from '@/lib/seo/content-audit'
+import { readinessClass } from './seo-style-utils'
 
 const formatter = new Intl.NumberFormat('id-ID')
 
-function scoreClass(score: number): string {
-  if (score >= 85) return 'text-emerald-700 bg-emerald-50 border-emerald-200'
-  if (score >= 70) return 'text-amber-700 bg-amber-50 border-amber-200'
-  return 'text-red-700 bg-red-50 border-red-200'
-}
 
 function severityClass(severity: SeoIssue['severity']): string {
   if (severity === 'critical') return 'bg-red-50 text-red-700 border-red-200'
@@ -52,7 +48,7 @@ export function ContentFixRow({ item }: ContentFixRowProps) {
         <span className="rounded-md bg-gray-50 px-2 py-1 font-bold text-gray-600">{item.internalLinkCount} link</span>
       </div>
       <div className="flex items-center justify-between gap-3 md:justify-end">
-        <span className={`rounded-md border px-3 py-2 text-sm font-black ${scoreClass(item.score)}`}>
+        <span className={`rounded-md border px-3 py-2 text-sm font-black ${readinessClass(item.score)}`}>
           {item.score}
         </span>
         <Link
