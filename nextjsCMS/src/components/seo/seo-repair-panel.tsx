@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -88,6 +88,118 @@ function fieldBlock(label: string, value: string | string[]) {
 
 function getItemKey(item: Pick<SeoAuditItem, 'type' | 'id'>): string {
   return `${item.type}:${item.id}`
+}
+
+function emptyFallback(value: string): string {
+  return value.trim() || '(kosong)'
+}
+
+function linesFallback(items: string[]): string {
+  return items.map((item) => item.trim()).filter(Boolean).length
+    ? items.map((item) => `- ${item.trim()}`).join('\n')
+    : '(kosong)'
+}
+
+function faqToText(items: Array<{ question: string; answer: string }>): string {
+  return items.length
+    ? items.map((item) => `Q: ${item.question}\nA: ${item.answer}`).join('\n\n')
+    : '(kosong)'
+}
+
+function proposedFaqToText(items: GenerateSeoRepairPlanOutput['proposed_faq']): string {
+  return items.length
+    ? items.map((item) => `Q: ${item.question}\nA: ${item.answer}`).join('\n\n')
+    : '(kosong)'
+}
+
+function contentPatchAfterText(patch: GenerateSeoRepairPlanOutput['content_patch']): string {
+  if (patch.mode === 'no_content_change' || !patch.markdown.trim()) {
+    return 'Tidak ada perubahan body.'
+  }
+
+  return [
+    `Mode: ${patch.mode}`,
+    patch.placement_note ? `Placement: ${patch.placement_note}` : '',
+    patch.markdown,
+  ].filter(Boolean).join('\n\n')
+}
+
+function DiffBlock({
+  label,
+  before,
+  after,
+}: {
+  label: string
+  before: string
+  after: string
+}) {
+  return (
+    <div className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
+      <p className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">{label}</p>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="rounded-md border border-gray-100 bg-gray-50 p-3">
+          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">Before</p>
+          <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-gray-600">{before}</p>
+        </div>
+        <div className="rounded-md border border-emerald-100 bg-emerald-50/50 p-3">
+          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-600">After</p>
+          <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-arkara-green">{after}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RepairDiffPreview({
+  item,
+  result,
+}: {
+  item: SeoAuditItem
+  result: GenerateSeoRepairPlanOutput
+}) {
+  return (
+    <div className="space-y-4 rounded-lg border border-arkara-green/10 bg-arkara-cream/30 p-4">
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Before / after review</p>
+        <h3 className="mt-1 text-base font-black text-arkara-green">Preview perubahan sebelum apply</h3>
+        <p className="mt-1 text-xs font-semibold leading-relaxed text-gray-500">
+          Cek field lama dan proposal baru. Apply hanya menyimpan setelah approval dicentang.
+        </p>
+      </div>
+      <div className="grid gap-4">
+        <DiffBlock
+          label="meta_title"
+          before={emptyFallback(item.currentMetaTitle)}
+          after={emptyFallback(result.proposed_meta_title)}
+        />
+        <DiffBlock
+          label="meta_desc"
+          before={emptyFallback(item.currentMetaDesc)}
+          after={emptyFallback(result.proposed_meta_desc)}
+        />
+        <DiffBlock
+          label="quick_answer"
+          before={emptyFallback(item.currentQuickAnswer)}
+          after={emptyFallback(result.proposed_quick_answer)}
+        />
+        <DiffBlock
+          label="key_takeaways"
+          before={linesFallback(item.currentKeyTakeaways)}
+          after={linesFallback(result.proposed_key_takeaways)}
+        />
+        <DiffBlock
+          label="faq"
+          before={faqToText(item.currentFaq)}
+          after={proposedFaqToText(result.proposed_faq)}
+        />
+        <DiffBlock
+          label="content_patch"
+          before={item.contentPreview ? `Konten saat ini: ${item.contentPreview}` : '(konten kosong atau belum dapat dipreview)'}
+          after={contentPatchAfterText(result.content_patch)}
+        />
+      </div>
+    </div>
+  )
 }
 
 function loadFixedLinks(): FixedLink[] {
@@ -378,24 +490,18 @@ export function SeoRepairPanel({ repairItems, keywordOpportunities }: SeoRepairP
         </div>
       ) : null}
 
-      {result ? (
+      {result && selectedItem ? (
         <div className="space-y-4 p-5">
           <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-emerald-700">
             <CheckCircle2 className="h-5 w-5" />
-            <p className="text-sm font-black">Proposal siap dievaluasi. Klik apply untuk update database.</p>
+            <p className="text-sm font-black">Proposal siap dievaluasi. Periksa before/after sebelum apply.</p>
           </div>
+
+          <RepairDiffPreview item={selectedItem} result={result} />
+
           <div className="grid gap-4 lg:grid-cols-2">
             {fieldBlock('Summary', result.summary)}
             {fieldBlock('Target keyword', [result.target_keyword, ...result.secondary_keywords].join('\n'))}
-            {fieldBlock('Meta title', result.proposed_meta_title)}
-            {fieldBlock('Meta description', result.proposed_meta_desc)}
-            {fieldBlock('Quick answer', result.proposed_quick_answer)}
-            {fieldBlock('Key takeaways', result.proposed_key_takeaways.map((item) => `- ${item}`))}
-            {fieldBlock('FAQ', result.proposed_faq.map((item) => `Q: ${item.question}\nA: ${item.answer}`))}
-            {fieldBlock(
-              `Content patch: ${result.content_patch.mode}`,
-              [result.content_patch.placement_note ?? '', result.content_patch.markdown].filter(Boolean).join('\n\n')
-            )}
             {fieldBlock('Internal link notes', result.internal_link_notes.map((item) => `- ${item}`))}
             {fieldBlock('Fact-check notes', result.fact_check_notes.map((item) => `- ${item}`))}
             {fieldBlock('Approval notes', result.approval_notes.map((item) => `- ${item}`))}
@@ -408,7 +514,7 @@ export function SeoRepairPanel({ repairItems, keywordOpportunities }: SeoRepairP
                 onChange={(event) => setApproved(event.target.checked)}
                 className="mt-1 h-4 w-4 rounded border-gray-300 text-arkara-green focus:ring-arkara-amber"
               />
-              Saya sudah evaluasi proposal dan setuju artikel diperbarui otomatis.
+              Saya sudah memeriksa before/after proposal dan setuju artikel diperbarui otomatis.
             </label>
             <button
               type="button"

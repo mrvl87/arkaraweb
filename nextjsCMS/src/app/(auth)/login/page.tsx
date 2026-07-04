@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -6,6 +6,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 
 const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -90,82 +93,70 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#1a2e1a' }}>
-      <div
-        className="w-full max-w-md p-8 rounded-lg shadow-2xl"
-        style={{ backgroundColor: '#f5f0e8' }}
-      >
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2" style={{ color: '#1a2e1a' }}>
-            Arkara
-          </h1>
-          <p className="text-sm" style={{ color: '#d4a017' }}>
-            Survival Knowledge Platform
-          </p>
-        </div>
-
-        <h2 className="text-2xl font-semibold mb-6 text-center" style={{ color: '#1a2e1a' }}>
-          Masuk ke CMS
-        </h2>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: '#1a2e1a' }}>
-              Email
-            </label>
-            <input
-              {...register('email')}
-              type="email"
-              placeholder="you@example.com"
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2"
-              style={{
-                borderColor: '#d4a017',
-                outlineColor: '#d4a017',
-              }}
-            />
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-            )}
+    <div className="flex min-h-screen items-center justify-center bg-arkara-green p-4">
+      <Card className="w-full max-w-md border-arkara-amber/20 bg-arkara-cream shadow-2xl">
+        <CardContent className="p-8">
+          <div className="mb-8 text-center">
+            <h1 className="mb-2 text-4xl font-bold text-arkara-green">
+              Arkara
+            </h1>
+            <p className="text-sm font-semibold text-arkara-amber">
+              Survival Knowledge Platform
+            </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: '#1a2e1a' }}>
-              Password
-            </label>
-            <input
-              {...register('password')}
-              type="password"
-              placeholder="••••••"
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2"
-              style={{
-                borderColor: '#d4a017',
-              }}
-            />
-            {errors.password && (
-              <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-            )}
-          </div>
+          <h2 className="mb-6 text-center text-2xl font-semibold text-arkara-green">
+            Masuk ke CMS
+          </h2>
 
-          {error && (
-            <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
-              {error}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-arkara-green">
+                Email
+              </label>
+              <Input
+                {...register('email')}
+                type="email"
+                placeholder="you@example.com"
+                hasError={Boolean(errors.email)}
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>
+              )}
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-2 rounded-lg font-semibold transition-colors"
-            style={{
-              backgroundColor: '#d4a017',
-              color: '#1a2e1a',
-              opacity: isLoading ? 0.7 : 1,
-            }}
-          >
-            {isLoading ? 'Sedang masuk...' : 'Masuk'}
-          </button>
-        </form>
-      </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-arkara-green">
+                Password
+              </label>
+              <Input
+                {...register('password')}
+                type="password"
+                placeholder="••••••"
+                hasError={Boolean(errors.password)}
+              />
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>
+              )}
+            </div>
+
+            {error && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              variant="accent"
+              className="w-full"
+            >
+              {isLoading ? 'Sedang masuk...' : 'Masuk'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

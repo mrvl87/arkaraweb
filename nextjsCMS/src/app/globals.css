@@ -27,18 +27,18 @@ body {
 
 @layer components {
   .btn-primary {
-    @apply px-6 py-2.5 bg-[#1a2e1a] text-white rounded-xl font-bold hover:bg-[#2a4e2a] transition-all active:scale-95 flex items-center gap-2;
+    @apply flex items-center gap-2 rounded-xl bg-arkara-green px-6 py-2.5 font-bold text-white transition-all hover:bg-arkara-dark active:scale-95;
   }
   
   .card-premium {
-    @apply bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 p-8 transition-all hover:shadow-2xl hover:shadow-gray-200/40;
+    @apply rounded-4xl border border-gray-100 bg-white p-8 shadow-xl shadow-gray-200/20 transition-all hover:shadow-2xl hover:shadow-gray-200/40;
   }
 
   .input-premium {
-    @apply w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37] transition-all outline-none bg-white/50 backdrop-blur-sm;
+    @apply w-full rounded-xl border border-gray-200 bg-white/50 px-4 py-3 outline-none backdrop-blur-sm transition-all focus:border-arkara-amber focus:ring-2 focus:ring-arkara-amber/20;
   }
 
   .input-social {
-    @apply w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none transition-all focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400;
+    @apply w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none transition-all focus:border-arkara-amber focus:ring-2 focus:ring-arkara-amber/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400;
   }
 }

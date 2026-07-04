@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 import { getSerperConfig, getSerperKeywordOpportunity, type SerperKeywordOpportunity } from './serper'
 import { getSeoKeywordSignals, type SeoKeywordSignal } from './keyword-signals'
 
@@ -119,6 +119,12 @@ export interface SeoAuditItem {
   howToSchemaReady: boolean
   issues: SeoIssue[]
   updatedAt: string | null
+  currentMetaTitle: string
+  currentMetaDesc: string
+  currentQuickAnswer: string
+  currentKeyTakeaways: string[]
+  currentFaq: Array<{ question: string; answer: string }>
+  contentPreview: string
 }
 
 export interface SeoClusterStatus {
@@ -259,6 +265,28 @@ function addIssue(issues: SeoIssue[], issue: SeoIssue): number {
   return 6
 }
 
+function previewContent(value?: string | null): string {
+  const normalized = (value ?? '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return normalized.length <= 900 ? normalized : normalized.slice(0, 900) + '...'
+}
+
+function normalizeCurrentFaq(faq?: RawContentRow['faq']): Array<{ question: string; answer: string }> {
+  return (faq ?? [])
+    .map((item) => ({
+      question: item.question?.trim() ?? '',
+      answer: item.answer?.trim() ?? '',
+    }))
+    .filter((item) => item.question && item.answer)
+    .slice(0, 6)
+}
+
 function auditRow(type: SeoContentType, row: RawContentRow): SeoAuditItem {
   const issues: SeoIssue[] = []
   let penalty = 0
@@ -354,6 +382,12 @@ function auditRow(type: SeoContentType, row: RawContentRow): SeoAuditItem {
     howToSchemaReady: type === 'panduan' && row.editorial_format === 'technical_guide' && headingCount >= 2,
     issues,
     updatedAt: row.updated_at ?? row.published_at ?? row.created_at ?? null,
+    currentMetaTitle: row.meta_title?.trim() ?? '',
+    currentMetaDesc: row.meta_desc?.trim() ?? '',
+    currentQuickAnswer: row.quick_answer?.trim() ?? '',
+    currentKeyTakeaways: (row.key_takeaways ?? []).map((item) => item.trim()).filter(Boolean).slice(0, 5),
+    currentFaq: normalizeCurrentFaq(row.faq),
+    contentPreview: previewContent(row.content),
   }
 }
 
