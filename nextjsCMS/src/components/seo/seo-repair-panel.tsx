@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -356,7 +356,7 @@ export function SeoRepairPanel({ repairItems, keywordOpportunities }: SeoRepairP
   }
 
   return (
-    <section className="rounded-lg border border-arkara-green/10 bg-white shadow-sm">
+    <section id="repair-panel" className="scroll-mt-6 rounded-lg border border-arkara-green/10 bg-white shadow-sm">
       <div className="flex flex-col gap-4 border-b border-gray-100 p-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Approval gate</p>

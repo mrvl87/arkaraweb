@@ -13,7 +13,7 @@ interface KeywordGapSectionProps {
 
 export function KeywordGapSection({ opportunities, serper }: KeywordGapSectionProps) {
   return (
-    <section className="rounded-lg border border-gray-100 bg-white shadow-sm">
+    <section id="keyword-gap" className="scroll-mt-6 rounded-lg border border-gray-100 bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b border-gray-100 p-5 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Serper automation</p>

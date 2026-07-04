@@ -1,4 +1,4 @@
-﻿import { CheckCircle2, Gauge, Globe2, ListChecks } from 'lucide-react'
+import { CheckCircle2, Gauge, Globe2, ListChecks } from 'lucide-react'
 import { getSeoCockpitData } from '@/lib/seo/content-audit'
 import { getSeoIndexingQueue } from '@/lib/seo/indexing-queue'
 import { SeoRepairPanel } from '@/components/seo/seo-repair-panel'
@@ -10,6 +10,7 @@ import { KeywordGapSection } from './_components/keyword-gap-section'
 import { SeoMetricCard } from './_components/seo-metric-card'
 import { SeoPageHeader } from './_components/seo-page-header'
 import { SeoPipeline } from './_components/seo-pipeline'
+import { TodaysSeoActions } from './_components/todays-seo-actions'
 
 export default async function SEOCockpitPage() {
   const [data, indexingQueue] = await Promise.all([
@@ -33,6 +34,8 @@ export default async function SEOCockpitPage() {
         <SeoMetricCard label="Keyword gaps" value={data.summary.keywordGapCount} icon={Globe2} />
       </div>
 
+      <TodaysSeoActions data={data} indexingQueue={indexingQueue} />
+
       <KeywordGapSection
         opportunities={data.keywordOpportunities}
         serper={data.serper}
@@ -43,12 +46,16 @@ export default async function SEOCockpitPage() {
         keywordOpportunities={data.keywordOpportunities}
       />
 
-      <SeoIndexingQueuePanel
-        items={indexingQueue.items}
-        error={indexingQueue.error}
-      />
+      <div id="indexing-queue" className="scroll-mt-6">
+        <SeoIndexingQueuePanel
+          items={indexingQueue.items}
+          error={indexingQueue.error}
+        />
+      </div>
 
-      <SeoKeywordSignalsPanel items={data.keywordSignals} />
+      <div id="keyword-signals" className="scroll-mt-6">
+        <SeoKeywordSignalsPanel items={data.keywordSignals} />
+      </div>
 
       <ContentFixSection
         items={data.topFixes}
