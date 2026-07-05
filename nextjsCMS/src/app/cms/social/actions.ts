@@ -172,50 +172,71 @@ async function getSourceByPost(
   }
 }
 
-async function getPlanSourceById(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  sourceId?: string
-): Promise<SocialSourceOption | null> {
-  if (!sourceId) return null
+function parseSocialSourceKey(sourceKey?: string): { type: SocialSourceOption['type']; id: string } | null {
+  const trimmed = sourceKey?.trim()
+  if (!trimmed) return null
 
-  const [{ data: post }, { data: panduan }] = await Promise.all([
-    supabase
+  const [type, id] = trimmed.split(':')
+
+  if ((type !== 'post' && type !== 'panduan') || !id) {
+    throw new Error('Format sumber konten tidak valid.')
+  }
+
+  return { type, id }
+}
+
+async function getPlanSourceByKey(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  sourceKey?: string
+): Promise<SocialSourceOption | null> {
+  const parsed = parseSocialSourceKey(sourceKey)
+  if (!parsed) return null
+
+  if (parsed.type === 'post') {
+    const { data, error } = await supabase
       .from('posts')
       .select('id, title, slug, status, description, content')
-      .eq('id', sourceId)
-      .maybeSingle(),
-    supabase
-      .from('panduan')
-      .select('id, title, slug, status, meta_desc, content')
-      .eq('id', sourceId)
-      .maybeSingle(),
-  ])
+      .eq('id', parsed.id)
+      .maybeSingle()
 
-  if (post) {
+    if (error) {
+      throw new Error(`Gagal memuat post sumber: ${error.message}`)
+    }
+
+    if (!data) return null
+
     return {
-      id: post.id as string,
+      id: data.id as string,
       type: 'post',
-      title: post.title as string,
-      slug: post.slug as string,
-      status: post.status as 'draft' | 'published',
-      description: compactContent(post.description as string | null, SOURCE_LIST_EXCERPT_LIMIT) || null,
-      content: compactContent(post.content as string | null),
+      title: data.title as string,
+      slug: data.slug as string,
+      status: data.status === 'published' ? 'published' : 'draft',
+      description: compactContent(data.description as string | null, SOURCE_LIST_EXCERPT_LIMIT) || null,
+      content: compactContent(data.content as string | null),
     }
   }
 
-  if (panduan) {
-    return {
-      id: panduan.id as string,
-      type: 'panduan',
-      title: panduan.title as string,
-      slug: panduan.slug as string,
-      status: panduan.status as 'draft' | 'published',
-      description: compactContent(panduan.meta_desc as string | null, SOURCE_LIST_EXCERPT_LIMIT) || null,
-      content: compactContent(panduan.content as string | null),
-    }
+  const { data, error } = await supabase
+    .from('panduan')
+    .select('id, title, slug, status, meta_desc, content')
+    .eq('id', parsed.id)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Gagal memuat panduan sumber: ${error.message}`)
   }
 
-  return null
+  if (!data) return null
+
+  return {
+    id: data.id as string,
+    type: 'panduan',
+    title: data.title as string,
+    slug: data.slug as string,
+    status: data.status === 'published' ? 'published' : 'draft',
+    description: compactContent(data.meta_desc as string | null, SOURCE_LIST_EXCERPT_LIMIT) || null,
+    content: compactContent(data.content as string | null),
+  }
 }
 
 async function validateReadyState(params: {
@@ -684,17 +705,19 @@ export async function recordPostMetrics(rawInput: z.infer<typeof metricsSchema>)
 
   if (error) return { error: error.message }
 
-  await supabase
+  const { error: postUpdateError } = await supabase
     .from('social_posts')
     .update({ metrics_done: true, status: 'reviewed' })
     .eq('id', input.post_id)
     .eq('user_id', user.id)
 
+  if (postUpdateError) return { error: postUpdateError.message }
+
   revalidatePath(SOCIAL_PATH)
   return { success: true }
 }
 
-export async function generateWeeklyFacebookPlan(campaignId: string, sourceId?: string) {
+export async function generateWeeklyFacebookPlan(campaignId: string, sourceKey?: string) {
   const { supabase, user } = await requireUser()
   const { data: campaign, error } = await supabase
     .from('social_campaigns')
@@ -705,7 +728,7 @@ export async function generateWeeklyFacebookPlan(campaignId: string, sourceId?: 
 
   if (error || !campaign) return { error: error?.message || 'Campaign tidak ditemukan.' }
 
-  const source = await getPlanSourceById(supabase, sourceId)
+  const source = await getPlanSourceByKey(supabase, sourceKey)
 
   const sourceUrl =
     source?.type === 'post'
