@@ -148,10 +148,32 @@ async function getSourceByPost(
     return null
   }
 
-  const table = post.source_type === 'post' ? 'posts' : 'panduan'
+  if (post.source_type === 'post') {
+    const { data, error } = await supabase
+      .from('posts')
+      .select('id, title, slug, status, description, content')
+      .eq('id', post.source_id)
+      .maybeSingle()
+
+    if (error || !data) {
+      return null
+    }
+
+    const path = getPostPath(data.slug)
+
+    return {
+      title: data.title as string,
+      summary: buildSourceSummary([
+        data.description as string | null,
+        data.content as string | null,
+      ]),
+      url: post.target_url || `${SITE_URL}${path}`,
+    }
+  }
+
   const { data, error } = await supabase
-    .from(table)
-    .select('id, title, slug, status, description, content, quick_answer')
+    .from('panduan')
+    .select('id, title, slug, status, meta_desc, quick_answer, content')
     .eq('id', post.source_id)
     .maybeSingle()
 
@@ -159,12 +181,12 @@ async function getSourceByPost(
     return null
   }
 
-  const path = post.source_type === 'post' ? getPostPath(data.slug) : getPanduanPath(data.slug)
+  const path = getPanduanPath(data.slug)
 
   return {
     title: data.title as string,
     summary: buildSourceSummary([
-      data.description as string | null,
+      data.meta_desc as string | null,
       data.quick_answer as string | null,
       data.content as string | null,
     ]),
@@ -728,7 +750,18 @@ export async function generateWeeklyFacebookPlan(campaignId: string, sourceKey?:
 
   if (error || !campaign) return { error: error?.message || 'Campaign tidak ditemukan.' }
 
-  const source = await getPlanSourceByKey(supabase, sourceKey)
+  let source: SocialSourceOption | null = null
+
+  try {
+    source = await getPlanSourceByKey(supabase, sourceKey)
+  } catch (sourceError) {
+    return {
+      error:
+        sourceError instanceof Error
+          ? sourceError.message
+          : 'Gagal memuat sumber konten.',
+    }
+  }
 
   const sourceUrl =
     source?.type === 'post'
