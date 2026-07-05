@@ -1,5 +1,9 @@
 import type { GenerateSeoRepairPlanOutput } from '@/lib/ai/schemas'
 
+export function containsRawHtml(value: string): boolean {
+  return /<\/?[a-z][\s\S]*?>/i.test(value)
+}
+
 export function emptyFallback(value: string): string {
   return value.trim() || '(kosong)'
 }

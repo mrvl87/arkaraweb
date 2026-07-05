@@ -1,14 +1,16 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, ExternalLink, Loader2, Save, Sparkles } from 'lucide-react'
+import { Loader2, Save } from 'lucide-react'
 import { actionApplySeoRepairPlan, actionGenerateSeoRepairPlan } from '@/app/cms/seo/actions'
 import type { GenerateSeoRepairPlanOutput } from '@/lib/ai/schemas'
 import type { SeoAuditItem } from '@/lib/seo/content-audit'
 import type { SerperKeywordOpportunity } from '@/lib/seo/serper'
+import { RecentlyFixedLinks, type RecentlyFixedLink } from './recently-fixed-links'
 import { RepairDiffPreview } from './repair-diff-preview'
+import { RepairSelectionDetails, RepairSelector } from './repair-selector'
+import { RepairStatusMessages, type RepairApplyResult } from './repair-status-messages'
 
 interface SeoRepairPanelProps {
   repairItems: SeoAuditItem[]
@@ -16,20 +18,8 @@ interface SeoRepairPanelProps {
 }
 
 type RepairResult = GenerateSeoRepairPlanOutput | null
-type ApplyResult = {
-  title: string
-  slug: string
-  publicPath: string
-  editPath: string
-  updatedAt: string
-  appliedFields: string[]
-  indexingQueued: boolean
-  indexingQueueError?: string
-} | null
-type FixedLink = NonNullable<ApplyResult> & {
-  id: string
-  type: SeoAuditItem['type']
-}
+type ApplyResult = RepairApplyResult | null
+type FixedLink = RecentlyFixedLink
 
 const FIXED_LINKS_STORAGE_KEY = 'arkara.seo.recent-fixed-links'
 const PUBLIC_SITE_URL = normalizePublicOrigin(process.env.NEXT_PUBLIC_FRONTEND_SITE_URL || 'https://arkaraweb.com')
@@ -165,6 +155,15 @@ export function SeoRepairPanel({ repairItems, keywordOpportunities }: SeoRepairP
     }
   }, [selectedId, visibleRepairItems])
 
+  const handleSelect = (id: string) => {
+    setSelectedId(id)
+    setResult(null)
+    setError(null)
+    setApplyError(null)
+    setApplyResult(null)
+    setApproved(false)
+  }
+
   const handleGenerate = async () => {
     if (!selectedItem) return
 
@@ -246,145 +245,37 @@ export function SeoRepairPanel({ repairItems, keywordOpportunities }: SeoRepairP
 
   return (
     <section id="repair-panel" className="scroll-mt-6 rounded-lg border border-arkara-green/10 bg-white shadow-sm">
-      <div className="flex flex-col gap-4 border-b border-gray-100 p-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Approval gate</p>
-          <h2 className="text-xl font-black text-arkara-green">Generate repair proposal</h2>
-          <p className="mt-1 text-sm font-semibold text-gray-500">
-            Generate proposal, cek hasilnya, lalu apply setelah disetujui.
-          </p>
-        </div>
-        {visibleRepairItems.length > 0 ? (
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <select
-              value={selectedId}
-              onChange={(event) => {
-                setSelectedId(event.target.value)
-                setResult(null)
-                setError(null)
-                setApplyError(null)
-                setApplyResult(null)
-                setApproved(false)
-              }}
-              className="min-w-[280px] rounded-md border border-gray-200 bg-white px-3 py-3 text-sm font-bold text-arkara-green outline-none focus:border-arkara-amber"
-            >
-              {visibleRepairItems.map((item) => (
-                <option key={getItemKey(item)} value={getItemKey(item)}>
-                  [{item.type}] {item.title}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={!selectedItem || loading}
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-arkara-green px-5 py-3 text-xs font-black uppercase tracking-widest text-white shadow-sm hover:bg-arkara-amber hover:text-arkara-green disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Generate Fix
-            </button>
-          </div>
-        ) : null}
-      </div>
+      <RepairSelector
+        repairItems={visibleRepairItems}
+        selectedId={selectedId}
+        selectedItem={selectedItem}
+        loading={loading}
+        getItemKey={getItemKey}
+        onSelect={handleSelect}
+        onGenerate={handleGenerate}
+      />
 
-      {fixedLinks.length > 0 ? (
-        <div className="border-b border-gray-100 bg-emerald-50/40 p-5">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">Recently fixed</p>
-              <h3 className="text-sm font-black text-arkara-green">Link yang baru diperbaiki</h3>
-            </div>
-            <span className="rounded-md border border-emerald-200 bg-white px-2 py-1 text-xs font-black text-emerald-700">
-              {fixedLinks.length}
-            </span>
-          </div>
-          <div className="grid gap-2 lg:grid-cols-2">
-            {fixedLinks.map((item) => (
-              <div key={`${item.type}:${item.id}:${item.updatedAt}`} className="flex items-center justify-between gap-3 rounded-md border border-emerald-100 bg-white px-3 py-2">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-arkara-green">{item.title}</p>
-                  <p className="truncate text-xs font-semibold text-gray-500">{toCanonicalPublicUrl(item.publicPath)}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Link
-                    href={item.editPath}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-arkara-green text-white hover:bg-arkara-amber hover:text-arkara-green"
-                    aria-label={`Edit ${item.title}`}
-                  >
-                    <Save className="h-4 w-4" />
-                  </Link>
-                  <a
-                    href={toCanonicalPublicUrl(item.publicPath)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-100 bg-white text-arkara-green hover:border-arkara-amber hover:text-arkara-amber"
-                    aria-label={`Buka ${item.title}`}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      <RecentlyFixedLinks fixedLinks={fixedLinks} toCanonicalPublicUrl={toCanonicalPublicUrl} />
 
-      {visibleRepairItems.length === 0 ? (
-        <div className="p-5 text-sm font-semibold text-gray-500">Tidak ada proposal repair aktif.</div>
-      ) : null}
+      <RepairSelectionDetails selectedItem={selectedItem} selectedKeywords={selectedKeywords} />
 
-      {selectedItem ? (
-        <div className="grid gap-4 border-b border-gray-100 p-5 lg:grid-cols-[1fr_1fr]">
-          <div>
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Issue aktif</p>
-            <div className="flex flex-wrap gap-2">
-              {selectedItem.issues.map((issue) => (
-                <span key={`${issue.code}:${issue.label}`} className="rounded-md border border-gray-100 bg-gray-50 px-2 py-1 text-xs font-bold text-gray-600">
-                  {issue.label}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Data Serper yang dipakai</p>
-            <div className="flex flex-wrap gap-2">
-              {selectedKeywords.length > 0 ? selectedKeywords.map((item) => (
-                <span key={item.query} className="rounded-md border border-gray-100 bg-gray-50 px-2 py-1 text-xs font-bold text-gray-600">
-                  {item.query}
-                </span>
-              )) : (
-                <span className="text-xs font-semibold text-gray-400">Belum ada data Serper untuk cluster ini.</span>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {error ? (
-        <div className="m-5 rounded-md border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-          {error}
-        </div>
-      ) : null}
-
-      {applyError ? (
-        <div className="m-5 rounded-md border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-          {applyError}
-        </div>
-      ) : null}
-
-      {applyResult ? (
-        <div className="m-5 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
-          Proposal sudah diterapkan ke "{applyResult.title}". Field: {applyResult.appliedFields.join(', ')}.
-          {applyResult.indexingQueued ? ' URL masuk indexing queue.' : applyResult.indexingQueueError ? ` Indexing queue: ${applyResult.indexingQueueError}` : ''}
-        </div>
-      ) : null}
+      <RepairStatusMessages
+        hasRepairItems={visibleRepairItems.length > 0}
+        error={error}
+        applyError={applyError}
+        applyResult={applyResult}
+        showReadyMessage={false}
+      />
 
       {result && selectedItem ? (
         <div className="space-y-4 p-5">
-          <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-emerald-700">
-            <CheckCircle2 className="h-5 w-5" />
-            <p className="text-sm font-black">Proposal siap dievaluasi. Periksa before/after sebelum apply.</p>
-          </div>
+          <RepairStatusMessages
+            hasRepairItems
+            error={null}
+            applyError={null}
+            applyResult={null}
+            showReadyMessage
+          />
 
           <RepairDiffPreview item={selectedItem} result={result} />
 

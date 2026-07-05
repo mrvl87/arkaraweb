@@ -245,9 +245,82 @@ function markdownPatchToHtml(markdown: string): string {
     .join('\n')
 }
 
+function hasRawHtml(value: string): boolean {
+  return /<\/?[a-z][\s\S]*?>/i.test(value)
+}
+
+function decodeHtmlEntityCode(value: string, radix: number): string {
+  const codePoint = Number.parseInt(value, radix)
+
+  if (!Number.isFinite(codePoint)) return radix === 16 ? `&#x${value};` : `&#${value};`
+
+  try {
+    return String.fromCodePoint(codePoint)
+  } catch {
+    return radix === 16 ? `&#x${value};` : `&#${value};`
+  }
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, code: string) => decodeHtmlEntityCode(code, 16))
+    .replace(/&#(\d+);/g, (_, code: string) => decodeHtmlEntityCode(code, 10))
+}
+
+function normalizeRepairInlineHtml(value: string): string {
+  return decodeHtmlEntities(value)
+    .replace(/<a\b[^>]*href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi, (_, doubleHref: string, singleHref: string, bareHref: string, text: string) => {
+      const href = decodeHtmlEntities(doubleHref || singleHref || bareHref || '').trim()
+      const label = normalizeRepairInlineHtml(text)
+      return href && label ? `[${label}](${href})` : label
+    })
+    .replace(/<(strong|b)\b[^>]*>([\s\S]*?)<\/\1>/gi, (_, _tag: string, text: string) => `**${normalizeRepairInlineHtml(text)}**`)
+    .replace(/<(em|i)\b[^>]*>([\s\S]*?)<\/\1>/gi, (_, _tag: string, text: string) => `*${normalizeRepairInlineHtml(text)}*`)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .trim()
+}
+
+function normalizeMarkdownWhitespace(value: string): string {
+  return value
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+/g, ' ').trimEnd())
+    .join('\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+function normalizeRepairPatchMarkdown(value: string): string {
+  const decoded = decodeHtmlEntities(value.trim())
+
+  if (!hasRawHtml(decoded)) {
+    return normalizeMarkdownWhitespace(decoded)
+  }
+
+  const markdown = decoded
+    .replace(/\r\n/g, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<h2\b[^>]*>([\s\S]*?)<\/h2>/gi, (_, text: string) => `\n\n## ${normalizeRepairInlineHtml(text)}\n\n`)
+    .replace(/<h3\b[^>]*>([\s\S]*?)<\/h3>/gi, (_, text: string) => `\n\n### ${normalizeRepairInlineHtml(text)}\n\n`)
+    .replace(/<li\b[^>]*>([\s\S]*?)<\/li>/gi, (_, text: string) => `\n- ${normalizeRepairInlineHtml(text)}\n`)
+    .replace(/<\/?(?:ul|ol)\b[^>]*>/gi, '\n')
+    .replace(/<p\b[^>]*>([\s\S]*?)<\/p>/gi, (_, text: string) => `\n\n${normalizeRepairInlineHtml(text)}\n\n`)
+    .replace(/<\/?(?:div|section|article|blockquote)\b[^>]*>/gi, '\n\n')
+
+  return normalizeMarkdownWhitespace(normalizeRepairInlineHtml(markdown))
+}
 function applyContentPatch(currentContent: string | null | undefined, patch: GenerateSeoRepairPlanOutput['content_patch']): string {
   const current = (currentContent ?? '').trim()
-  const markdown = patch.markdown.trim()
+  const markdown = normalizeRepairPatchMarkdown(patch.markdown)
 
   if (patch.mode === 'no_content_change' || !markdown) {
     return current

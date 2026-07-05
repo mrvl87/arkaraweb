@@ -1,6 +1,7 @@
 import type { GenerateSeoRepairPlanOutput } from '@/lib/ai/schemas'
 import type { SeoAuditItem } from '@/lib/seo/content-audit'
 import {
+  containsRawHtml,
   contentPatchAfterText,
   emptyFallback,
   faqToText,
@@ -41,6 +42,8 @@ export function RepairDiffPreview({
   item: SeoAuditItem
   result: GenerateSeoRepairPlanOutput
 }) {
+  const hasRawHtmlPatch = result.content_patch.mode !== 'no_content_change' && containsRawHtml(result.content_patch.markdown)
+
   return (
     <div className="space-y-4 rounded-lg border border-arkara-green/10 bg-arkara-cream/30 p-4">
       <div>
@@ -50,6 +53,11 @@ export function RepairDiffPreview({
           Cek field lama dan proposal baru. Apply hanya menyimpan setelah approval dicentang.
         </p>
       </div>
+      {hasRawHtmlPatch ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-relaxed text-amber-700">
+          Patch dari AI mengandung HTML mentah. Sistem akan mengubahnya ke Markdown sebelum apply.
+        </div>
+      ) : null}
       <div className="grid gap-4">
         <DiffBlock
           label="meta_title"

@@ -1409,7 +1409,7 @@ Balas hanya JSON valid:
   ],
   "content_patch": {
     "mode": "append_section",
-    "markdown": "Markdown tambahan atau intro baru",
+    "markdown": "Markdown murni tambahan atau intro baru, tanpa tag HTML",
     "placement_note": "di mana editor sebaiknya meletakkan patch"
   },
   "internal_link_notes": ["saran internal link"],
@@ -1422,6 +1422,9 @@ Aturan:
 - Jangan rewrite total artikel.
 - Jangan menghapus angle Arkara.
 - Jika tidak perlu mengubah body, gunakan content_patch.mode = "no_content_change" dan markdown = "".
+- content_patch.markdown wajib Markdown murni, bukan HTML mentah.
+- Dilarang memakai tag HTML seperti <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, atau <a> di content_patch.markdown.
+- Gunakan Markdown: ## heading, ### heading, paragraf biasa, - bullet, **bold**, *italic*, dan [text](url).
 - FAQ minimal 3 item dan harus melengkapi PAA/related Serper.
 - Jika ada data keyword internal GSC/Bing, prioritaskan keyword dengan impresi/click nyata selama tetap relevan dengan konten.
 - Quick answer harus langsung menjawab intent utama, bukan intro panjang.
