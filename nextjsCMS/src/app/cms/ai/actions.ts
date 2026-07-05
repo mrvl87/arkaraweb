@@ -36,6 +36,7 @@ import type {
 } from '@/lib/ai/schemas'
 
 export type AIWorkspaceTargetType = 'workspace' | 'post' | 'panduan'
+export type ClusterSourceContentType = 'post' | 'panduan'
 
 export interface AIWorkspaceActionContext {
   targetType?: AIWorkspaceTargetType
@@ -43,10 +44,12 @@ export interface AIWorkspaceActionContext {
 
 const CLUSTER_SOURCE_CONTENT_LIMIT = 12000
 
-export interface ClusterSourcePostOption {
+export interface ClusterSourceContentOption {
   id: string
+  type: ClusterSourceContentType
   title: string
   slug: string
+  path: string
   category: string | null
   status: 'draft' | 'published'
   description: string | null
@@ -54,8 +57,22 @@ export interface ClusterSourcePostOption {
   published_at: string | null
 }
 
+type ClusterSourceDetail = ClusterSourceContentOption & {
+  content: string | null
+}
+
+type SupabaseWorkspaceClient = Awaited<ReturnType<typeof createClient>>
+
 function getWorkspaceCtx(ctx?: AIWorkspaceActionContext): { targetType: AIWorkspaceTargetType } {
   return { targetType: ctx?.targetType ?? 'workspace' }
+}
+
+function getPublicPath(type: ClusterSourceContentType, slug: string) {
+  return type === 'post' ? `/blog/${slug}` : `/panduan/${slug}`
+}
+
+function normalizeStatus(status?: string | null): 'draft' | 'published' {
+  return status === 'published' ? 'published' : 'draft'
 }
 
 function compactSourceContent(content?: string | null) {
@@ -72,27 +89,183 @@ function compactSourceContent(content?: string | null) {
   return `${value.slice(0, CLUSTER_SOURCE_CONTENT_LIMIT)}\n\n[Konten dipotong untuk efisiensi token.]`
 }
 
-export async function getClusterSourcePosts(): Promise<ClusterSourcePostOption[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('posts')
-    .select('id, title, slug, category, status, description, updated_at, published_at')
+function mapPostSource(row: Record<string, unknown>): ClusterSourceContentOption {
+  const slug = String(row.slug ?? '')
+
+  return {
+    id: String(row.id ?? ''),
+    type: 'post',
+    title: String(row.title ?? ''),
+    slug,
+    path: getPublicPath('post', slug),
+    category: typeof row.category === 'string' ? row.category : null,
+    status: normalizeStatus(typeof row.status === 'string' ? row.status : null),
+    description: typeof row.description === 'string' ? row.description : null,
+    updated_at: typeof row.updated_at === 'string' ? row.updated_at : null,
+    published_at: typeof row.published_at === 'string' ? row.published_at : null,
+  }
+}
+
+function mapPanduanSource(row: Record<string, unknown>): ClusterSourceContentOption {
+  const slug = String(row.slug ?? '')
+  const metaDesc = typeof row.meta_desc === 'string' ? row.meta_desc : null
+  const quickAnswer = typeof row.quick_answer === 'string' ? row.quick_answer : null
+
+  return {
+    id: String(row.id ?? ''),
+    type: 'panduan',
+    title: String(row.title ?? ''),
+    slug,
+    path: getPublicPath('panduan', slug),
+    category: typeof row.category === 'string' ? row.category : null,
+    status: normalizeStatus(typeof row.status === 'string' ? row.status : null),
+    description: metaDesc ?? quickAnswer,
+    updated_at: typeof row.updated_at === 'string' ? row.updated_at : null,
+    published_at: typeof row.published_at === 'string' ? row.published_at : null,
+  }
+}
+
+function sortSourceContent(items: ClusterSourceContentOption[]) {
+  return [...items].sort((a, b) => {
+    const bTime = Date.parse(b.updated_at ?? b.published_at ?? '') || 0
+    const aTime = Date.parse(a.updated_at ?? a.published_at ?? '') || 0
+    return bTime - aTime
+  })
+}
+
+async function getPanduanSourceOptions(supabase: SupabaseWorkspaceClient): Promise<ClusterSourceContentOption[]> {
+  const selectWithCategory = 'id, title, slug, category, status, meta_desc, quick_answer, updated_at, published_at'
+  const selectFallback = 'id, title, slug, status, meta_desc, quick_answer, updated_at, published_at'
+  const first = await supabase
+    .from('panduan')
+    .select(selectWithCategory)
     .order('updated_at', { ascending: false, nullsFirst: false })
 
-  if (error) {
-    throw new Error(`Gagal memuat daftar artikel: ${error.message}`)
+  if (!first.error) {
+    return (first.data ?? []).map((row) => mapPanduanSource(row as Record<string, unknown>))
   }
 
-  return (data ?? []).map((post) => ({
-    id: post.id,
-    title: post.title,
-    slug: post.slug,
-    category: post.category ?? null,
-    status: post.status,
-    description: post.description ?? null,
-    updated_at: post.updated_at ?? null,
-    published_at: post.published_at ?? null,
-  }))
+  const fallback = await supabase
+    .from('panduan')
+    .select(selectFallback)
+    .order('updated_at', { ascending: false, nullsFirst: false })
+
+  if (fallback.error) {
+    throw new Error(`Gagal memuat daftar panduan: ${fallback.error.message}`)
+  }
+
+  return (fallback.data ?? []).map((row) => mapPanduanSource(row as Record<string, unknown>))
+}
+
+async function getPanduanSourceDetail(
+  supabase: SupabaseWorkspaceClient,
+  sourceId: string
+): Promise<{ data: ClusterSourceDetail | null; error: string | null }> {
+  const selectWithCategory = 'id, title, slug, category, status, meta_desc, quick_answer, content, updated_at, published_at'
+  const selectFallback = 'id, title, slug, status, meta_desc, quick_answer, content, updated_at, published_at'
+  const first = await supabase
+    .from('panduan')
+    .select(selectWithCategory)
+    .eq('id', sourceId)
+    .maybeSingle()
+
+  if (!first.error) {
+    const row = first.data as Record<string, unknown> | null
+    return {
+      data: row ? { ...mapPanduanSource(row), content: typeof row.content === 'string' ? row.content : null } : null,
+      error: null,
+    }
+  }
+
+  const fallback = await supabase
+    .from('panduan')
+    .select(selectFallback)
+    .eq('id', sourceId)
+    .maybeSingle()
+
+  if (fallback.error) {
+    return { data: null, error: fallback.error.message }
+  }
+
+  const row = fallback.data as Record<string, unknown> | null
+  return {
+    data: row ? { ...mapPanduanSource(row), content: typeof row.content === 'string' ? row.content : null } : null,
+    error: null,
+  }
+}
+
+async function getPostSourceDetail(
+  supabase: SupabaseWorkspaceClient,
+  sourceId: string
+): Promise<{ data: ClusterSourceDetail | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('id, title, slug, category, status, description, content, updated_at, published_at')
+    .eq('id', sourceId)
+    .maybeSingle()
+
+  if (error) {
+    return { data: null, error: error.message }
+  }
+
+  const row = data as Record<string, unknown> | null
+  return {
+    data: row ? { ...mapPostSource(row), content: typeof row.content === 'string' ? row.content : null } : null,
+    error: null,
+  }
+}
+
+async function getClusterExistingTitles(
+  supabase: SupabaseWorkspaceClient,
+  source: { id: string; type: ClusterSourceContentType }
+): Promise<{ titles: string[]; error: string | null }> {
+  const [postsResult, panduanResult] = await Promise.all([
+    supabase
+      .from('posts')
+      .select('id, title')
+      .order('updated_at', { ascending: false, nullsFirst: false })
+      .limit(300),
+    supabase
+      .from('panduan')
+      .select('id, title')
+      .order('updated_at', { ascending: false, nullsFirst: false })
+      .limit(300),
+  ])
+
+  if (postsResult.error) {
+    return { titles: [], error: `Gagal memuat daftar judul post pembanding: ${postsResult.error.message}` }
+  }
+
+  if (panduanResult.error) {
+    return { titles: [], error: `Gagal memuat daftar judul panduan pembanding: ${panduanResult.error.message}` }
+  }
+
+  const postTitles = (postsResult.data ?? [])
+    .filter((row) => !(source.type === 'post' && row.id === source.id) && row.title)
+    .map((row) => row.title)
+  const panduanTitles = (panduanResult.data ?? [])
+    .filter((row) => !(source.type === 'panduan' && row.id === source.id) && row.title)
+    .map((row) => row.title)
+
+  return { titles: [...postTitles, ...panduanTitles], error: null }
+}
+
+export async function getClusterSourceContent(): Promise<ClusterSourceContentOption[]> {
+  const supabase = await createClient()
+  const [postsResult, panduanOptions] = await Promise.all([
+    supabase
+      .from('posts')
+      .select('id, title, slug, category, status, description, updated_at, published_at')
+      .order('updated_at', { ascending: false, nullsFirst: false }),
+    getPanduanSourceOptions(supabase),
+  ])
+
+  if (postsResult.error) {
+    throw new Error(`Gagal memuat daftar artikel: ${postsResult.error.message}`)
+  }
+
+  const postOptions = (postsResult.data ?? []).map((row) => mapPostSource(row as Record<string, unknown>))
+  return sortSourceContent([...postOptions, ...panduanOptions])
 }
 
 export async function actionGenerateSlug(input: GenerateSlugInput, ctx?: AIWorkspaceActionContext) {
@@ -119,51 +292,48 @@ export async function actionGenerateClusterIdeas(input: GenerateClusterIdeasInpu
   return generateClusterIdeas(input, getWorkspaceCtx(ctx))
 }
 
-export async function actionGenerateClusterIdeasFromPost(input: { postId: string }, ctx?: AIWorkspaceActionContext) {
-  const postId = input.postId?.trim()
+export async function actionGenerateClusterIdeasFromContent(
+  input: { sourceId: string; type: ClusterSourceContentType },
+  ctx?: AIWorkspaceActionContext
+) {
+  const sourceId = input.sourceId?.trim()
+  const type = input.type === 'post' || input.type === 'panduan' ? input.type : null
 
-  if (!postId) {
-    return { success: false as const, error: 'Pilih artikel sumber terlebih dahulu.' }
+  if (!sourceId || !type) {
+    return { success: false as const, error: 'Pilih konten sumber terlebih dahulu.' }
   }
 
   const supabase = await createClient()
-  const [{ data: post, error: postError }, { data: titleRows, error: titlesError }] = await Promise.all([
-    supabase
-      .from('posts')
-      .select('id, title, slug, category, status, description, content')
-      .eq('id', postId)
-      .maybeSingle(),
-    supabase
-      .from('posts')
-      .select('id, title')
-      .order('updated_at', { ascending: false, nullsFirst: false })
-      .limit(300),
+  const [sourceResult, titlesResult] = await Promise.all([
+    type === 'post' ? getPostSourceDetail(supabase, sourceId) : getPanduanSourceDetail(supabase, sourceId),
+    getClusterExistingTitles(supabase, { id: sourceId, type }),
   ])
 
-  if (postError) {
-    return { success: false as const, error: `Gagal memuat artikel sumber: ${postError.message}` }
+  if (sourceResult.error) {
+    const label = type === 'post' ? 'artikel' : 'panduan'
+    return { success: false as const, error: `Gagal memuat ${label} sumber: ${sourceResult.error}` }
   }
 
-  if (!post) {
-    return { success: false as const, error: 'Artikel sumber tidak ditemukan.' }
+  if (!sourceResult.data) {
+    return { success: false as const, error: 'Konten sumber tidak ditemukan.' }
   }
 
-  if (titlesError) {
-    return { success: false as const, error: `Gagal memuat daftar judul pembanding: ${titlesError.message}` }
+  if (titlesResult.error) {
+    return { success: false as const, error: titlesResult.error }
   }
+
+  const source = sourceResult.data
 
   return generateClusterIdeas(
     {
-      topic: post.title,
-      source_title: post.title,
-      source_slug: post.slug,
-      source_description: post.description ?? undefined,
-      source_content: compactSourceContent(post.content),
-      source_category: post.category ?? undefined,
-      source_status: post.status,
-      existing_titles: (titleRows ?? [])
-        .filter((row) => row.id !== post.id && row.title)
-        .map((row) => row.title),
+      topic: source.title,
+      source_title: source.title,
+      source_slug: source.slug,
+      source_description: source.description ?? undefined,
+      source_content: compactSourceContent(source.content),
+      source_category: source.category ?? undefined,
+      source_status: source.status,
+      existing_titles: titlesResult.titles,
     },
     getWorkspaceCtx(ctx)
   )

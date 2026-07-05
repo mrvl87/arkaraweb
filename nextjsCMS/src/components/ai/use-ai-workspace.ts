@@ -5,11 +5,15 @@ import {
   actionGenerateSeoPack,
   actionGenerateOutline,
   actionGenerateFullDraft,
-  actionGenerateClusterIdeasFromPost,
+  actionGenerateClusterIdeasFromContent,
   actionGenerateImagePrompts,
   actionVerifyLatestFacts,
 } from '@/app/cms/ai/actions'
-import type { AIWorkspaceActionContext, AIWorkspaceTargetType } from '@/app/cms/ai/actions'
+import type {
+  AIWorkspaceActionContext,
+  AIWorkspaceTargetType,
+  ClusterSourceContentType,
+} from '@/app/cms/ai/actions'
 import type {
   GenerateSEOPackOutput,
   GenerateOutlineOutput,
@@ -40,6 +44,16 @@ export type WorkspaceResult = WorkspaceResultMap[WorkspaceOperation]
 export type WorkspaceResults = Partial<WorkspaceResultMap>
 export type WorkspaceErrors = Partial<Record<WorkspaceOperation, string>>
 
+function parseClusterContentKey(value: string): { type: ClusterSourceContentType; sourceId: string } | null {
+  const [type, sourceId] = value.split(':')
+
+  if ((type !== 'post' && type !== 'panduan') || !sourceId) {
+    return null
+  }
+
+  return { type, sourceId }
+}
+
 export function useAIWorkspace() {
   const [activeOp, setActiveOp] = useState<WorkspaceOperation>('seo_pack')
   const [targetType, setTargetType] = useState<AIWorkspaceTargetType>('workspace')
@@ -53,10 +67,11 @@ export function useAIWorkspace() {
   const [angle, setAngle] = useState('')
   const [audience, setAudience] = useState('')
   const [notes, setNotes] = useState('')
+  const [outline, setOutline] = useState('')
   const [excerpt, setExcerpt] = useState('')
   const [focusArea, setFocusArea] = useState('')
   const [category, setCategory] = useState('')
-  const [selectedClusterPostId, setSelectedClusterPostId] = useState('')
+  const [selectedClusterContentKey, setSelectedClusterContentKey] = useState('')
 
   const resetResult = (operation: WorkspaceOperation = activeOp) => {
     setResults((current) => {
@@ -69,6 +84,15 @@ export function useAIWorkspace() {
       delete next[operation]
       return next
     })
+  }
+
+  const handleTargetTypeChange = (nextTargetType: AIWorkspaceTargetType) => {
+    if (nextTargetType === targetType || loadingOp !== null) {
+      return
+    }
+
+    setTargetType(nextTargetType)
+    resetResult(activeOp)
   }
 
   const handleGenerate = async () => {
@@ -94,11 +118,15 @@ export function useAIWorkspace() {
           response = await actionGenerateOutline({ title, keyword, angle, audience, notes }, ctx)
           break
         case 'full_draft':
-          response = await actionGenerateFullDraft({ title, keyword, angle, audience, notes }, ctx)
+          response = await actionGenerateFullDraft({ title, keyword, angle, audience, notes, outline }, ctx)
           break
-        case 'cluster_ideas':
-          response = await actionGenerateClusterIdeasFromPost({ postId: selectedClusterPostId }, ctx)
+        case 'cluster_ideas': {
+          const source = parseClusterContentKey(selectedClusterContentKey)
+          response = source
+            ? await actionGenerateClusterIdeasFromContent(source, ctx)
+            : { success: false, error: 'Pilih konten sumber terlebih dahulu.' }
           break
+        }
         case 'verify_latest_facts':
           response = await actionVerifyLatestFacts({ title, content, excerpt, focus_area: focusArea }, ctx)
           break
@@ -133,6 +161,7 @@ export function useAIWorkspace() {
     setActiveOp,
     targetType,
     setTargetType,
+    handleTargetTypeChange,
     loadingOp,
     results,
     errors,
@@ -148,14 +177,16 @@ export function useAIWorkspace() {
     setAudience,
     notes,
     setNotes,
+    outline,
+    setOutline,
     excerpt,
     setExcerpt,
     focusArea,
     setFocusArea,
     category,
     setCategory,
-    selectedClusterPostId,
-    setSelectedClusterPostId,
+    selectedClusterContentKey,
+    setSelectedClusterContentKey,
     resetResult,
     handleGenerate,
   }

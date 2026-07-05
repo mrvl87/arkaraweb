@@ -1,17 +1,17 @@
 import { AIWorkspacePanel } from '@/components/ai/ai-workspace-panel'
-import { getClusterSourcePosts } from './actions'
+import { getClusterSourceContent } from './actions'
 import { Sparkles } from 'lucide-react'
-import type { ClusterSourcePostOption } from './actions'
+import type { ClusterSourceContentOption } from './actions'
 
 export default async function AIPage() {
-  let clusterSourcePosts: ClusterSourcePostOption[] = []
-  let clusterSourcePostsError: string | null = null
+  let clusterSourceContent: ClusterSourceContentOption[] = []
+  let clusterSourceContentError: string | null = null
 
   try {
-    clusterSourcePosts = await getClusterSourcePosts()
+    clusterSourceContent = await getClusterSourceContent()
   } catch (error) {
-    clusterSourcePostsError =
-      error instanceof Error ? error.message : 'Gagal memuat daftar artikel.'
+    clusterSourceContentError =
+      error instanceof Error ? error.message : 'Gagal memuat daftar konten.'
   }
 
   return (
@@ -24,13 +24,13 @@ export default async function AIPage() {
           AI <span className="text-arkara-amber">Workspace</span>
         </h1>
         <p className="text-gray-500 mt-3 font-medium max-w-2xl leading-relaxed text-sm">
-           Editorial planning workspace — generate SEO packs, outlines, full drafts, dan ide klaster konten dengan AI.
+           Editorial planning workspace - generate SEO packs, outlines, full drafts, dan ide klaster konten dengan AI.
         </p>
       </div>
 
       <AIWorkspacePanel
-        clusterSourcePosts={clusterSourcePosts}
-        clusterSourcePostsError={clusterSourcePostsError}
+        clusterSourceContent={clusterSourceContent}
+        clusterSourceContentError={clusterSourceContentError}
       />
     </div>
   )

@@ -1,7 +1,7 @@
 "use client"
 
 import { Loader2, Sparkles } from 'lucide-react'
-import type { ClusterSourcePostOption } from '@/app/cms/ai/actions'
+import type { ClusterSourceContentOption } from '@/app/cms/ai/actions'
 import type { OperationDef } from './ai-operation-tabs'
 import { AIClusterSourceSelect } from './ai-cluster-source-select'
 import type { WorkspaceOperation } from './use-ai-workspace'
@@ -15,13 +15,14 @@ interface AIWorkspaceFormProps {
   angle: string
   audience: string
   notes: string
+  outline: string
   excerpt: string
   focusArea: string
   category: string
-  selectedClusterPostId: string
-  selectedClusterPost: ClusterSourcePostOption | null
-  clusterSourcePosts: ClusterSourcePostOption[]
-  clusterSourcePostsError?: string | null
+  selectedClusterContentKey: string
+  selectedClusterContent: ClusterSourceContentOption | null
+  clusterSourceContent: ClusterSourceContentOption[]
+  clusterSourceContentError?: string | null
   isLoading: boolean
   onTitleChange: (value: string) => void
   onContentChange: (value: string) => void
@@ -29,10 +30,11 @@ interface AIWorkspaceFormProps {
   onAngleChange: (value: string) => void
   onAudienceChange: (value: string) => void
   onNotesChange: (value: string) => void
+  onOutlineChange: (value: string) => void
   onExcerptChange: (value: string) => void
   onFocusAreaChange: (value: string) => void
   onCategoryChange: (value: string) => void
-  onSelectClusterPost: (postId: string) => void
+  onSelectClusterContent: (contentKey: string) => void
   onGenerate: () => void
 }
 
@@ -45,13 +47,14 @@ export function AIWorkspaceForm({
   angle,
   audience,
   notes,
+  outline,
   excerpt,
   focusArea,
   category,
-  selectedClusterPostId,
-  selectedClusterPost,
-  clusterSourcePosts,
-  clusterSourcePostsError = null,
+  selectedClusterContentKey,
+  selectedClusterContent,
+  clusterSourceContent,
+  clusterSourceContentError = null,
   isLoading,
   onTitleChange,
   onContentChange,
@@ -59,10 +62,11 @@ export function AIWorkspaceForm({
   onAngleChange,
   onAudienceChange,
   onNotesChange,
+  onOutlineChange,
   onExcerptChange,
   onFocusAreaChange,
   onCategoryChange,
-  onSelectClusterPost,
+  onSelectClusterContent,
   onGenerate,
 }: AIWorkspaceFormProps) {
   const ActiveIcon = activeOperation.icon
@@ -70,7 +74,7 @@ export function AIWorkspaceForm({
   const requiresContent = activeOp === 'verify_latest_facts' || activeOp === 'image_prompts'
   const isGenerateDisabled = isLoading || (
     activeOp === 'cluster_ideas'
-      ? !selectedClusterPostId || Boolean(clusterSourcePostsError)
+      ? !selectedClusterContentKey || Boolean(clusterSourceContentError)
       : !title.trim() || (requiresContent && !content.trim())
   )
   const contentLabel = activeOp === 'verify_latest_facts'
@@ -108,11 +112,11 @@ export function AIWorkspaceForm({
 
       {activeOp === 'cluster_ideas' ? (
         <AIClusterSourceSelect
-          clusterSourcePosts={clusterSourcePosts}
-          clusterSourcePostsError={clusterSourcePostsError}
-          selectedClusterPostId={selectedClusterPostId}
-          selectedClusterPost={selectedClusterPost}
-          onSelect={onSelectClusterPost}
+          clusterSourceContent={clusterSourceContent}
+          clusterSourceContentError={clusterSourceContentError}
+          selectedClusterContentKey={selectedClusterContentKey}
+          selectedClusterContent={selectedClusterContent}
+          onSelect={onSelectClusterContent}
         />
       ) : null}
 
@@ -255,6 +259,20 @@ export function AIWorkspaceForm({
               className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition-all focus:border-arkara-amber focus:ring-2 focus:ring-arkara-amber/30"
             />
           </div>
+          {activeOp === 'full_draft' ? (
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                Outline Opsional
+              </label>
+              <textarea
+                value={outline}
+                onChange={(event) => onOutlineChange(event.target.value)}
+                rows={4}
+                placeholder="Tempel outline yang ingin dipakai sebagai struktur draft..."
+                className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition-all focus:border-arkara-amber focus:ring-2 focus:ring-arkara-amber/30"
+              />
+            </div>
+          ) : null}
         </>
       ) : null}
 

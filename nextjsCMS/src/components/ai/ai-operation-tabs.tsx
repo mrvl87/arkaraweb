@@ -68,6 +68,7 @@ interface AIOperationTabsProps {
   targetType: AIWorkspaceTargetType
   onSelectOperation: (operation: WorkspaceOperation) => void
   onSelectTargetType: (targetType: AIWorkspaceTargetType) => void
+  isProfileDisabled?: boolean
 }
 
 export function AIOperationTabs({
@@ -75,6 +76,7 @@ export function AIOperationTabs({
   targetType,
   onSelectOperation,
   onSelectTargetType,
+  isProfileDisabled = false,
 }: AIOperationTabsProps) {
   return (
     <div className="space-y-3">
@@ -94,6 +96,7 @@ export function AIOperationTabs({
                 key={profile.value}
                 type="button"
                 onClick={() => onSelectTargetType(profile.value)}
+                disabled={isProfileDisabled}
                 className={`rounded-xl border px-3 py-2 text-left transition-all ${
                   isActive
                     ? 'border-arkara-amber bg-arkara-amber/10 text-arkara-green shadow-sm'

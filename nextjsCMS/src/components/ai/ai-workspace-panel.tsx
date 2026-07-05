@@ -1,28 +1,32 @@
 "use client"
 
 import { RotateCcw, Sparkles } from 'lucide-react'
-import type { ClusterSourcePostOption } from '@/app/cms/ai/actions'
+import type { ClusterSourceContentOption } from '@/app/cms/ai/actions'
 import { AIOperationTabs, AI_WORKSPACE_OPERATIONS } from './ai-operation-tabs'
 import { AIWorkspaceForm } from './ai-workspace-form'
 import { AIResultRenderer } from './ai-result-renderer'
 import { useAIWorkspace } from './use-ai-workspace'
 
 interface AIWorkspacePanelProps {
-  clusterSourcePosts: ClusterSourcePostOption[]
-  clusterSourcePostsError?: string | null
+  clusterSourceContent: ClusterSourceContentOption[]
+  clusterSourceContentError?: string | null
+}
+
+function getClusterContentKey(content: ClusterSourceContentOption) {
+  return `${content.type}:${content.id}`
 }
 
 export function AIWorkspacePanel({
-  clusterSourcePosts,
-  clusterSourcePostsError = null,
+  clusterSourceContent,
+  clusterSourceContentError = null,
 }: AIWorkspacePanelProps) {
   const workspace = useAIWorkspace()
   const activeOperation = AI_WORKSPACE_OPERATIONS.find((item) => item.id === workspace.activeOp) ?? AI_WORKSPACE_OPERATIONS[0]
   const currentResult = workspace.results[workspace.activeOp] ?? null
   const currentError = workspace.errors[workspace.activeOp] ?? null
   const isLoading = workspace.loadingOp === workspace.activeOp
-  const selectedClusterPost =
-    clusterSourcePosts.find((post) => post.id === workspace.selectedClusterPostId) ?? null
+  const selectedClusterContent =
+    clusterSourceContent.find((content) => getClusterContentKey(content) === workspace.selectedClusterContentKey) ?? null
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -30,7 +34,8 @@ export function AIWorkspacePanel({
         activeOp={workspace.activeOp}
         targetType={workspace.targetType}
         onSelectOperation={workspace.setActiveOp}
-        onSelectTargetType={workspace.setTargetType}
+        onSelectTargetType={workspace.handleTargetTypeChange}
+        isProfileDisabled={workspace.loadingOp !== null}
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -44,13 +49,14 @@ export function AIWorkspacePanel({
             angle={workspace.angle}
             audience={workspace.audience}
             notes={workspace.notes}
+            outline={workspace.outline}
             excerpt={workspace.excerpt}
             focusArea={workspace.focusArea}
             category={workspace.category}
-            selectedClusterPostId={workspace.selectedClusterPostId}
-            selectedClusterPost={selectedClusterPost}
-            clusterSourcePosts={clusterSourcePosts}
-            clusterSourcePostsError={clusterSourcePostsError}
+            selectedClusterContentKey={workspace.selectedClusterContentKey}
+            selectedClusterContent={selectedClusterContent}
+            clusterSourceContent={clusterSourceContent}
+            clusterSourceContentError={clusterSourceContentError}
             isLoading={isLoading}
             onTitleChange={workspace.setTitle}
             onContentChange={workspace.setContent}
@@ -58,10 +64,11 @@ export function AIWorkspacePanel({
             onAngleChange={workspace.setAngle}
             onAudienceChange={workspace.setAudience}
             onNotesChange={workspace.setNotes}
+            onOutlineChange={workspace.setOutline}
             onExcerptChange={workspace.setExcerpt}
             onFocusAreaChange={workspace.setFocusArea}
             onCategoryChange={workspace.setCategory}
-            onSelectClusterPost={workspace.setSelectedClusterPostId}
+            onSelectClusterContent={workspace.setSelectedClusterContentKey}
             onGenerate={workspace.handleGenerate}
           />
 
