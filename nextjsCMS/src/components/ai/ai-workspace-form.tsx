@@ -166,7 +166,7 @@ export function AIWorkspaceForm({
 
       {activeOp === 'image_prompts' ? (
         <>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
                 Focus Keyword
@@ -209,7 +209,7 @@ export function AIWorkspaceForm({
 
       {activeOp === 'outline' || activeOp === 'full_draft' ? (
         <>
-          <div className="grid grid-cols-2 gap-3">
+         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
                 Keyword
