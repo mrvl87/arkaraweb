@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation";
 import {
   Bot,
   CalendarDays,
-  Check,
   Clipboard,
   Copy,
-  FileText,
   Loader2,
   Megaphone,
   Pencil,
@@ -29,7 +27,6 @@ import {
   generateFacebookCarouselSlides,
   generateFacebookPostDraft,
   generateFacebookVisualPromptForPost,
-  generateWeeklyFacebookPlan,
   updateCarouselSlide,
   updateCampaign,
   updateSocialPost,
@@ -41,6 +38,15 @@ import type {
   SocialPostStatus,
   SocialCampaignStatus,
 } from "@/types/social";
+import { SocialAIPlanPanel } from "./social-ai-plan-panel";
+import { SocialCampaignHeader } from "./social-campaign-header";
+import { SocialWeeklyPostCard } from "./social-weekly-post-card";
+import {
+  DAY_LABELS,
+  buildCaption,
+  getPostDayIndex,
+  todayDate,
+} from "./social-utils";
 
 interface SocialTrackerDashboardProps {
   initialData: SocialDashboardData;
@@ -60,52 +66,6 @@ const STATUS_COLUMNS: Array<{ id: SocialPostStatus; label: string }> = [
   { id: "posted", label: "Posted" },
   { id: "reviewed", label: "Reviewed" },
 ];
-
-const DAY_LABELS = [
-  "Senin",
-  "Selasa",
-  "Rabu",
-  "Kamis",
-  "Jumat",
-  "Sabtu",
-  "Minggu",
-] as const;
-
-function getLocalKey(kind: "copied" | "facebook_done", postId: string) {
-  return `arkara.social.${kind}.${postId}`;
-}
-
-function useLocalBoolean(key: string, fallback = false) {
-  const [value, setValue] = useState(fallback);
-
-  useEffect(() => {
-    setValue(window.localStorage.getItem(key) === "1" || fallback);
-  }, [fallback, key]);
-
-  const setPersistedValue = (nextValue: boolean) => {
-    setValue(nextValue);
-    window.localStorage.setItem(key, nextValue ? "1" : "0");
-  };
-
-  return [value, setPersistedValue] as const;
-}
-
-function getPostDayIndex(post: Pick<SocialPost, "scheduled_date">) {
-  if (!post.scheduled_date) return 99;
-  const day = new Date(`${post.scheduled_date}T00:00:00`).getDay();
-  return day === 0 ? 6 : day - 1;
-}
-
-function getPostDayLabel(post: Pick<SocialPost, "scheduled_date">) {
-  const index = getPostDayIndex(post);
-  return index >= 0 && index < DAY_LABELS.length
-    ? DAY_LABELS[index]
-    : "Tanpa Hari";
-}
-
-function todayDate() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function makeEmptyPost(campaignId?: string | null): PostDraft {
   return {
@@ -135,14 +95,6 @@ function makeEmptyPost(campaignId?: string | null): PostDraft {
     metrics_done: false,
     notes: null,
   };
-}
-
-function buildCaption(
-  post: Pick<SocialPost, "hook" | "body" | "cta" | "target_url">,
-) {
-  return [post.hook, post.body, post.cta, post.target_url]
-    .filter(Boolean)
-    .join("\n\n");
 }
 
 export function SocialTrackerDashboard({
@@ -312,109 +264,25 @@ export function SocialTrackerDashboard({
   return (
     <div className="space-y-5">
       <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700">
-                  Facebook
-                </span>
-                <span>{progressText}</span>
-              </div>
-              <h2 className="mt-2 truncate text-xl font-black text-arkara-green">
-                {activeCampaign?.title ?? "Belum ada campaign"}
-              </h2>
-              <p className="mt-1 text-sm text-gray-500">
-                {activeCampaign
-                  ? `${activeCampaign.start_date} sampai ${activeCampaign.end_date}`
-                  : "Buat campaign untuk mulai tracking konten Facebook manual."}
-              </p>
-            </div>
+        <SocialCampaignHeader
+          activeCampaign={activeCampaign}
+          campaigns={initialData.campaigns}
+          progressText={progressText}
+          onSelectCampaign={(campaignId) =>
+            router.push(`/cms/social?campaign=${campaignId}`)
+          }
+          onCreateCampaign={createQuickCampaign}
+          onAddPost={() => setSelectedPost(makeEmptyPost(activeCampaign?.id))}
+        />
 
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={activeCampaign?.id ?? ""}
-                onChange={(event) =>
-                  router.push(`/cms/social?campaign=${event.target.value}`)
-                }
-                className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 outline-none focus:border-arkara-amber"
-              >
-                {initialData.campaigns.length === 0 ? (
-                  <option value="">No campaign</option>
-                ) : null}
-                {initialData.campaigns.map((campaign) => (
-                  <option key={campaign.id} value={campaign.id}>
-                    {campaign.title}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={createQuickCampaign}
-                className="inline-flex h-10 items-center gap-2 rounded-lg border border-arkara-green/20 bg-white px-3 text-sm font-bold text-arkara-green hover:bg-arkara-green hover:text-white"
-              >
-                <Plus className="h-4 w-4" />
-                New Campaign
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setSelectedPost(makeEmptyPost(activeCampaign?.id))
-                }
-                disabled={!activeCampaign}
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-arkara-amber px-3 text-sm font-black text-arkara-green disabled:opacity-50"
-              >
-                <FileText className="h-4 w-4" />
-                Add Post
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-            <Bot className="h-4 w-4" />
-            OpenRouter
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <select
-              value={selectedSourceForPlan}
-              onChange={(event) => setSelectedSourceForPlan(event.target.value)}
-              className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-arkara-amber"
-            >
-              <option value="">Tanpa sumber</option>
-              {initialData.sources.map((source) => (
-                <option
-                  key={`${source.type}:${source.id}`}
-                  value={`${source.type}:${source.id}`}
-                >
-                  {source.type}: {source.title}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              disabled={!activeCampaign || isPending}
-              onClick={() =>
-                activeCampaign &&
-                runAction(() =>
-                  generateWeeklyFacebookPlan(
-                    activeCampaign.id,
-                    selectedSourceForPlan || undefined,
-                  ),
-                )
-              }
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-arkara-green px-3 text-sm font-black text-white disabled:opacity-50"
-            >
-              {isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              Generate 7-Day Plan
-            </button>
-          </div>
-        </div>
+        <SocialAIPlanPanel
+          sources={initialData.sources}
+          selectedSourceForPlan={selectedSourceForPlan}
+          onSelectedSourceForPlanChange={setSelectedSourceForPlan}
+          activeCampaign={activeCampaign}
+          isPending={isPending}
+          runAction={runAction}
+        />
       </div>
 
       {error ? (
@@ -649,7 +517,7 @@ export function SocialTrackerDashboard({
                     </div>
                     <div className="space-y-3">
                       {dayPosts.map((post) => (
-                        <WeeklyPostCard
+                        <SocialWeeklyPostCard
                           key={post.id}
                           post={post}
                           onEdit={() => setSelectedPost(post)}
@@ -680,100 +548,6 @@ export function SocialTrackerDashboard({
         copyCaption={copyCaption}
       />
     </div>
-  );
-}
-
-function WeeklyPostCard({
-  post,
-  onEdit,
-}: {
-  post: SocialPost;
-  onEdit: () => void;
-}) {
-  const [facebookDone, setFacebookDone] = useLocalBoolean(
-    getLocalKey("facebook_done", post.id),
-    false,
-  );
-
-  return (
-    <div
-      className={`rounded-lg border bg-white p-3 transition-colors ${facebookDone ? "border-gray-200 opacity-75" : "border-blue-200"}`}
-    >
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-gray-500">
-            {post.post_type.replace("_", " ")}
-          </span>
-          <p className="mt-1 text-[11px] font-medium text-gray-400">
-            {post.scheduled_date || "Tanpa tanggal"}{" "}
-            {post.scheduled_time?.slice(0, 5) || ""}
-          </p>
-        </div>
-        <button
-          type="button"
-          title={
-            facebookDone
-              ? "Sudah dibuat di Facebook"
-              : "Tandai sudah dibuat di Facebook"
-          }
-          onClick={() => setFacebookDone(!facebookDone)}
-          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition-colors ${
-            facebookDone
-              ? "bg-gray-200 text-gray-500"
-              : "bg-blue-600 text-white hover:bg-blue-700"
-          }`}
-        >
-          <Check className="h-4 w-4" />
-        </button>
-      </div>
-
-      <button
-        type="button"
-        onClick={onEdit}
-        className="block w-full text-left text-sm font-black leading-snug text-arkara-green hover:text-arkara-amber"
-      >
-        {post.title}
-      </button>
-
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold text-gray-400">
-          {getPostDayLabel(post)}
-        </span>
-        <LocalCopyButton post={post} />
-      </div>
-    </div>
-  );
-}
-
-function LocalCopyButton({ post }: { post: SocialPost }) {
-  const [copied, setCopied] = useLocalBoolean(
-    getLocalKey("copied", post.id),
-    Boolean(post.copied_done),
-  );
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(buildCaption(post));
-    setCopied(true);
-  };
-
-  return (
-    <button
-      type="button"
-      title={copied ? "Caption sudah dicopy" : "Copy caption"}
-      onClick={handleCopy}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-black transition-colors ${
-        copied
-          ? "bg-gray-100 text-gray-500"
-          : "bg-arkara-amber text-arkara-green hover:bg-arkara-green hover:text-white"
-      }`}
-    >
-      {copied ? (
-        <Check className="h-3.5 w-3.5" />
-      ) : (
-        <Copy className="h-3.5 w-3.5" />
-      )}
-      {copied ? "Copied" : "Copy"}
-    </button>
   );
 }
 
