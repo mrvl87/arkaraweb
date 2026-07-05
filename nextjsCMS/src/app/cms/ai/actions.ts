@@ -1,7 +1,7 @@
 "use server"
 
 /**
- * AI Server Actions — /cms/ai workspace.
+ * AI Server Actions - /cms/ai workspace.
  *
  * Thin server action layer that delegates to src/lib/ai/operations.
  * These are callable from client components in the AI workspace.
@@ -35,8 +35,12 @@ import type {
   VerifyLatestFactsInput,
 } from '@/lib/ai/schemas'
 
-// ─── Workspace context (no specific target) ──────────────────────
-const workspaceCtx = { targetType: 'workspace' as const }
+export type AIWorkspaceTargetType = 'workspace' | 'post' | 'panduan'
+
+export interface AIWorkspaceActionContext {
+  targetType?: AIWorkspaceTargetType
+}
+
 const CLUSTER_SOURCE_CONTENT_LIMIT = 12000
 
 export interface ClusterSourcePostOption {
@@ -48,6 +52,10 @@ export interface ClusterSourcePostOption {
   description: string | null
   updated_at: string | null
   published_at: string | null
+}
+
+function getWorkspaceCtx(ctx?: AIWorkspaceActionContext): { targetType: AIWorkspaceTargetType } {
+  return { targetType: ctx?.targetType ?? 'workspace' }
 }
 
 function compactSourceContent(content?: string | null) {
@@ -87,31 +95,31 @@ export async function getClusterSourcePosts(): Promise<ClusterSourcePostOption[]
   }))
 }
 
-export async function actionGenerateSlug(input: GenerateSlugInput) {
-  return generateSlug(input, workspaceCtx)
+export async function actionGenerateSlug(input: GenerateSlugInput, ctx?: AIWorkspaceActionContext) {
+  return generateSlug(input, getWorkspaceCtx(ctx))
 }
 
-export async function actionGenerateSeoPack(input: GenerateSEOPackInput) {
-  return generateSeoPack(input, workspaceCtx)
+export async function actionGenerateSeoPack(input: GenerateSEOPackInput, ctx?: AIWorkspaceActionContext) {
+  return generateSeoPack(input, getWorkspaceCtx(ctx))
 }
 
-export async function actionGenerateOutline(input: GenerateOutlineInput) {
-  return generateOutline(input, workspaceCtx)
+export async function actionGenerateOutline(input: GenerateOutlineInput, ctx?: AIWorkspaceActionContext) {
+  return generateOutline(input, getWorkspaceCtx(ctx))
 }
 
-export async function actionGenerateFullDraft(input: GenerateFullDraftInput) {
-  return generateFullDraft(input, workspaceCtx)
+export async function actionGenerateFullDraft(input: GenerateFullDraftInput, ctx?: AIWorkspaceActionContext) {
+  return generateFullDraft(input, getWorkspaceCtx(ctx))
 }
 
-export async function actionGenerateImagePrompts(input: GenerateImagePromptsInput) {
-  return generateImagePrompts(input, workspaceCtx)
+export async function actionGenerateImagePrompts(input: GenerateImagePromptsInput, ctx?: AIWorkspaceActionContext) {
+  return generateImagePrompts(input, getWorkspaceCtx(ctx))
 }
 
-export async function actionGenerateClusterIdeas(input: GenerateClusterIdeasInput) {
-  return generateClusterIdeas(input, workspaceCtx)
+export async function actionGenerateClusterIdeas(input: GenerateClusterIdeasInput, ctx?: AIWorkspaceActionContext) {
+  return generateClusterIdeas(input, getWorkspaceCtx(ctx))
 }
 
-export async function actionGenerateClusterIdeasFromPost(input: { postId: string }) {
+export async function actionGenerateClusterIdeasFromPost(input: { postId: string }, ctx?: AIWorkspaceActionContext) {
   const postId = input.postId?.trim()
 
   if (!postId) {
@@ -157,26 +165,26 @@ export async function actionGenerateClusterIdeasFromPost(input: { postId: string
         .filter((row) => row.id !== post.id && row.title)
         .map((row) => row.title),
     },
-    workspaceCtx
+    getWorkspaceCtx(ctx)
   )
 }
 
-export async function actionRewriteSection(input: RewriteSectionInput) {
-  return rewriteSection(input, workspaceCtx)
+export async function actionRewriteSection(input: RewriteSectionInput, ctx?: AIWorkspaceActionContext) {
+  return rewriteSection(input, getWorkspaceCtx(ctx))
 }
 
-export async function actionExpandSection(input: ExpandSectionInput) {
-  return expandSection(input, workspaceCtx)
+export async function actionExpandSection(input: ExpandSectionInput, ctx?: AIWorkspaceActionContext) {
+  return expandSection(input, getWorkspaceCtx(ctx))
 }
 
-export async function actionGenerateFAQ(input: GenerateFAQInput) {
-  return generateFAQ(input, workspaceCtx)
+export async function actionGenerateFAQ(input: GenerateFAQInput, ctx?: AIWorkspaceActionContext) {
+  return generateFAQ(input, getWorkspaceCtx(ctx))
 }
 
-export async function actionResearchWithWeb(input: ResearchWithWebInput) {
-  return researchWithWeb(input, workspaceCtx)
+export async function actionResearchWithWeb(input: ResearchWithWebInput, ctx?: AIWorkspaceActionContext) {
+  return researchWithWeb(input, getWorkspaceCtx(ctx))
 }
 
-export async function actionVerifyLatestFacts(input: VerifyLatestFactsInput) {
-  return verifyLatestFacts(input, workspaceCtx)
+export async function actionVerifyLatestFacts(input: VerifyLatestFactsInput, ctx?: AIWorkspaceActionContext) {
+  return verifyLatestFacts(input, getWorkspaceCtx(ctx))
 }
