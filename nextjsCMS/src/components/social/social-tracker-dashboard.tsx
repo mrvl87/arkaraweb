@@ -9,7 +9,6 @@ import {
   Copy,
   Loader2,
   Megaphone,
-  Pencil,
   Plus,
   Save,
   Sparkles,
@@ -35,10 +34,10 @@ import type {
   SocialCarouselSlide,
   SocialDashboardData,
   SocialPost,
-  SocialPostStatus,
-  SocialCampaignStatus,
 } from "@/types/social";
 import { SocialAIPlanPanel } from "./social-ai-plan-panel";
+import { SocialCampaignList } from "./social-campaign-list";
+import { SocialCampaignSettings } from "./social-campaign-settings";
 import { SocialCampaignHeader } from "./social-campaign-header";
 import { SocialWeeklyPostCard } from "./social-weekly-post-card";
 import {
@@ -59,13 +58,6 @@ type PostDraft = Omit<
   id?: string;
 };
 
-const STATUS_COLUMNS: Array<{ id: SocialPostStatus; label: string }> = [
-  { id: "planned", label: "Planned" },
-  { id: "drafting", label: "Drafting" },
-  { id: "ready", label: "Ready" },
-  { id: "posted", label: "Posted" },
-  { id: "reviewed", label: "Reviewed" },
-];
 
 function makeEmptyPost(campaignId?: string | null): PostDraft {
   return {
@@ -298,164 +290,23 @@ export function SocialTrackerDashboard({
 
       {initialData.campaigns.length > 0 ? (
         <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="mb-4 flex items-center justify-between gap-3 border-b border-gray-100 pb-3">
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-widest text-arkara-green">
-                  Campaign List
-                </h3>
-                <p className="mt-1 text-xs font-medium text-gray-400">
-                  Pilih, arsipkan, atau hapus campaign yang tidak dipakai.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={createQuickCampaign}
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-arkara-amber px-3 text-xs font-black text-arkara-green"
-              >
-                <Plus className="h-4 w-4" />
-                New
-              </button>
-            </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              {initialData.campaigns.map((campaign) => {
-                const isActive = activeCampaign?.id === campaign.id;
-                return (
-                  <div
-                    key={campaign.id}
-                    className={`rounded-lg border p-3 transition-colors ${
-                      isActive
-                        ? "border-arkara-amber bg-arkara-cream"
-                        : "border-gray-200 bg-gray-50"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          router.push(`/cms/social?campaign=${campaign.id}`)
-                        }
-                        className="min-w-0 text-left"
-                      >
-                        <p className="truncate text-sm font-black text-arkara-green">
-                          {campaign.title}
-                        </p>
-                        <p className="mt-1 text-xs font-medium text-gray-500">
-                          {campaign.start_date} - {campaign.end_date}
-                        </p>
-                      </button>
-                      <button
-                        type="button"
-                        title="Hapus campaign permanen"
-                        onClick={() =>
-                          removeCampaign(campaign.id, campaign.title)
-                        }
-                        className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold uppercase text-gray-500">
-                        {campaign.status.replace("_", " ")}
-                      </span>
-                      {isActive ? (
-                        <span className="text-[11px] font-black uppercase tracking-wider text-arkara-amber">
-                          Active
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <SocialCampaignList
+            campaigns={initialData.campaigns}
+            activeCampaign={activeCampaign}
+            onSelectCampaign={(campaignId) =>
+              router.push(`/cms/social?campaign=${campaignId}`)
+            }
+            onCreateCampaign={createQuickCampaign}
+            onDeleteCampaign={removeCampaign}
+          />
 
-          {activeCampaign ? (
-            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
-                <Pencil className="h-4 w-4 text-arkara-amber" />
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-widest text-arkara-green">
-                    Upload Period
-                  </h3>
-                  <p className="mt-1 text-xs font-medium text-gray-400">
-                    Atur rencana periode post untuk campaign aktif.
-                  </p>
-                </div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Start Date">
-                  <input
-                    type="date"
-                    value={campaignDraft.start_date}
-                    onChange={(event) =>
-                      setCampaignDraft({
-                        ...campaignDraft,
-                        start_date: event.target.value,
-                      })
-                    }
-                    className="input-social"
-                  />
-                </Field>
-                <Field label="End Date">
-                  <input
-                    type="date"
-                    value={campaignDraft.end_date}
-                    onChange={(event) =>
-                      setCampaignDraft({
-                        ...campaignDraft,
-                        end_date: event.target.value,
-                      })
-                    }
-                    className="input-social"
-                  />
-                </Field>
-                <Field label="Title">
-                  <input
-                    value={campaignDraft.title}
-                    onChange={(event) =>
-                      setCampaignDraft({
-                        ...campaignDraft,
-                        title: event.target.value,
-                      })
-                    }
-                    className="input-social"
-                  />
-                </Field>
-                <Field label="Status">
-                  <select
-                    value={campaignDraft.status}
-                    onChange={(event) =>
-                      setCampaignDraft({
-                        ...campaignDraft,
-                        status: event.target.value as SocialCampaignStatus,
-                      })
-                    }
-                    className="input-social"
-                  >
-                    <option value="planned">Planned</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </Field>
-              </div>
-              <button
-                type="button"
-                onClick={saveCampaignSettings}
-                disabled={isPending}
-                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-arkara-green px-3 py-2.5 text-sm font-black text-white disabled:opacity-50"
-              >
-                {isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                Save Period
-              </button>
-            </div>
-          ) : null}
+          <SocialCampaignSettings
+            activeCampaign={activeCampaign}
+            campaignDraft={campaignDraft}
+            onCampaignDraftChange={setCampaignDraft}
+            onSave={saveCampaignSettings}
+            isPending={isPending}
+          />
         </div>
       ) : null}
 
