@@ -1,6 +1,5 @@
 import type {
   SocialCarouselSlide,
-  SocialDashboardData,
   SocialPost,
 } from "@/types/social";
 
@@ -11,11 +10,15 @@ export type PostDraft = Omit<
   id?: string;
 };
 
+export type PostDraftUpdater = <K extends keyof PostDraft>(
+  key: K,
+  value: PostDraft[K],
+) => void;
+
 export interface PostEditorProps {
   post: PostDraft | null;
   setPost: (post: PostDraft | null) => void;
   slides: SocialCarouselSlide[];
-  sources: SocialDashboardData["sources"];
   isPending: boolean;
   runAction: (
     task: () => Promise<{

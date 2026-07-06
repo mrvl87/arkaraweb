@@ -318,7 +318,6 @@ export function SocialTrackerDashboard({
         post={selectedPost}
         setPost={setSelectedPost}
         slides={selectedSlides}
-        sources={initialData.sources}
         isPending={isPending}
         runAction={runAction}
         savePost={savePost}
