@@ -166,7 +166,8 @@ const schemaHowTo = contentType === 'panduan' && isTechnicalGuide && howToSteps.
       })),
     }
   : null;
-const structuredData = [schemaArticle, schemaFaq, schemaHowTo].filter(Boolean);
+const structuredData = [schemaArticle, schemaFaq, schemaHowTo]
+  .filter((item) => item !== null) as Record<string, unknown>[];
 const readerImageUrl = ogImageUrl ? rewriteMediaUrl(ogImageUrl, { width: 240, quality: 70 }) : undefined;
 const readerMeta = {
   id: `${readerType}:${currentSlug || title}`,
@@ -804,20 +805,20 @@ const readerMetaJson = JSON.stringify(readerMeta).replace(/</g, '\\u003c');
   <script>
     const mobileTocLinks = document.querySelectorAll('[data-mobile-toc-link]');
 
-    function normalizeMobileHeadingText(text) {
+    function normalizeMobileHeadingText(text: string) {
       return text
         .replace(/\s+/g, ' ')
         .trim()
         .toLowerCase();
     }
 
-    function findMobileHeadingByText(text) {
+    function findMobileHeadingByText(text: string): HTMLElement | null {
       const normalizedText = normalizeMobileHeadingText(text);
       if (!normalizedText) {
         return null;
       }
 
-      const headings = document.querySelectorAll('.prose-arkara h2, .prose-arkara h3');
+      const headings = document.querySelectorAll<HTMLElement>('.prose-arkara h2, .prose-arkara h3');
 
       for (const heading of headings) {
         if (normalizeMobileHeadingText(heading.textContent || '') === normalizedText) {

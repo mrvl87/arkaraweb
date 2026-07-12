@@ -294,7 +294,7 @@ const categoryLabels: Record<string, string> = {
   if ('requestIdleCallback' in window) {
     window.requestIdleCallback(() => setupCarousel(), { timeout: 1200 });
   } else {
-    window.setTimeout(setupCarousel, 0);
+    globalThis.setTimeout(setupCarousel, 0);
   }
   document.addEventListener('astro:after-swap', setupCarousel);
 </script>

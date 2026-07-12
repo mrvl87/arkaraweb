@@ -5,6 +5,7 @@ interface Props {
   image?: any;       // The JSON object from Supabase or string fallback
   alt?: string;      // Fallback alt text if not in JSON
   class?: string;    // CSS classes
+  style?: string;    // Accepted for backward-compatible call sites
   loading?: 'lazy' | 'eager'; // Priority loading
   aspectRatio?: string; // Optional enforced aspect ratio class e.g., 'aspect-video'
   sizes?: string; // HTML sizes attribute

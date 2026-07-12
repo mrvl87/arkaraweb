@@ -1,0 +1,105 @@
+﻿---
+import { rewriteMediaUrl } from '../../lib/media';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  imageAlt?: string;
+  canonicalHref?: string;
+  siteName?: string;
+  type?: 'website' | 'article';
+  robots?: string;
+  preloadImage?: string;
+  structuredData?: Record<string, unknown> | Array<Record<string, unknown>>;
+}
+
+const {
+  title,
+  description = 'Platform pengetahuan survival Indonesia. Pelajari teknik survival praktis untuk menghadapi krisis.',
+  image,
+  imageAlt,
+  canonicalHref,
+  siteName = 'Arkara',
+  type = 'website',
+  robots = 'index, follow',
+  preloadImage,
+  structuredData,
+} = Astro.props;
+const MAX_SEO_TITLE_LENGTH = 70;
+
+function normalizeTitle(value: string) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+function shortenTitle(value: string, maxLength = MAX_SEO_TITLE_LENGTH) {
+  const normalized = normalizeTitle(value);
+  if (normalized.length <= maxLength) return normalized;
+  const clipped = normalized.slice(0, maxLength + 1);
+  const lastSpace = clipped.lastIndexOf(' ');
+  const base = lastSpace > 40 ? clipped.slice(0, lastSpace) : normalized.slice(0, maxLength);
+  return base.replace(/[,:;|&\-\s]+$/g, '').trim();
+}
+function buildSeoTitle(pageTitle?: string) {
+  if (!pageTitle) return `${siteName} | Survive with Knowledge`;
+  const normalizedTitle = normalizeTitle(pageTitle);
+  const branded = `${normalizedTitle} | ${siteName}`;
+  if (branded.length <= MAX_SEO_TITLE_LENGTH) return branded;
+  if (normalizedTitle.length <= MAX_SEO_TITLE_LENGTH) return normalizedTitle;
+  return shortenTitle(normalizedTitle);
+}
+
+const siteTitle = buildSeoTitle(title);
+const siteUrl = 'https://arkaraweb.com';
+const googleAnalyticsId = 'G-6Y19TY4DNY';
+const enableGoogleAnalytics = import.meta.env.PROD;
+const googleAnalyticsScript = `
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', '${googleAnalyticsId}');
+`;
+const canonicalUrl = new URL(canonicalHref || Astro.url.pathname, siteUrl);
+const socialImageUrl = image ? new URL(rewriteMediaUrl(image), siteUrl).href : undefined;
+const preloadedImageUrl = preloadImage
+  ? new URL(rewriteMediaUrl(preloadImage), siteUrl).href
+  : type === 'article' ? socialImageUrl : undefined;
+const structuredDataItems = structuredData ? (Array.isArray(structuredData) ? structuredData : [structuredData]) : [];
+const structuredDataJson = structuredDataItems.map((item) => JSON.stringify(item).replace(/</g, '\\u003c'));
+---
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{siteTitle}</title>
+<meta name="title" content={siteTitle} />
+<meta name="description" content={description} />
+<meta name="robots" content={robots} />
+<link rel="canonical" href={canonicalUrl.href} />
+<link rel="preconnect" href="https://media.arkaraweb.com" />
+<link rel="dns-prefetch" href="https://media.arkaraweb.com" />
+{preloadedImageUrl && <link rel="preload" as="image" href={preloadedImageUrl} fetchpriority="high" />}
+<meta property="og:type" content={type} />
+<meta property="og:url" content={canonicalUrl.href} />
+<meta property="og:site_name" content={siteName} />
+<meta property="og:title" content={siteTitle} />
+<meta property="og:description" content={description} />
+{socialImageUrl && <meta property="og:image" content={socialImageUrl} />}
+{socialImageUrl && <meta property="og:image:secure_url" content={socialImageUrl} />}
+{imageAlt && <meta property="og:image:alt" content={imageAlt} />}
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:url" content={canonicalUrl.href} />
+<meta property="twitter:title" content={siteTitle} />
+<meta property="twitter:description" content={description} />
+{socialImageUrl && <meta property="twitter:image" content={socialImageUrl} />}
+{imageAlt && <meta property="twitter:image:alt" content={imageAlt} />}
+{structuredDataJson.map((json) => <script type="application/ld+json" set:html={json}></script>)}
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Share+Tech+Mono&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<noscript><link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Share+Tech+Mono&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet" /></noscript>
+{enableGoogleAnalytics && (
+  <>
+    <script async src={`https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`}></script>
+    <script is:inline set:html={googleAnalyticsScript}></script>
+  </>
+)}

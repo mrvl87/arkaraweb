@@ -189,7 +189,7 @@ const redditShareUrl = buildRedditShareUrl(shareUrl);
   const tocLinks = document.querySelectorAll('[data-toc-link]');
   const popupLinks = document.querySelectorAll('[data-share-popup]');
 
-  function getAnchorTarget(id) {
+  function getAnchorTarget(id: string): HTMLElement | null {
     if (!id) {
       return null;
     }
@@ -202,20 +202,20 @@ const redditShareUrl = buildRedditShareUrl(shareUrl);
     return null;
   }
 
-  function normalizeHeadingText(text) {
+  function normalizeHeadingText(text: string) {
     return text
       .replace(/\s+/g, ' ')
       .trim()
       .toLowerCase();
   }
 
-  function findHeadingByText(text) {
+  function findHeadingByText(text: string): HTMLElement | null {
     const normalizedText = normalizeHeadingText(text);
     if (!normalizedText) {
       return null;
     }
 
-    const headings = document.querySelectorAll('.prose-arkara h2, .prose-arkara h3');
+    const headings = document.querySelectorAll<HTMLElement>('.prose-arkara h2, .prose-arkara h3');
 
     for (const heading of headings) {
       if (normalizeHeadingText(heading.textContent || '') === normalizedText) {

@@ -15,6 +15,7 @@ if (resolvedRoute.kind === 'redirect') {
 
 const guide = resolvedRoute.kind === 'panduan' ? resolvedRoute.panduan : null;
 const guideNotFound = resolvedRoute.kind === 'not_found';
+const renderedGuide = guide!;
 
 if (guideNotFound) {
   Astro.response.status = 404;
@@ -46,27 +47,27 @@ const headings = extractHeadings(htmlContent);
   />
 ) : (
   <PostLayout
-    title={guide.title}
-    description={`Panduan Teknis: Bab ${guide.bab_ref || '-'}`}
-    category={categoryLabels[guide.category] || guide.category || 'PANDUAN'}
+    title={renderedGuide.title}
+    description={`Panduan Teknis: Bab ${renderedGuide.bab_ref || '-'}`}
+    category={categoryLabels[renderedGuide.category || ''] || renderedGuide.category || 'PANDUAN'}
     publishDate={new Date().toISOString()} 
-    coverImage={guide.banner_image || guide.cover_image}
-    canonicalHref={`/panduan/${guide.slug}`}
+    coverImage={renderedGuide.banner_image || renderedGuide.cover_image}
+    canonicalHref={`/panduan/${renderedGuide.slug}`}
     headings={headings}
-    content={guide.content || ''}
-    currentSlug={guide.slug}
+    content={renderedGuide.content || ''}
+    currentSlug={renderedGuide.slug}
     contentType="panduan"
-    quickAnswer={guide.quick_answer}
-    keyTakeaways={guide.key_takeaways || []}
-    faq={guide.faq || []}
-    editorialFormat={guide.editorial_format || 'legacy'}
+    quickAnswer={renderedGuide.quick_answer}
+    keyTakeaways={renderedGuide.key_takeaways || []}
+    faq={renderedGuide.faq || []}
+    editorialFormat={renderedGuide.editorial_format || 'legacy'}
   >
     <div class="flex gap-4 text-sm font-mono mb-8 bg-parchment p-4 rounded-xl border border-stone/10">
-      {guide.bab_ref && (
-        <span>REF: <strong class="text-moss">{guide.bab_ref}</strong></span>
+      {renderedGuide.bab_ref && (
+        <span>REF: <strong class="text-moss">{renderedGuide.bab_ref}</strong></span>
       )}
-      {guide.qr_slug && (
-        <span>QR_CODE: <strong class="text-amber-600">{guide.qr_slug}</strong></span>
+      {renderedGuide.qr_slug && (
+        <span>QR_CODE: <strong class="text-amber-600">{renderedGuide.qr_slug}</strong></span>
       )}
     </div>
     

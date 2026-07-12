@@ -15,6 +15,7 @@ if (resolvedRoute.kind === 'redirect') {
 
 const post = resolvedRoute.kind === 'post' ? resolvedRoute.post : null;
 const postNotFound = resolvedRoute.kind === 'not_found';
+const renderedPost = post!;
 
 if (postNotFound) {
   Astro.response.status = 404;
@@ -37,20 +38,20 @@ const headings = extractHeadings(htmlContent);
   />
 ) : (
   <PostLayout
-    title={post.meta_title || post.title}
-    description={post.meta_desc || post.description}
-    publishDate={post.published_at}
+    title={renderedPost.meta_title || renderedPost.title}
+    description={renderedPost.meta_desc || renderedPost.description}
+    publishDate={renderedPost.published_at}
     category="ARKARA JURNAL"
-    coverImage={post.banner_image || post.cover_image}
-    canonicalHref={`/blog/${post.slug}`}
+    coverImage={renderedPost.banner_image || renderedPost.cover_image}
+    canonicalHref={`/blog/${renderedPost.slug}`}
     headings={headings}
-    content={post.content || ''}
-    currentSlug={post.slug}
+    content={renderedPost.content || ''}
+    currentSlug={renderedPost.slug}
     contentType="blog"
-    quickAnswer={post.quick_answer}
-    keyTakeaways={post.key_takeaways || []}
-    faq={post.faq || []}
-    editorialFormat={post.editorial_format || 'legacy'}
+    quickAnswer={renderedPost.quick_answer}
+    keyTakeaways={renderedPost.key_takeaways || []}
+    faq={renderedPost.faq || []}
+    editorialFormat={renderedPost.editorial_format || 'legacy'}
   >
     <div set:html={htmlContent} />
   </PostLayout>

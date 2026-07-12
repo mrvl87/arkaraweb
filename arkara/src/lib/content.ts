@@ -533,7 +533,7 @@ export async function searchPublishedContent(rawQuery: string, limit = 24): Prom
   ])
 
   const postResults = posts
-    .map((post) => {
+    .map<SearchResultItem | null>((post) => {
       const summary = post.description || post.quick_answer || ''
       const extras = `${(post.key_takeaways ?? []).join(' ')} ${flattenFaq(post.faq)}`
       const score = scoreSearchMatch(terms, fullQuery, {
@@ -559,10 +559,10 @@ export async function searchPublishedContent(rawQuery: string, limit = 24): Prom
         score,
       }
     })
-    .filter((result): result is SearchResultItem => Boolean(result))
+    .filter((result): result is SearchResultItem => result !== null)
 
   const panduanResults = panduan
-    .map((guide) => {
+    .map<SearchResultItem | null>((guide) => {
       const summary = guide.quick_answer || ''
       const extras = `${guide.bab_ref ?? ''} ${(guide.key_takeaways ?? []).join(' ')} ${flattenFaq(guide.faq)}`
       const score = scoreSearchMatch(terms, fullQuery, {
@@ -587,7 +587,7 @@ export async function searchPublishedContent(rawQuery: string, limit = 24): Prom
         score,
       }
     })
-    .filter((result): result is SearchResultItem => Boolean(result))
+    .filter((result): result is SearchResultItem => result !== null)
 
   return [...postResults, ...panduanResults]
     .sort((a, b) => {

@@ -11,6 +11,8 @@ const {
   placeholder = 'Cari panduan...',
 } = Astro.props;
 const rootClass = `search-autosuggest search-autosuggest--${variant}`;
+const instanceId = id || `search-autosuggest-${variant}`;
+const resultsId = `${instanceId}-results`;
 ---
 
 <form id={id} class={rootClass} data-search-autosuggest role="search" autocomplete="off">
@@ -27,13 +29,17 @@ const rootClass = `search-autosuggest search-autosuggest--${variant}`;
         placeholder={placeholder}
         autocomplete="off"
         inputmode="search"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded="false"
+        aria-controls={resultsId}
         data-search-input
       />
     </label>
   </div>
   <div class="search-autosuggest__panel" data-search-panel hidden>
-    <div class="search-autosuggest__status" data-search-status>Ketik minimal 2 karakter.</div>
-    <div class="search-autosuggest__results" data-search-results></div>
+    <div class="search-autosuggest__status" data-search-status aria-live="polite">Ketik minimal 2 karakter.</div>
+    <div id={resultsId} class="search-autosuggest__results" data-search-results role="listbox"></div>
   </div>
 </form>
 
@@ -116,71 +122,6 @@ const rootClass = `search-autosuggest search-autosuggest--${variant}`;
     overflow: visible;
   }
 
-  :global(.search-suggest-item) {
-    display: grid;
-    grid-template-columns: 4.65rem minmax(0, 1fr);
-    align-items: center;
-    gap: 0.72rem;
-    min-width: 0;
-    min-height: 2.75rem;
-    padding: 0 0.72rem;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-left: 2px solid transparent;
-    border-radius: 8px;
-    color: inherit;
-    text-decoration: none;
-    transition:
-      background 0.14s ease,
-      border-color 0.14s ease,
-      color 0.14s ease,
-      transform 0.14s ease;
-  }
-
-  :global(.search-suggest-item:hover),
-  :global(.search-suggest-item:focus) {
-    border-left-color: #63d2b5;
-    border-color: rgba(99,210,181,0.30);
-    background: rgba(99,210,181,0.11);
-    outline: 0;
-    transform: translateX(1px);
-  }
-
-  :global(.search-suggest-type) {
-    display: inline-grid;
-    place-items: center;
-    min-width: 0;
-    height: 1.35rem;
-    border: 1px solid rgba(99,210,181,0.36);
-    border-radius: 999px;
-    background: rgba(99,210,181,0.08);
-    color: #7ee7ca;
-    font: 900 0.58rem 'Barlow', system-ui, sans-serif;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  :global(.search-suggest-type--post) {
-    border-color: rgba(245,158,11,0.46);
-    background: rgba(245,158,11,0.10);
-    color: #f6b34b;
-  }
-
-  :global(.search-suggest-type--panduan) {
-    border-color: rgba(99,210,181,0.40);
-    background: rgba(99,210,181,0.10);
-    color: #7ee7ca;
-  }
-
-  :global(.search-suggest-title) {
-    min-width: 0;
-    overflow: hidden;
-    color: #f4efe1;
-    font: 800 0.78rem/1.25 'Barlow', system-ui, sans-serif;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .search-autosuggest--desktop {
     width: min(25vw, 20rem);
     min-width: 15rem;
@@ -235,20 +176,6 @@ const rootClass = `search-autosuggest search-autosuggest--${variant}`;
       display: none;
     }
 
-    :global(.search-suggest-item) {
-      grid-template-columns: 4.45rem minmax(0, 1fr);
-      gap: 0.62rem;
-      min-height: 2.85rem;
-      padding: 0 0.62rem;
-    }
-
-    :global(.search-suggest-type) {
-      font-size: 0.56rem;
-    }
-
-    :global(.search-suggest-title) {
-      font-size: 0.76rem;
-    }
   }
 </style>
 
@@ -362,7 +289,7 @@ const rootClass = `search-autosuggest search-autosuggest--${variant}`;
     const typeClass = result.type === 'panduan' ? 'search-suggest-type--panduan' : 'search-suggest-type--post';
 
     return `
-      <a class="search-suggest-item" href="${sanitize(result.href)}">
+      <a class="search-suggest-item" href="${sanitize(result.href)}" role="option">
         <span class="search-suggest-type ${typeClass}">${typeLabel}</span>
         <span class="search-suggest-title">${sanitize(result.title)}</span>
       </a>
@@ -379,17 +306,24 @@ const rootClass = `search-autosuggest search-autosuggest--${variant}`;
 
     if (!input || !panel || !status || !results) return;
 
+    const searchInput = input;
+    const searchPanel = panel;
+    const searchStatus = status;
+    const searchResults = results;
+
     function closePanel() {
-      panel.hidden = true;
+      searchPanel.hidden = true;
+      searchInput.setAttribute('aria-expanded', 'false');
     }
 
     function openPanel(message?: string) {
       if (message) {
-        status.textContent = message;
-        status.hidden = false;
-        results.innerHTML = '';
+        searchStatus.textContent = message;
+        searchStatus.hidden = false;
+        searchResults.innerHTML = '';
       }
-      panel.hidden = false;
+      searchPanel.hidden = false;
+      searchInput.setAttribute('aria-expanded', 'true');
     }
 
     async function runSearch(query: string) {
@@ -417,33 +351,33 @@ const rootClass = `search-autosuggest search-autosuggest--${variant}`;
           return;
         }
 
-        status.hidden = true;
-        results.innerHTML = items.map(renderSuggestion).join('');
-        panel.hidden = false;
+        searchStatus.hidden = true;
+        searchResults.innerHTML = items.map(renderSuggestion).join('');
+        openPanel();
       } catch (error) {
         if ((error as Error).name === 'AbortError') return;
         openPanel('Search belum bisa dipakai. Coba lagi.');
       }
     }
 
-    input.addEventListener('input', () => {
+    searchInput.addEventListener('input', () => {
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => runSearch(input.value), 180);
+      timer = window.setTimeout(() => runSearch(searchInput.value), 180);
     });
 
-    input.addEventListener('focus', () => {
-      if (input.value.trim().length >= 2 || results.innerHTML) {
-        panel.hidden = false;
+    searchInput.addEventListener('focus', () => {
+      if (searchInput.value.trim().length >= 2 || searchResults.innerHTML) {
+        openPanel();
       }
     });
 
     root.addEventListener('submit', (event) => {
       event.preventDefault();
-      const firstResult = results.querySelector<HTMLAnchorElement>('a');
+      const firstResult = searchResults.querySelector<HTMLAnchorElement>('a');
       if (firstResult) {
         window.location.href = firstResult.href;
       } else {
-        runSearch(input.value);
+        runSearch(searchInput.value);
       }
     });
 
@@ -453,7 +387,7 @@ const rootClass = `search-autosuggest search-autosuggest--${variant}`;
       }
     });
 
-    input.addEventListener('keydown', (event) => {
+    searchInput.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') closePanel();
     });
   });

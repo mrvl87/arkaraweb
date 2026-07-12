@@ -1,0 +1,36 @@
+﻿---
+import SearchAutosuggest from '../SearchAutosuggest.astro';
+const navLinks = [
+  { label: 'BLOG', href: '/blog' },
+  { label: 'PANDUAN', href: '/panduan' },
+];
+---
+
+<nav id="main-nav" style="position:sticky;top:0;z-index:100;background:var(--ink);border-bottom:3px solid var(--green-terminal);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:52px;">
+  <a href="/" style="font-family:'Share Tech Mono',monospace;font-size:0.78rem;color:var(--green-terminal);letter-spacing:0.15em;text-decoration:none;display:flex;align-items:center;gap:0.75rem;"><span class="nav-cursor" aria-hidden="true"></span>ARKARA_OS &mdash; SURVIVAL MANUAL</a>
+  <ul style="display:flex;gap:0;list-style:none;margin:0;padding:0;" class="nav-links-desktop">
+    {navLinks.map((link) => <li><a href={link.href} class="desktop-nav__link" style="font-family:'Share Tech Mono',monospace;font-size:0.65rem;letter-spacing:0.12em;text-decoration:none;padding:0.5rem 1.1rem;border-left:1px solid rgba(143,175,143,0.2);display:block;text-transform:uppercase;">{link.label}</a></li>)}
+  </ul>
+  <SearchAutosuggest variant="desktop" placeholder="Cari..." />
+  <button id="nav-mobile-btn" class="nav-mobile-btn" aria-label="Menu" style="display:none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--cream)" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg></button>
+</nav>
+<div id="nav-mobile-menu" style="display:none;position:fixed;top:52px;left:0;right:0;background:var(--ink);border-bottom:3px solid var(--green-terminal);z-index:99;padding:0;">
+  {navLinks.map((link) => <a href={link.href} style="display:block;font-family:'Share Tech Mono',monospace;font-size:0.72rem;letter-spacing:0.15em;color:var(--cream-dark);text-decoration:none;padding:1rem 2rem;border-bottom:1px solid rgba(143,175,143,0.1);text-transform:uppercase;">{link.label}</a>)}
+</div>
+
+<style>
+  .nav-cursor { display:inline-block; width:8px; height:14px; background:var(--green-terminal); animation:blink 1.2s steps(1) infinite; }
+  .desktop-nav__link { color:var(--cream-dark); transition:background 0.15s,color 0.15s; }
+  .desktop-nav__link:hover,.desktop-nav__link:focus-visible { background:var(--green-dark); color:var(--green-terminal); }
+  .desktop-nav__link:focus-visible { outline:2px solid var(--green-terminal); outline-offset:-2px; }
+  @media (max-width: 768px) { #main-nav,#nav-mobile-menu { display:none !important; } }
+</style>
+
+<script>
+  const btn = document.getElementById('nav-mobile-btn');
+  const menu = document.getElementById('nav-mobile-menu');
+  btn?.addEventListener('click', () => {
+    const open = menu?.style.display === 'block';
+    if (menu) menu.style.display = open ? 'none' : 'block';
+  });
+</script>

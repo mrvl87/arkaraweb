@@ -15,7 +15,7 @@ import HeroCarousel from '../components/home/HeroCarousel.astro';
 import MascotSection from '../components/home/MascotSection.astro';
 import SearchAutosuggest from '../components/SearchAutosuggest.astro';
 import { getRecentPosts, getCtaSection, getSiteSettings, getHeroSection } from '../lib/content';
-import { rewriteMediaUrl } from '../lib/media';
+import { getPostImage, getPostImageUrl } from '../lib/post-media';
 
 const [recentPosts, cta, settings, hero] = await Promise.all([
   getRecentPosts(5),
@@ -68,19 +68,6 @@ const guideCategories = [
 ];
 const fixedGuideCategory = guideCategories[0];
 const scrollGuideCategories = guideCategories.slice(1);
-
-function getPostImage(post: any) {
-  return post?.thumbnail_image || post?.banner_image || post?.cover_image;
-}
-
-function getPostImageUrl(post: any) {
-  const image = getPostImage(post);
-  const rawUrl = typeof image === 'string'
-    ? image
-    : image?.formats?.sm || image?.formats?.md || image?.url || image?.src || '';
-
-  return rawUrl ? rewriteMediaUrl(rawUrl, { width: 160, quality: 70 }) : '';
-}
 
 function getCategoryLabel(category?: string | null) {
   if (!category) return 'Artikel';
@@ -422,7 +409,7 @@ function getCategoryLabel(category?: string | null) {
             <PostCard
               title={post.title}
               excerpt={post.description || ''}
-              category={post.category}
+              category={post.category || ''}
               date={post.published_at || ''}
               slug={post.slug}
               readingTime={post.reading_time}
