@@ -1,20 +1,13 @@
 "use client";
 
 import {
-  Bot,
-  Clipboard,
-  Loader2,
-  Save,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
-import {
   deleteSocialPost,
   generateFacebookPostDraft,
   generateFacebookVisualPromptForPost,
 } from "@/app/cms/social/actions";
 import { SocialCarouselEditor } from "./social-carousel-editor";
 import { SocialCopyReadyPanel } from "./social-copy-ready-panel";
+import { SocialPostActionBar } from "./social-post-action-bar";
 import { SocialPostEditorHeader } from "./social-post-editor-header";
 import { SocialPostMainFields } from "./social-post-main-fields";
 import type { PostDraftUpdater, PostEditorProps } from "./social-post-editor-types";
@@ -40,6 +33,24 @@ export function SocialPostEditor({
   const copyVisualPrompt = async () => {
     if (!post.visual_prompt) return;
     await navigator.clipboard.writeText(post.visual_prompt);
+  };
+  const handleGenerateCaption = () => {
+    if (!post.id) return;
+    runAction(() => generateFacebookPostDraft(post.id!));
+  };
+  const handleGenerateVisual = () => {
+    if (!post.id) return;
+    runAction(() => generateFacebookVisualPromptForPost(post.id!));
+  };
+  const handleDeletePost = () => {
+    if (!post.id) return;
+
+    const confirmed = window.confirm(
+      `Hapus post "${post.title}" secara permanen?`,
+    );
+    if (!confirmed) return;
+
+    runAction(() => deleteSocialPost(post.id!));
   };
 
   return (
@@ -73,69 +84,15 @@ export function SocialPostEditor({
             <SocialCarouselEditor post={post} slides={slides} runAction={runAction} />
           ) : null}
 
-          <div className="sticky bottom-0 -mx-5 flex flex-wrap gap-2 border-t border-gray-100 bg-white p-4">
-            <button
-              type="button"
-              onClick={savePost}
-              disabled={isPending}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-arkara-amber px-3 py-2.5 text-sm font-black text-arkara-green disabled:opacity-50"
-            >
-              {isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={() => copyCaption(post)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-700"
-            >
-              <Clipboard className="h-4 w-4" />
-              Copy
-            </button>
-            {post.id ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    runAction(() => generateFacebookPostDraft(post.id!))
-                  }
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-700"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Caption
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    runAction(() =>
-                      generateFacebookVisualPromptForPost(post.id!),
-                    )
-                  }
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-700"
-                >
-                  <Bot className="h-4 w-4" />
-                  Visual
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const confirmed = window.confirm(
-                      `Hapus post "${post.title}" secara permanen?`,
-                    );
-                    if (!confirmed) return;
-
-                    runAction(() => deleteSocialPost(post.id!));
-                  }}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-100 px-3 py-2.5 text-sm font-bold text-red-600"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </>
-            ) : null}
-          </div>
+          <SocialPostActionBar
+            post={post}
+            isPending={isPending}
+            onSave={savePost}
+            onCopyCaption={() => copyCaption(post)}
+            onGenerateCaption={handleGenerateCaption}
+            onGenerateVisual={handleGenerateVisual}
+            onDeletePost={handleDeletePost}
+          />
         </div>
       </aside>
     </div>
