@@ -14,8 +14,9 @@
     "media:migrate-r2": "node scripts/migrate-supabase-media-to-r2.mjs",
     "media:migrate-r2:dry": "node scripts/migrate-supabase-media-to-r2.mjs --dry-run",
     "media:migrate-r2:verify": "node scripts/migrate-supabase-media-to-r2.mjs --verify-only",
+    "check:search-a11y": "node scripts/verify-search-autosuggest.mjs",
     "check": "astro check",
-    "verify": "npm run check && npm run build"
+    "verify": "npm run check:search-a11y && npm run check && npm run build"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^13.5.2",

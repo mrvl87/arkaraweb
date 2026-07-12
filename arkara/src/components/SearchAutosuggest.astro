@@ -11,11 +11,24 @@ const {
   placeholder = 'Cari panduan...',
 } = Astro.props;
 const rootClass = `search-autosuggest search-autosuggest--${variant}`;
-const instanceId = id || `search-autosuggest-${variant}`;
+type SearchAutosuggestLocals = App.Locals & {
+  __arkaraSearchAutosuggestCounters?: Partial<Record<NonNullable<Props['variant']>, number>>;
+};
+const searchAutosuggestLocals = Astro.locals as SearchAutosuggestLocals;
+const searchAutosuggestCounters = searchAutosuggestLocals.__arkaraSearchAutosuggestCounters ??= {};
+let generatedInstanceId: string | undefined;
+
+if (!id) {
+  const nextInstanceNumber = (searchAutosuggestCounters[variant] ?? 0) + 1;
+  searchAutosuggestCounters[variant] = nextInstanceNumber;
+  generatedInstanceId = `search-autosuggest-${variant}-${nextInstanceNumber}`;
+}
+
+const instanceId = id ?? generatedInstanceId ?? `search-autosuggest-${variant}`;
 const resultsId = `${instanceId}-results`;
 ---
 
-<form id={id} class={rootClass} data-search-autosuggest role="search" autocomplete="off">
+<form id={instanceId} class={rootClass} data-search-autosuggest role="search" autocomplete="off">
   <div class="search-autosuggest__field">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
       <circle cx="11" cy="11" r="7" />
@@ -201,7 +214,9 @@ const resultsId = `${instanceId}-results`;
   }
 
   .search-suggest-item:hover,
-  .search-suggest-item:focus {
+  .search-suggest-item:focus,
+  .search-suggest-item.is-active,
+  .search-suggest-item[aria-selected="true"] {
     border-left-color: #63d2b5;
     border-color: rgba(99,210,181,0.30);
     background: rgba(99,210,181,0.11);
@@ -273,6 +288,10 @@ const resultsId = `${instanceId}-results`;
     image?: string | null;
   };
 
+  type SearchAutosuggestWindow = typeof window & {
+    __arkaraSearchAutosuggestDocumentClick?: boolean;
+  };
+
   const searchRoots = document.querySelectorAll<HTMLFormElement>('[data-search-autosuggest]');
 
   function sanitize(value: string) {
@@ -284,12 +303,12 @@ const resultsId = `${instanceId}-results`;
       .replaceAll("'", '&#039;');
   }
 
-  function renderSuggestion(result: SearchSuggestion) {
+  function renderSuggestion(result: SearchSuggestion, instanceId: string, index: number) {
     const typeLabel = result.type === 'panduan' ? 'Panduan' : 'Artikel';
     const typeClass = result.type === 'panduan' ? 'search-suggest-type--panduan' : 'search-suggest-type--post';
 
     return `
-      <a class="search-suggest-item" href="${sanitize(result.href)}" role="option">
+      <a id="${sanitize(`${instanceId}-option-${index}`)}" class="search-suggest-item" href="${sanitize(result.href)}" role="option" aria-selected="false">
         <span class="search-suggest-type ${typeClass}">${typeLabel}</span>
         <span class="search-suggest-title">${sanitize(result.title)}</span>
       </a>
@@ -310,14 +329,49 @@ const resultsId = `${instanceId}-results`;
     const searchPanel = panel;
     const searchStatus = status;
     const searchResults = results;
+    const searchInstanceId = root.id;
+    let activeIndex = -1;
+
+    function getOptions(): HTMLAnchorElement[] {
+      return Array.from(searchResults.querySelectorAll<HTMLAnchorElement>('[role="option"]'));
+    }
+
+    function resetActiveOption() {
+      activeIndex = -1;
+      getOptions().forEach((option) => {
+        option.classList.remove('is-active');
+        option.setAttribute('aria-selected', 'false');
+      });
+      searchInput.removeAttribute('aria-activedescendant');
+    }
+
+    function setActiveIndex(index: number) {
+      const options = getOptions();
+      resetActiveOption();
+
+      if (options.length === 0) {
+        activeIndex = -1;
+        return;
+      }
+
+      const normalizedIndex = ((index % options.length) + options.length) % options.length;
+      const option = options[normalizedIndex];
+      activeIndex = normalizedIndex;
+      option.classList.add('is-active');
+      option.setAttribute('aria-selected', 'true');
+      searchInput.setAttribute('aria-activedescendant', option.id);
+      option.scrollIntoView({ block: 'nearest' });
+    }
 
     function closePanel() {
       searchPanel.hidden = true;
       searchInput.setAttribute('aria-expanded', 'false');
+      resetActiveOption();
     }
 
     function openPanel(message?: string) {
       if (message) {
+        resetActiveOption();
         searchStatus.textContent = message;
         searchStatus.hidden = false;
         searchResults.innerHTML = '';
@@ -328,6 +382,8 @@ const resultsId = `${instanceId}-results`;
 
     async function runSearch(query: string) {
       const trimmed = query.trim();
+      resetActiveOption();
+
       if (trimmed.length < 2) {
         openPanel('Ketik minimal 2 karakter.');
         return;
@@ -352,15 +408,18 @@ const resultsId = `${instanceId}-results`;
         }
 
         searchStatus.hidden = true;
-        searchResults.innerHTML = items.map(renderSuggestion).join('');
+        searchResults.innerHTML = items.map((item, index) => renderSuggestion(item, searchInstanceId, index)).join('');
+        resetActiveOption();
         openPanel();
       } catch (error) {
         if ((error as Error).name === 'AbortError') return;
+        resetActiveOption();
         openPanel('Search belum bisa dipakai. Coba lagi.');
       }
     }
 
     searchInput.addEventListener('input', () => {
+      resetActiveOption();
       window.clearTimeout(timer);
       timer = window.setTimeout(() => runSearch(searchInput.value), 180);
     });
@@ -369,6 +428,15 @@ const resultsId = `${instanceId}-results`;
       if (searchInput.value.trim().length >= 2 || searchResults.innerHTML) {
         openPanel();
       }
+    });
+
+    searchResults.addEventListener('pointerover', (event) => {
+      const target = event.target as Element | null;
+      const option = target?.closest<HTMLAnchorElement>('[role="option"]');
+      if (!option || !searchResults.contains(option)) return;
+
+      const optionIndex = getOptions().indexOf(option);
+      if (optionIndex >= 0) setActiveIndex(optionIndex);
     });
 
     root.addEventListener('submit', (event) => {
@@ -381,14 +449,57 @@ const resultsId = `${instanceId}-results`;
       }
     });
 
-    document.addEventListener('click', (event) => {
-      if (!root.contains(event.target as Node)) {
+    root.addEventListener('arkara:search-close', closePanel);
+
+    searchInput.addEventListener('keydown', (event) => {
+      const options = getOptions();
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (searchPanel.hidden && searchInput.value.trim().length >= 2) openPanel();
+        if (options.length > 0) setActiveIndex(activeIndex < 0 ? 0 : activeIndex + 1);
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (searchPanel.hidden && options.length > 0) openPanel();
+        if (options.length > 0) setActiveIndex(activeIndex < 0 ? options.length - 1 : activeIndex - 1);
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        const activeOption = activeIndex >= 0 ? options[activeIndex] : undefined;
+        const firstResult = searchResults.querySelector<HTMLAnchorElement>('a');
+        if (activeOption) {
+          event.preventDefault();
+          window.location.href = activeOption.href;
+        } else if (firstResult) {
+          event.preventDefault();
+          window.location.href = firstResult.href;
+        } else {
+          event.preventDefault();
+          runSearch(searchInput.value);
+        }
+        return;
+      }
+
+      if (event.key === 'Escape') {
         closePanel();
       }
     });
-
-    searchInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') closePanel();
-    });
   });
+
+  const searchAutosuggestWindow = window as SearchAutosuggestWindow;
+  if (!searchAutosuggestWindow.__arkaraSearchAutosuggestDocumentClick) {
+    document.addEventListener('click', (event) => {
+      const target = event.target as Node;
+      document.querySelectorAll<HTMLFormElement>('[data-search-autosuggest]').forEach((root) => {
+        if (!root.contains(target)) {
+          root.dispatchEvent(new CustomEvent('arkara:search-close'));
+        }
+      });
+    });
+    searchAutosuggestWindow.__arkaraSearchAutosuggestDocumentClick = true;
+  }
 </script>

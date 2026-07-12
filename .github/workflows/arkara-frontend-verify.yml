@@ -1,0 +1,39 @@
+name: Arkara Frontend Verify
+
+on:
+  pull_request:
+    paths:
+      - 'arkara/**'
+      - '.github/workflows/arkara-frontend-verify.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'arkara/**'
+      - '.github/workflows/arkara-frontend-verify.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: arkara-frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: arkara
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: arkara/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run verify
