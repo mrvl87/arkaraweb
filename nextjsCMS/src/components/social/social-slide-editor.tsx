@@ -7,19 +7,17 @@ import {
   updateCarouselSlide,
 } from "@/app/cms/social/actions";
 import type { SocialCarouselSlide } from "@/types/social";
+import type { SocialActionRunner } from "./social-post-editor-types";
+
+interface SocialSlideEditorProps {
+  slide: SocialCarouselSlide;
+  runAction: SocialActionRunner;
+}
+
 export function SocialSlideEditor({
   slide,
   runAction,
-}: {
-  slide: SocialCarouselSlide;
-  runAction: (
-    task: () => Promise<{
-      error?: string;
-      success?: boolean;
-      summary?: string;
-    }>,
-  ) => void;
-}) {
+}: SocialSlideEditorProps) {
   const [draft, setDraft] = useState(slide);
   const copyPrompt = async () => {
     if (!draft.visual_prompt) return;

@@ -3,6 +3,14 @@ import type {
   SocialPost,
 } from "@/types/social";
 
+export type SocialActionRunner = (
+  task: () => Promise<{
+    error?: string;
+    success?: boolean;
+    summary?: string;
+  }>,
+) => void;
+
 export type PostDraft = Omit<
   SocialPost,
   "id" | "user_id" | "created_at" | "updated_at"
@@ -20,13 +28,7 @@ export interface PostEditorProps {
   setPost: (post: PostDraft | null) => void;
   slides: SocialCarouselSlide[];
   isPending: boolean;
-  runAction: (
-    task: () => Promise<{
-      error?: string;
-      success?: boolean;
-      summary?: string;
-    }>,
-  ) => void;
+  runAction: SocialActionRunner;
   savePost: () => void;
   copyCaption: (post: PostDraft | SocialPost) => Promise<void>;
 }

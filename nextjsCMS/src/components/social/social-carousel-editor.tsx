@@ -6,23 +6,20 @@ import {
   generateFacebookCarouselSlides,
 } from "@/app/cms/social/actions";
 import type { SocialCarouselSlide } from "@/types/social";
-import type { PostDraft } from "./social-post-editor-types";
+import type { PostDraft, SocialActionRunner } from "./social-post-editor-types";
 import { SocialSlideEditor } from "./social-slide-editor";
+
+interface SocialCarouselEditorProps {
+  post: PostDraft;
+  slides: SocialCarouselSlide[];
+  runAction: SocialActionRunner;
+}
+
 export function SocialCarouselEditor({
   post,
   slides,
   runAction,
-}: {
-  post: PostDraft;
-  slides: SocialCarouselSlide[];
-  runAction: (
-    task: () => Promise<{
-      error?: string;
-      success?: boolean;
-      summary?: string;
-    }>,
-  ) => void;
-}) {
+}: SocialCarouselEditorProps) {
   const copyAllPrompts = async () => {
     await navigator.clipboard.writeText(
       slides
@@ -63,7 +60,11 @@ export function SocialCarouselEditor({
       </div>
       <div className="space-y-2">
         {slides.map((slide) => (
-          <SocialSlideEditor key={slide.id} slide={slide} runAction={runAction} />
+          <SocialSlideEditor
+            key={slide.id}
+            slide={slide}
+            runAction={runAction}
+          />
         ))}
         {slides.length === 0 ? (
           <p className="text-sm text-gray-400">Belum ada slide.</p>

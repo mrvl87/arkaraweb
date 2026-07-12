@@ -2,6 +2,7 @@
 
 import { Loader2, Pencil, Save } from "lucide-react";
 import type { SocialCampaign, SocialCampaignStatus } from "@/types/social";
+import { SocialEditorField } from "./social-editor-field";
 
 export interface SocialCampaignSettingsDraft {
   title: string;
@@ -45,7 +46,7 @@ export function SocialCampaignSettings({
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Start Date">
+        <SocialEditorField label="Start Date">
           <input
             type="date"
             value={campaignDraft.start_date}
@@ -57,8 +58,8 @@ export function SocialCampaignSettings({
             }
             className="input-social"
           />
-        </Field>
-        <Field label="End Date">
+        </SocialEditorField>
+        <SocialEditorField label="End Date">
           <input
             type="date"
             value={campaignDraft.end_date}
@@ -70,8 +71,8 @@ export function SocialCampaignSettings({
             }
             className="input-social"
           />
-        </Field>
-        <Field label="Title">
+        </SocialEditorField>
+        <SocialEditorField label="Title">
           <input
             value={campaignDraft.title}
             onChange={(event) =>
@@ -82,8 +83,8 @@ export function SocialCampaignSettings({
             }
             className="input-social"
           />
-        </Field>
-        <Field label="Status">
+        </SocialEditorField>
+        <SocialEditorField label="Status">
           <select
             value={campaignDraft.status}
             onChange={(event) =>
@@ -99,7 +100,7 @@ export function SocialCampaignSettings({
             <option value="completed">Completed</option>
             <option value="archived">Archived</option>
           </select>
-        </Field>
+        </SocialEditorField>
       </div>
       <button
         type="button"
@@ -115,22 +116,5 @@ export function SocialCampaignSettings({
         Save Period
       </button>
     </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block space-y-1.5">
-      <span className="text-xs font-black uppercase tracking-widest text-gray-400">
-        {label}
-      </span>
-      {children}
-    </label>
   );
 }

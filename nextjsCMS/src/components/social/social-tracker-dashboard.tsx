@@ -23,7 +23,7 @@ import { SocialAIPlanPanel } from "./social-ai-plan-panel";
 import { SocialCampaignList } from "./social-campaign-list";
 import { SocialCampaignSettings } from "./social-campaign-settings";
 import { SocialCampaignHeader } from "./social-campaign-header";
-import type { PostDraft } from "./social-post-editor-types";
+import type { PostDraft, SocialActionRunner } from "./social-post-editor-types";
 import { SocialPostEditor } from "./social-post-editor";
 import { SocialWeeklyBoard } from "./social-weekly-board";
 import {
@@ -35,7 +35,6 @@ import {
 interface SocialTrackerDashboardProps {
   initialData: SocialDashboardData;
 }
-
 
 function makeEmptyPost(campaignId?: string | null): PostDraft {
   return {
@@ -113,13 +112,7 @@ export function SocialTrackerDashboard({
     ? `${posts.length || 0} weekly cards`
     : "Belum ada campaign";
 
-  const runAction = (
-    task: () => Promise<{
-      error?: string;
-      success?: boolean;
-      summary?: string;
-    }>,
-  ) => {
+  const runAction: SocialActionRunner = (task) => {
     setError(null);
     setInfo(null);
     startTransition(async () => {

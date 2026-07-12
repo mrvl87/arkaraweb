@@ -10,7 +10,10 @@ import { SocialCopyReadyPanel } from "./social-copy-ready-panel";
 import { SocialPostActionBar } from "./social-post-action-bar";
 import { SocialPostEditorHeader } from "./social-post-editor-header";
 import { SocialPostMainFields } from "./social-post-main-fields";
-import type { PostDraftUpdater, PostEditorProps } from "./social-post-editor-types";
+import type {
+  PostDraftUpdater,
+  PostEditorProps,
+} from "./social-post-editor-types";
 import { buildCaption } from "./social-utils";
 
 export function SocialPostEditor({
@@ -81,7 +84,11 @@ export function SocialPostEditor({
           />
 
           {post.post_type === "carousel" ? (
-            <SocialCarouselEditor post={post} slides={slides} runAction={runAction} />
+            <SocialCarouselEditor
+              post={post}
+              slides={slides}
+              runAction={runAction}
+            />
           ) : null}
 
           <SocialPostActionBar

@@ -3,6 +3,7 @@
 import { Bot, Loader2, Sparkles } from "lucide-react";
 import { generateWeeklyFacebookPlan } from "@/app/cms/social/actions";
 import type { SocialCampaign, SocialDashboardData } from "@/types/social";
+import type { SocialActionRunner } from "./social-post-editor-types";
 
 interface SocialAIPlanPanelProps {
   sources: SocialDashboardData["sources"];
@@ -10,13 +11,7 @@ interface SocialAIPlanPanelProps {
   onSelectedSourceForPlanChange: (value: string) => void;
   activeCampaign: SocialCampaign | null;
   isPending: boolean;
-  runAction: (
-    task: () => Promise<{
-      error?: string;
-      success?: boolean;
-      summary?: string;
-    }>,
-  ) => void;
+  runAction: SocialActionRunner;
 }
 
 export function SocialAIPlanPanel({
