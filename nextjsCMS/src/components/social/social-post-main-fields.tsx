@@ -7,7 +7,6 @@ import type { PostDraft, PostDraftUpdater } from "./social-post-editor-types";
 interface SocialPostMainFieldsProps {
   post: PostDraft;
   update: PostDraftUpdater;
-  setPost: (post: PostDraft | null) => void;
   captionValue: string;
   onCopyVisualPrompt: () => void;
 }
@@ -15,7 +14,6 @@ interface SocialPostMainFieldsProps {
 export function SocialPostMainFields({
   post,
   update,
-  setPost,
   captionValue,
   onCopyVisualPrompt,
 }: SocialPostMainFieldsProps) {
@@ -28,20 +26,43 @@ export function SocialPostMainFields({
           className="input-social"
         />
       </SocialEditorField>
-      <SocialEditorField label="Short Caption">
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <SocialEditorField label="Hook">
+          <textarea
+            value={post.hook ?? ""}
+            onChange={(event) =>
+              update("hook", event.target.value || null)
+            }
+            rows={3}
+            className="input-social resize-y text-[15px] leading-7"
+          />
+        </SocialEditorField>
+        <SocialEditorField label="CTA">
+          <textarea
+            value={post.cta ?? ""}
+            onChange={(event) => update("cta", event.target.value || null)}
+            rows={3}
+            className="input-social resize-y text-[15px] leading-7"
+          />
+        </SocialEditorField>
+      </div>
+
+      <SocialEditorField label="Body">
+        <textarea
+          value={post.body ?? ""}
+          onChange={(event) => update("body", event.target.value || null)}
+          rows={6}
+          className="input-social resize-y text-[15px] leading-7"
+        />
+      </SocialEditorField>
+
+      <SocialEditorField label="Combined Caption Preview">
         <textarea
           value={captionValue}
-          onChange={(event) =>
-            setPost({
-              ...post,
-              hook: null,
-              body: event.target.value,
-              cta: null,
-              caption_done: event.target.value.trim().length > 0,
-            })
-          }
-          rows={4}
-          className="input-social resize-y text-[15px] leading-7"
+          readOnly
+          rows={6}
+          className="input-social resize-y bg-gray-50 text-[15px] leading-7 text-gray-600"
         />
       </SocialEditorField>
 

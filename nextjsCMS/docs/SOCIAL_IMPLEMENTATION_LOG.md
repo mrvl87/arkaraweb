@@ -97,3 +97,99 @@ Acceptance criteria status:
 - Dependency renderer yang akan dipakai sudah diputuskan: done.
 - Risiko backward compatibility sudah dicatat: done.
 - Tidak ada perubahan behavior aplikasi: done.
+
+## 2026-07-13: Phase 1 Existing Social Tracker Stabilization
+
+Scope:
+
+- Stabilize existing Social Tracker behavior only.
+- No database schema changes.
+- No AI prompt changes.
+- No Meta API or autoposting.
+
+Files inspected:
+
+- `package.json`
+- `src/app/cms/social/actions.ts`
+- `src/components/social/social-tracker-dashboard.tsx`
+- `src/components/social/social-weekly-board.tsx`
+- `src/components/social/social-weekly-post-card.tsx`
+- `src/components/social/social-post-editor.tsx`
+- `src/components/social/social-post-main-fields.tsx`
+- `src/components/social/social-post-action-bar.tsx`
+- `src/components/social/social-copy-ready-panel.tsx`
+- `src/components/social/social-utils.ts`
+- `src/components/social/social-ai-plan-panel.tsx`
+- `src/components/social/social-carousel-editor.tsx`
+- `src/components/social/social-slide-editor.tsx`
+- `src/components/social/social-post-editor-types.ts`
+- `src/types/social.ts`
+- `src/lib/supabase/server.ts`
+- `supabase/migrations/20260510120000_create_social_tracker.sql`
+- `docs/SOCIAL_PRODUCT_SPEC.md`
+- `docs/SOCIAL_DATA_MODEL.md`
+- `docs/SOCIAL_ACCEPTANCE_CRITERIA.md`
+- `docs/SOCIAL_IMPLEMENTATION_LOG.md`
+
+Files changed:
+
+- `src/components/social/social-tracker-dashboard.tsx`
+- `src/components/social/social-weekly-board.tsx`
+- `src/components/social/social-weekly-post-card.tsx`
+- `src/components/social/social-post-editor.tsx`
+- `src/components/social/social-post-main-fields.tsx`
+- `src/components/social/social-post-action-bar.tsx`
+- `src/components/social/social-copy-ready-panel.tsx`
+- `src/components/social/social-utils.ts`
+- `src/components/social/social-post-editor-types.ts`
+- `src/components/social/social-checklist-panel.tsx`
+- `src/components/social/social-metrics-panel.tsx`
+- `docs/SOCIAL_PRODUCT_SPEC.md`
+- `docs/SOCIAL_DATA_MODEL.md`
+- `docs/SOCIAL_ACCEPTANCE_CRITERIA.md`
+- `docs/SOCIAL_IMPLEMENTATION_LOG.md`
+
+Migrations created:
+
+- None.
+
+Feature work completed:
+
+- Removed Social Tracker localStorage as source of truth for copied and posted state.
+- Weekly cards now use `copied_done`, `posted_done`, `status`, and latest metrics from server data.
+- Copy caption now persists through `copyPostCaptionMark()` after clipboard copy.
+- Posted state now persists through `markPostPosted()`.
+- Editor has separate Hook, Body, and CTA fields.
+- Combined caption is read-only and generated with `buildCaption()`.
+- Editor exposes Copy Caption, Mark Ready, Mark Posted, and Mark Reviewed actions.
+- Added checklist panel using `togglePostChecklistItem()` for non-status checklist items.
+- Added metrics panel using `recordPostMetrics()`.
+- Metrics save marks `metrics_done = true` and `status = reviewed` through the existing server action.
+- Latest metrics display on weekly cards and inside the editor.
+
+Checklist/status duplication note:
+
+- `status` remains the workflow state.
+- `copied_done`, `posted_done`, and `metrics_done` remain checklist flags used for UI badges and workflow completion.
+- Non-status checklist fields remain manual operational flags.
+- No checklist fields were removed.
+
+Tests run:
+
+- `npx tsc --noEmit --pretty false`: passed during implementation.
+- Final verification pending.
+
+Remaining risks:
+
+- `npm run lint` still uses the existing `next lint` script that failed in phase 0 before linting.
+- Mark Reviewed can set status reviewed without metrics if the user clicks it manually; metrics save remains the primary reviewed workflow.
+- Existing localStorage values are ignored by design because database fields are now the source of truth.
+
+Acceptance criteria status:
+
+- Refresh browser tidak menghilangkan status copy atau posted: done.
+- Status sama pada perangkat berbeda: done via database-backed state.
+- Hook, body, dan CTA dapat diedit terpisah: done.
+- Metrics dapat dimasukkan dari UI: done.
+- Post reviewed menampilkan metrics terakhir: done.
+- Existing campaign dan post lama tetap dapat dibuka: preserved; no schema change.

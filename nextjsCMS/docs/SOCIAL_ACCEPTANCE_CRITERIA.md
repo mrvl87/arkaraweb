@@ -24,18 +24,26 @@ Acceptance criteria:
 - No code behavior is changed.
 - No database migration is created.
 
-## Phase 1: Data Foundation
+## Phase 1: Existing Social Tracker Stabilization
 
 Acceptance criteria:
 
-- Additive Supabase migrations are created for planned Social Content OS tables.
-- All new user-owned tables include `user_id`.
-- RLS policies require `auth.uid() = user_id`.
-- Existing social tables remain unchanged or only receive additive nullable columns.
-- Existing social data remains readable.
-- TypeScript types are updated.
-- Documentation data model is updated after migration.
-- Lint and typecheck pass.
+- Copied status no longer uses localStorage as source of truth.
+- Facebook posted status no longer uses localStorage as source of truth.
+- Weekly post cards read copied, posted, reviewed, and metrics state from database-backed fields.
+- Optimistic UI is allowed, but successful server action refreshes server data.
+- Hook, body, and CTA are edited separately.
+- Combined caption preview is read-only and uses `buildCaption()`.
+- Editing preview can no longer erase hook or CTA.
+- Editor exposes Copy Caption, Mark Ready, Mark Posted, and Mark Reviewed actions.
+- Metrics can be entered from UI with reach, comments, shares, link clicks, notes, and next action.
+- Saving metrics sets `metrics_done = true` and `status = reviewed` through existing server action.
+- Reviewed posts show the latest metrics in the UI.
+- Existing campaigns and old posts remain readable.
+- No schema migration is required.
+- AI prompts are unchanged.
+- Documentation and implementation log are updated.
+- Typecheck passes.
 
 ## Phase 2: Idea and Strategy
 

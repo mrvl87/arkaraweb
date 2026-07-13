@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import type { SocialPost } from "@/types/social";
 
 export const DAY_LABELS = [
@@ -12,25 +11,6 @@ export const DAY_LABELS = [
   "Sabtu",
   "Minggu",
 ] as const;
-
-export function getLocalKey(kind: "copied" | "facebook_done", postId: string) {
-  return `arkara.social.${kind}.${postId}`;
-}
-
-export function useLocalBoolean(key: string, fallback = false) {
-  const [value, setValue] = useState(fallback);
-
-  useEffect(() => {
-    setValue(window.localStorage.getItem(key) === "1" || fallback);
-  }, [fallback, key]);
-
-  const setPersistedValue = (nextValue: boolean) => {
-    setValue(nextValue);
-    window.localStorage.setItem(key, nextValue ? "1" : "0");
-  };
-
-  return [value, setPersistedValue] as const;
-}
 
 export function getPostDayIndex(post: Pick<SocialPost, "scheduled_date">) {
   if (!post.scheduled_date) return 99;

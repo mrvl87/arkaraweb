@@ -25,7 +25,7 @@ Out of scope:
 
 ## Current Product State
 
-The current Social Tracker is a manual Facebook planning tool. It supports campaign setup, weekly post planning, post editing, caption copying, visual prompt copying, carousel slide generation, manual posted tracking, and manual metrics entry.
+The current Social Tracker is a manual Facebook planning tool. It supports campaign setup, weekly post planning, post editing, caption copying, visual prompt copying, carousel slide generation, manual posted tracking, database-backed copy/posted state, and manual metrics entry.
 
 The current UI name is "Social Tracker". The target product is "Social Content OS", but the name should not be changed until a later phase explicitly changes behavior and navigation.
 
@@ -44,10 +44,11 @@ The current UI name is "Social Tracker". The target product is "Social Content O
 1. A post belongs to a campaign and `user_id`.
 2. A user can add a manual post through the dashboard.
 3. The editor stores title, caption parts, target URL, source, schedule, status, visual prompt, objective, pillar, checklist booleans, and notes.
-4. `buildCaption()` joins hook, body, CTA, and target URL with blank lines.
-5. Copy buttons write the built caption or prompt to the clipboard.
-6. The editor can call AI actions for caption and visual prompt when the post already exists.
-7. Ready and posted states are validated by server action before save/status change.
+4. Hook, body, and CTA are edited separately.
+5. `buildCaption()` joins hook, body, CTA, and target URL into a read-only combined preview.
+6. Copy buttons write the built caption or prompt to the clipboard and persist copy state when a post exists.
+7. The editor can call AI actions for caption and visual prompt when the post already exists.
+8. Ready and posted states are validated by server action before save/status change.
 
 ## Current Weekly Plan Generator
 
@@ -161,11 +162,12 @@ Server actions already available:
 - `updatePostStatus(id, status)`
 - `recordPostMetrics(input)`
 
-UI usage gaps:
+Phase 1 UI usage:
 
-- Weekly card copy state uses `localStorage` instead of `copyPostCaptionMark()`.
-- Weekly card Facebook done state uses `localStorage` instead of `markPostPosted()` or `togglePostChecklistItem()`.
-- The metrics action exists but the current social UI does not expose a complete metrics entry panel.
+- Weekly card copy state uses `copyPostCaptionMark()` and `copied_done`.
+- Weekly card Facebook done state uses `markPostPosted()`, `posted_done`, and `status`.
+- Ready, posted, and reviewed buttons use existing status server actions.
+- Metrics entry is available in the post editor and uses `recordPostMetrics()`.
 
 Metrics fields:
 
@@ -176,24 +178,19 @@ Metrics fields:
 - Notes.
 - Next action.
 
-## LocalStorage Duplication
+## Publishing State Stabilization
 
-Current local keys:
+Phase 1 removed `localStorage` as the source of truth for copied and posted state inside the Social Tracker UI.
 
-- `arkara.social.facebook_done.{postId}`
-- `arkara.social.copied.{postId}`
+Database-backed state now drives weekly cards and editor workflow:
 
-These duplicate database fields:
+- `copied_done` is set through `copyPostCaptionMark()` after a caption copy.
+- `posted_done` and `status = posted` are set through `markPostPosted()` after manual Facebook posting.
+- Ready, posted, and reviewed status changes use `updatePostStatus()` through explicit buttons.
+- Manual checklist toggles use `togglePostChecklistItem()` for non-status checklist items.
+- Metrics save uses `recordPostMetrics()`, then sets `metrics_done = true` and `status = reviewed`.
 
-- `posted_done`
-- `copied_done`
-- `status = posted`
-
-Future migration path:
-
-1. Keep localStorage reads initially for compatibility.
-2. Write database state through existing server actions.
-3. Optionally clear or ignore localStorage after database state becomes the source of truth.
+Checklist fields remain in place. `status` is the workflow state, while checklist fields remain operational flags for copy, posted, asset, visual prompt, and metrics readiness.
 
 ## Target Product Flow
 
@@ -267,5 +264,5 @@ Optional later dependency:
 - Existing checklist booleans must keep meaning until replacement fields are fully wired.
 - New planned fields/tables should be additive.
 - Existing `post_type`, `status`, and `image_status` enums should not be narrowed.
-- LocalStorage state should be migrated gently, not abruptly ignored without a UI fallback.
+- Legacy localStorage state is no longer the source of truth for copied or posted status.
 - Existing AI generation logs must remain compatible with current operation names.

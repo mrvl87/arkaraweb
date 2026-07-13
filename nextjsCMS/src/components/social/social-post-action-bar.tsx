@@ -2,6 +2,7 @@
 
 import {
   Bot,
+  CheckCircle2,
   Clipboard,
   Loader2,
   Save,
@@ -15,6 +16,9 @@ interface SocialPostActionBarProps {
   isPending: boolean;
   onSave: () => void;
   onCopyCaption: () => void;
+  onMarkReady: () => void;
+  onMarkPosted: () => void;
+  onMarkReviewed: () => void;
   onGenerateCaption: () => void;
   onGenerateVisual: () => void;
   onDeletePost: () => void;
@@ -25,17 +29,22 @@ export function SocialPostActionBar({
   isPending,
   onSave,
   onCopyCaption,
+  onMarkReady,
+  onMarkPosted,
+  onMarkReviewed,
   onGenerateCaption,
   onGenerateVisual,
   onDeletePost,
 }: SocialPostActionBarProps) {
+  const existingPost = Boolean(post.id);
+
   return (
     <div className="sticky bottom-0 -mx-5 flex flex-wrap gap-2 border-t border-gray-100 bg-white p-4">
       <button
         type="button"
         onClick={onSave}
         disabled={isPending}
-        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-arkara-amber px-3 py-2.5 text-sm font-black text-arkara-green disabled:opacity-50"
+        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-arkara-amber px-3 py-2.5 text-sm font-black text-arkara-green disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isPending ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -47,17 +56,46 @@ export function SocialPostActionBar({
       <button
         type="button"
         onClick={onCopyCaption}
-        className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-700"
+        disabled={isPending || !existingPost}
+        className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Clipboard className="h-4 w-4" />
-        Copy
+        Copy Caption
       </button>
-      {post.id ? (
+      {existingPost ? (
         <>
           <button
             type="button"
+            onClick={onMarkReady}
+            disabled={isPending || post.status === "ready"}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-green-100 px-3 py-2.5 text-sm font-bold text-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Ready
+          </button>
+          <button
+            type="button"
+            onClick={onMarkPosted}
+            disabled={isPending || post.status === "posted" || post.status === "reviewed"}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-100 px-3 py-2.5 text-sm font-bold text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Posted
+          </button>
+          <button
+            type="button"
+            onClick={onMarkReviewed}
+            disabled={isPending || post.status === "reviewed"}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-purple-100 px-3 py-2.5 text-sm font-bold text-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Reviewed
+          </button>
+          <button
+            type="button"
             onClick={onGenerateCaption}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-700"
+            disabled={isPending}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Sparkles className="h-4 w-4" />
             Caption
@@ -65,7 +103,8 @@ export function SocialPostActionBar({
           <button
             type="button"
             onClick={onGenerateVisual}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-700"
+            disabled={isPending}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Bot className="h-4 w-4" />
             Visual
@@ -73,7 +112,8 @@ export function SocialPostActionBar({
           <button
             type="button"
             onClick={onDeletePost}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-100 px-3 py-2.5 text-sm font-bold text-red-600"
+            disabled={isPending}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-100 px-3 py-2.5 text-sm font-bold text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Trash2 className="h-4 w-4" />
           </button>

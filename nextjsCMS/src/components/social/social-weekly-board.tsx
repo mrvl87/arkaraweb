@@ -1,17 +1,24 @@
 "use client";
 
 import { CalendarDays } from "lucide-react";
-import type { SocialPost } from "@/types/social";
+import type { SocialPost, SocialPostMetric } from "@/types/social";
+import type { SocialActionRunner } from "./social-post-editor-types";
 import { SocialWeeklyPostCard } from "./social-weekly-post-card";
 import { DAY_LABELS, getPostDayIndex } from "./social-utils";
 
 interface SocialWeeklyBoardProps {
   weekPosts: SocialPost[];
+  metricsByPost: Map<string, SocialPostMetric>;
+  isPending: boolean;
+  runAction: SocialActionRunner;
   onEditPost: (post: SocialPost) => void;
 }
 
 export function SocialWeeklyBoard({
   weekPosts,
+  metricsByPost,
+  isPending,
+  runAction,
   onEditPost,
 }: SocialWeeklyBoardProps) {
   return (
@@ -28,8 +35,7 @@ export function SocialWeeklyBoard({
             </h3>
           </div>
           <p className="max-w-md text-sm text-gray-500">
-            Check biru disimpan lokal. Saat diklik, warnanya berubah abu-abu
-            sebagai tanda post sudah dibuat di Facebook.
+            Copy, posted, dan reviewed sekarang mengikuti database agar tetap sama setelah refresh dan di perangkat lain.
           </p>
         </div>
 
@@ -56,6 +62,9 @@ export function SocialWeeklyBoard({
                     <SocialWeeklyPostCard
                       key={post.id}
                       post={post}
+                      latestMetric={metricsByPost.get(post.id) ?? null}
+                      isPending={isPending}
+                      runAction={runAction}
                       onEdit={() => onEditPost(post)}
                     />
                   ))}

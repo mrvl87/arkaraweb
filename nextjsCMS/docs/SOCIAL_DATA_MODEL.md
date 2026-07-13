@@ -338,7 +338,7 @@ Future migrations should be additive:
 
 ## Data Risks
 
-- Current localStorage keys duplicate DB checklist state.
+- Phase 1 removed Social Tracker localStorage as source of truth for copied and posted state.
 - Current AI visual prompts encode text-in-image behavior that conflicts with deterministic renderer goals.
 - The live `media` table may differ from `supabase/schema.sql`; verify before linking social assets to `media.id`.
 - Existing carousel regeneration deletes slides. Versioning is needed before users can safely preserve previous visual work.

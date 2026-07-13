@@ -1,15 +1,18 @@
 import type {
   SocialCarouselSlide,
   SocialPost,
+  SocialPostMetric,
 } from "@/types/social";
 
+export interface SocialActionResult {
+  error?: string;
+  success?: boolean;
+  summary?: string;
+}
+
 export type SocialActionRunner = (
-  task: () => Promise<{
-    error?: string;
-    success?: boolean;
-    summary?: string;
-  }>,
-) => void;
+  task: () => Promise<SocialActionResult>,
+) => Promise<SocialActionResult>;
 
 export type PostDraft = Omit<
   SocialPost,
@@ -27,8 +30,8 @@ export interface PostEditorProps {
   post: PostDraft | null;
   setPost: (post: PostDraft | null) => void;
   slides: SocialCarouselSlide[];
+  latestMetric: SocialPostMetric | null;
   isPending: boolean;
   runAction: SocialActionRunner;
   savePost: () => void;
-  copyCaption: (post: PostDraft | SocialPost) => Promise<void>;
 }

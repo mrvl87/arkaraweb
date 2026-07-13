@@ -18,6 +18,7 @@ import type {
   SocialCarouselSlide,
   SocialDashboardData,
   SocialPost,
+  SocialPostMetric,
 } from "@/types/social";
 import { SocialAIPlanPanel } from "./social-ai-plan-panel";
 import { SocialCampaignList } from "./social-campaign-list";
@@ -27,7 +28,6 @@ import type { PostDraft, SocialActionRunner } from "./social-post-editor-types";
 import { SocialPostEditor } from "./social-post-editor";
 import { SocialWeeklyBoard } from "./social-weekly-board";
 import {
-  buildCaption,
   getPostDayIndex,
   todayDate,
 } from "./social-utils";
@@ -107,6 +107,15 @@ export function SocialTrackerDashboard({
     }
     return map;
   }, [initialData.slides]);
+  const latestMetricsByPost = useMemo(() => {
+    const map = new Map<string, SocialPostMetric>();
+    for (const metric of initialData.metrics) {
+      if (!map.has(metric.post_id)) {
+        map.set(metric.post_id, metric);
+      }
+    }
+    return map;
+  }, [initialData.metrics]);
 
   const progressText = activeCampaign
     ? `${posts.length || 0} weekly cards`
@@ -115,14 +124,29 @@ export function SocialTrackerDashboard({
   const runAction: SocialActionRunner = (task) => {
     setError(null);
     setInfo(null);
-    startTransition(async () => {
-      const result = await task();
-      if (result?.error) {
-        setError(result.error);
-        return;
-      }
-      if (result?.summary) setInfo(result.summary);
-      router.refresh();
+
+    return new Promise((resolve) => {
+      startTransition(async () => {
+        try {
+          const result = await task();
+          if (result?.error) {
+            setError(result.error);
+            resolve(result);
+            return;
+          }
+          if (result?.summary) setInfo(result.summary);
+          router.refresh();
+          resolve(result ?? { success: true });
+        } catch (actionError) {
+          const message =
+            actionError instanceof Error
+              ? actionError.message
+              : "Action gagal dijalankan.";
+          const result = { error: message };
+          setError(message);
+          resolve(result);
+        }
+      });
     });
   };
 
@@ -166,6 +190,8 @@ export function SocialTrackerDashboard({
         objective: selectedPost.objective ?? "",
         content_pillar: selectedPost.content_pillar ?? "",
         notes: selectedPost.notes ?? "",
+        caption_done: Boolean(selectedPost.body?.trim()),
+        cta_done: Boolean(selectedPost.cta?.trim()),
       };
 
       const result = selectedPost.id
@@ -177,13 +203,12 @@ export function SocialTrackerDashboard({
     });
   };
 
-  const copyCaption = async (post: PostDraft | SocialPost) => {
-    await navigator.clipboard.writeText(buildCaption(post));
-  };
-
   const selectedSlides = selectedPost?.id
     ? (slidesByPost.get(selectedPost.id) ?? [])
     : [];
+  const selectedMetric = selectedPost?.id
+    ? (latestMetricsByPost.get(selectedPost.id) ?? null)
+    : null;
 
   useEffect(() => {
     if (!activeCampaign) return;
@@ -198,6 +223,12 @@ export function SocialTrackerDashboard({
       status: activeCampaign.status,
     });
   }, [activeCampaign]);
+
+  useEffect(() => {
+    if (!selectedPost?.id) return;
+    const freshPost = posts.find((post) => post.id === selectedPost.id);
+    if (freshPost) setSelectedPost(freshPost);
+  }, [posts, selectedPost?.id]);
 
   const saveCampaignSettings = () => {
     if (!activeCampaign) return;
@@ -303,6 +334,9 @@ export function SocialTrackerDashboard({
       ) : (
         <SocialWeeklyBoard
           weekPosts={weekPosts}
+          metricsByPost={latestMetricsByPost}
+          isPending={isPending}
+          runAction={runAction}
           onEditPost={(post) => setSelectedPost(post)}
         />
       )}
@@ -311,10 +345,10 @@ export function SocialTrackerDashboard({
         post={selectedPost}
         setPost={setSelectedPost}
         slides={selectedSlides}
+        latestMetric={selectedMetric}
         isPending={isPending}
         runAction={runAction}
         savePost={savePost}
-        copyCaption={copyCaption}
       />
     </div>
   );

@@ -1,12 +1,17 @@
 "use client";
 
 import {
+  copyPostCaptionMark,
   deleteSocialPost,
   generateFacebookPostDraft,
   generateFacebookVisualPromptForPost,
+  markPostPosted,
+  updatePostStatus,
 } from "@/app/cms/social/actions";
 import { SocialCarouselEditor } from "./social-carousel-editor";
+import { SocialChecklistPanel } from "./social-checklist-panel";
 import { SocialCopyReadyPanel } from "./social-copy-ready-panel";
+import { SocialMetricsPanel } from "./social-metrics-panel";
 import { SocialPostActionBar } from "./social-post-action-bar";
 import { SocialPostEditorHeader } from "./social-post-editor-header";
 import { SocialPostMainFields } from "./social-post-main-fields";
@@ -20,10 +25,10 @@ export function SocialPostEditor({
   post,
   setPost,
   slides,
+  latestMetric,
   isPending,
   runAction,
   savePost,
-  copyCaption,
 }: PostEditorProps) {
   if (!post) {
     return null;
@@ -36,6 +41,41 @@ export function SocialPostEditor({
   const copyVisualPrompt = async () => {
     if (!post.visual_prompt) return;
     await navigator.clipboard.writeText(post.visual_prompt);
+  };
+  const handleCopyCaption = () => {
+    if (!post.id) return;
+    const previousPost = post;
+    setPost({ ...post, copied_done: true });
+    runAction(async () => {
+      await navigator.clipboard.writeText(captionValue);
+      return copyPostCaptionMark(post.id!);
+    }).then((result) => {
+      if (result.error) setPost(previousPost);
+    });
+  };
+  const handleMarkReady = () => {
+    if (!post.id) return;
+    const previousPost = post;
+    setPost({ ...post, status: "ready" });
+    runAction(() => updatePostStatus(post.id!, "ready")).then((result) => {
+      if (result.error) setPost(previousPost);
+    });
+  };
+  const handleMarkPosted = () => {
+    if (!post.id) return;
+    const previousPost = post;
+    setPost({ ...post, status: "posted", posted_done: true, copied_done: true });
+    runAction(() => markPostPosted(post.id!)).then((result) => {
+      if (result.error) setPost(previousPost);
+    });
+  };
+  const handleMarkReviewed = () => {
+    if (!post.id) return;
+    const previousPost = post;
+    setPost({ ...post, status: "reviewed" });
+    runAction(() => updatePostStatus(post.id!, "reviewed")).then((result) => {
+      if (result.error) setPost(previousPost);
+    });
   };
   const handleGenerateCaption = () => {
     if (!post.id) return;
@@ -73,14 +113,20 @@ export function SocialPostEditor({
         <SocialPostEditorHeader onClose={() => setPost(null)} />
 
         <div className="flex-1 space-y-5 overflow-y-auto p-5">
-          <SocialCopyReadyPanel onCopyCaption={() => copyCaption(post)} />
+          <SocialCopyReadyPanel disabled={isPending || !post.id} onCopyCaption={handleCopyCaption} />
 
           <SocialPostMainFields
             post={post}
             update={update}
-            setPost={setPost}
             captionValue={captionValue}
             onCopyVisualPrompt={copyVisualPrompt}
+          />
+
+          <SocialChecklistPanel
+            post={post}
+            setPost={setPost}
+            isPending={isPending}
+            runAction={runAction}
           />
 
           {post.post_type === "carousel" ? (
@@ -91,11 +137,22 @@ export function SocialPostEditor({
             />
           ) : null}
 
+          <SocialMetricsPanel
+            post={post}
+            setPost={setPost}
+            latestMetric={latestMetric}
+            isPending={isPending}
+            runAction={runAction}
+          />
+
           <SocialPostActionBar
             post={post}
             isPending={isPending}
             onSave={savePost}
-            onCopyCaption={() => copyCaption(post)}
+            onCopyCaption={handleCopyCaption}
+            onMarkReady={handleMarkReady}
+            onMarkPosted={handleMarkPosted}
+            onMarkReviewed={handleMarkReviewed}
             onGenerateCaption={handleGenerateCaption}
             onGenerateVisual={handleGenerateVisual}
             onDeletePost={handleDeletePost}
