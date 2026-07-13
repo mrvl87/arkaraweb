@@ -389,67 +389,362 @@ test('zip entry names remove traversal segments', () => {
   assert.equal(sanitizeZipEntryName('carousel\\..\\02-slide.png'), 'carousel/02-slide.png')
   assert.equal(sanitizeZipEntryName('/'), 'asset')
 })
-test('social migrations remain additive and ordered', () => {
-  const migrationDir = require('node:path').join(__dirname, '..', 'supabase', 'migrations')
-  const socialMigrations = fs.readdirSync(migrationDir)
-    .filter((file) => file.includes('social') && file.endsWith('.sql'))
-    .sort()
+const path = require('node:path')
+const {
+  getSupabaseSocialAssetRemotePatterns,
+} = require('../src/lib/social/supabase-image-pattern.ts')
 
-  assert.deepEqual(socialMigrations, [
-    '20260510120000_create_social_tracker.sql',
-    '20260713090000_add_social_assets_and_publications.sql',
-    '20260713100000_add_social_carousel_slide_visual_spec.sql',
-    '20260713120000_extend_social_post_derivative_types.sql',
-    '20260713130000_create_social_post_variants.sql',
-    '20260713140000_extend_social_post_metrics_analytics.sql',
-    '20260713150000_create_social_learnings.sql',
-    '20260713160000_add_social_metric_ingestion.sql',
-  ])
+const SOCIAL_MIGRATION_BASELINE = '20260510120000_create_social_tracker.sql'
+const SOCIAL_TABLES = [
+  'social_campaigns',
+  'social_posts',
+  'social_carousel_slides',
+  'social_post_metrics',
+  'social_assets',
+  'social_publications',
+  'social_post_variants',
+  'social_learnings',
+  'social_metric_imports',
+]
 
-  const additiveSql = socialMigrations
-    .slice(1)
-    .map((file) => fs.readFileSync(require('node:path').join(migrationDir, file), 'utf8').toLowerCase())
-    .join('\n')
+function normalizeSql(sql) {
+  return sql
+    .replace(/--.*$/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
 
-  assert.equal(/drop\s+table\b/.test(additiveSql), false)
-  assert.equal(/drop\s+column\b/.test(additiveSql), false)
-})
+function extractCreatePolicyStatements(sql) {
+  return (sql.match(/create\s+policy[\s\S]*?;/gi) ?? []).map(normalizeSql)
+}
 
-test('social RLS migrations protect owned rows', () => {
-  const migrationDir = require('node:path').join(__dirname, '..', 'supabase', 'migrations')
-  const sql = fs.readdirSync(migrationDir)
-    .filter((file) => file.includes('social') && file.endsWith('.sql'))
-    .map((file) => fs.readFileSync(require('node:path').join(migrationDir, file), 'utf8').toLowerCase())
-    .join('\n')
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^\${}()|[\]\\]/g, '\\$&')
+}
 
-  for (const table of [
-    'social_campaigns',
-    'social_posts',
-    'social_carousel_slides',
-    'social_post_metrics',
-    'social_assets',
-    'social_publications',
-    'social_post_variants',
-    'social_learnings',
-    'social_metric_imports',
-  ]) {
-    assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`))
-    assert.match(sql, new RegExp(String.raw`on public\.${table}[\s\S]*auth\.uid\(\)\) = user_id|on public\.${table}[\s\S]*auth\.uid\(\) = user_id|on public\.${table}[\s\S]*user_id = auth\.uid\(\)`))
+function getPoliciesForTable(policies, table) {
+  const tablePattern = new RegExp(`\\bon\\s+${escapeRegExp(table)}\\b`)
+  return policies.filter((policy) => tablePattern.test(policy))
+}
+
+function getPolicyOperation(policy) {
+  return policy.match(/\bfor\s+(all|select|insert|update|delete)\b/)?.[1] ?? 'all'
+}
+
+function getPolicyClause(policy, clause) {
+  const marker = ` ${clause} `
+  const start = policy.indexOf(marker)
+  if (start < 0) return ''
+
+  const value = policy.slice(start + marker.length)
+  if (clause === 'using') {
+    const withCheck = value.indexOf(' with check ')
+    return withCheck < 0 ? value : value.slice(0, withCheck)
   }
 
-  assert.equal(sql.includes('auth.role()'), false)
-  assert.equal(sql.includes('service_role'), false)
+  return value
+}
+
+function hasPolicyRole(policy, role) {
+  return new RegExp(`\\bto\\s+${role}\\b`).test(policy)
+}
+
+function hasUserOwnershipCondition(clause) {
+  const authOwnsRow = /(?:\(\s*select\s+)?auth\.uid\(\)\s*\)?\s*=\s*(?:[a-z0-9_]+\.)?user_id/.test(clause)
+  const rowOwnedByAuth = /(?:[a-z0-9_]+\.)?user_id\s*=\s*(?:\(\s*select\s+)?auth\.uid\(\)\s*\)?/.test(clause)
+  return authOwnsRow || rowOwnedByAuth
+}
+
+function validateOwnedTablePolicies(sql, tables = SOCIAL_TABLES) {
+  const normalizedSql = normalizeSql(sql)
+  const policies = extractCreatePolicyStatements(sql)
+  const errors = []
+
+  for (const table of tables) {
+    if (!normalizedSql.includes(`alter table public.${table} enable row level security;`)) {
+      errors.push(`${table}: RLS is not enabled`)
+    }
+
+    const tablePolicies = getPoliciesForTable(policies, `public.${table}`)
+    if (tablePolicies.length === 0) {
+      errors.push(`${table}: no policy found`)
+      continue
+    }
+
+    for (const policy of tablePolicies) {
+      const operation = getPolicyOperation(policy)
+      const usingClause = getPolicyClause(policy, 'using')
+      const withCheckClause = getPolicyClause(policy, 'with check')
+
+      if (!hasPolicyRole(policy, 'authenticated')) {
+        errors.push(`${table}: ${operation} policy is not limited to authenticated`)
+      }
+
+      if (operation === 'all' || operation === 'select' || operation === 'delete' || operation === 'update') {
+        if (!usingClause || !hasUserOwnershipCondition(usingClause)) {
+          errors.push(`${table}: ${operation} policy lacks owned USING`)
+        }
+      }
+
+      if (operation === 'all' || operation === 'insert' || operation === 'update') {
+        if (!withCheckClause || !hasUserOwnershipCondition(withCheckClause)) {
+          errors.push(`${table}: ${operation} policy lacks owned WITH CHECK`)
+        }
+      }
+    }
+  }
+
+  return errors
+}
+
+function hasSocialAssetsBucketCondition(clause) {
+  return /\bbucket_id\s*=\s*'social-assets'/.test(clause)
+}
+
+function hasOwnedSocialAssetsFolderCondition(clause) {
+  return hasSocialAssetsBucketCondition(clause)
+    && /\(storage\.foldername\(name\)\)\s*\[\s*1\s*\]\s*=\s*\((?:select\s+)?auth\.uid\(\)\)\s*::\s*text/.test(clause)
+}
+
+function validateSocialStoragePolicies(sql) {
+  const policies = getPoliciesForTable(
+    extractCreatePolicyStatements(sql),
+    'storage.objects'
+  )
+  const errors = []
+
+  const publicRead = policies.find((policy) =>
+    getPolicyOperation(policy) === 'select'
+    && hasPolicyRole(policy, 'public')
+    && hasSocialAssetsBucketCondition(getPolicyClause(policy, 'using'))
+  )
+  if (!publicRead) errors.push('storage select policy lacks public social-assets USING')
+
+  const insert = policies.find((policy) =>
+    getPolicyOperation(policy) === 'insert'
+    && hasPolicyRole(policy, 'authenticated')
+    && hasOwnedSocialAssetsFolderCondition(getPolicyClause(policy, 'with check'))
+  )
+  if (!insert) errors.push('storage insert policy lacks owned WITH CHECK')
+
+  const update = policies.find((policy) =>
+    getPolicyOperation(policy) === 'update'
+    && hasPolicyRole(policy, 'authenticated')
+    && hasOwnedSocialAssetsFolderCondition(getPolicyClause(policy, 'using'))
+    && hasOwnedSocialAssetsFolderCondition(getPolicyClause(policy, 'with check'))
+  )
+  if (!update) errors.push('storage update policy lacks owned USING or WITH CHECK')
+
+  const remove = policies.find((policy) =>
+    getPolicyOperation(policy) === 'delete'
+    && hasPolicyRole(policy, 'authenticated')
+    && hasOwnedSocialAssetsFolderCondition(getPolicyClause(policy, 'using'))
+  )
+  if (!remove) errors.push('storage delete policy lacks owned USING')
+
+  return errors
+}
+
+function validateSocialMigrationEntries(entries) {
+  const errors = []
+  const parsed = entries.map((entry) => {
+    const match = entry.file.match(/^(\d{14})_.+\.sql$/)
+    if (!match) errors.push(`Invalid migration filename: ${entry.file}`)
+    return { ...entry, timestamp: match?.[1] ?? null }
+  })
+
+  if (!entries.some((entry) => entry.file === SOCIAL_MIGRATION_BASELINE)) {
+    errors.push(`Missing baseline migration: ${SOCIAL_MIGRATION_BASELINE}`)
+  }
+
+  const timestamps = parsed.flatMap((entry) => entry.timestamp ? [entry.timestamp] : [])
+  if (timestamps.join('|') !== [...timestamps].sort().join('|')) {
+    errors.push('Migration timestamps are not ordered ascending')
+  }
+  if (new Set(timestamps).size !== timestamps.length) {
+    errors.push('Migration timestamps must be unique')
+  }
+
+  const destructivePatterns = [
+    ['DROP TABLE', /\bdrop\s+table\b/],
+    ['DROP COLUMN', /\bdrop\s+column\b/],
+    ['TRUNCATE', /\btruncate\b/],
+    ['DROP SCHEMA', /\bdrop\s+schema\b/],
+  ]
+
+  for (const entry of parsed) {
+    if (entry.file === SOCIAL_MIGRATION_BASELINE) continue
+    const sql = normalizeSql(entry.sql)
+    for (const [label, pattern] of destructivePatterns) {
+      if (pattern.test(sql)) errors.push(`${entry.file}: destructive ${label}`)
+    }
+  }
+
+  return errors
+}
+
+function readSocialMigrationEntries() {
+  const migrationDir = path.join(__dirname, '..', 'supabase', 'migrations')
+  return fs.readdirSync(migrationDir)
+    .filter((file) => file.includes('social') && file.endsWith('.sql'))
+    .sort()
+    .map((file) => ({
+      file,
+      sql: fs.readFileSync(path.join(migrationDir, file), 'utf8'),
+    }))
+}
+
+test('Supabase image pattern accepts only the social-assets public path', () => {
+  const patterns = getSupabaseSocialAssetRemotePatterns('https://project-ref.supabase.co')
+
+  assert.deepEqual(patterns, [{
+    protocol: 'https',
+    hostname: 'project-ref.supabase.co',
+    port: '',
+    pathname: '/storage/v1/object/public/social-assets/**',
+    search: '',
+  }])
+  assert.notEqual(patterns[0].pathname, '/storage/v1/object/public/**')
 })
 
-test('social storage policies keep writes in user-owned folders', () => {
-  const migration = fs.readFileSync(
-    require('node:path').join(__dirname, '..', 'supabase', 'migrations', '20260713090000_add_social_assets_and_publications.sql'),
-    'utf8'
-  ).toLowerCase()
+test('Supabase image pattern supports local HTTP URLs', () => {
+  const patterns = getSupabaseSocialAssetRemotePatterns('http://127.0.0.1:54321/')
 
-  assert.match(migration, /values \('social-assets', 'social-assets', true\)/)
-  assert.match(migration, /on storage\.objects[\s\S]*for select[\s\S]*bucket_id = 'social-assets'/)
-  assert.match(migration, /for insert[\s\S]*bucket_id = 'social-assets'[\s\S]*\(storage\.foldername\(name\)\)\[1\] = (?:\(select auth\.uid\(\)\)|\(auth\.uid\(\)\))::text/)
-  assert.match(migration, /for update[\s\S]*bucket_id = 'social-assets'[\s\S]*\(storage\.foldername\(name\)\)\[1\] = (?:\(select auth\.uid\(\)\)|\(auth\.uid\(\)\))::text/)
-  assert.match(migration, /for delete[\s\S]*bucket_id = 'social-assets'[\s\S]*\(storage\.foldername\(name\)\)\[1\] = (?:\(select auth\.uid\(\)\)|\(auth\.uid\(\)\))::text/)
+  assert.equal(patterns[0].protocol, 'http')
+  assert.equal(patterns[0].hostname, '127.0.0.1')
+  assert.equal(patterns[0].port, '54321')
+})
+
+test('Supabase image pattern returns no patterns for an empty URL', () => {
+  assert.deepEqual(getSupabaseSocialAssetRemotePatterns(''), [])
+  assert.deepEqual(getSupabaseSocialAssetRemotePatterns('   '), [])
+})
+
+test('Supabase image pattern ignores invalid or unsupported URLs', () => {
+  assert.doesNotThrow(() => getSupabaseSocialAssetRemotePatterns('not a url'))
+  assert.deepEqual(getSupabaseSocialAssetRemotePatterns('not a url'), [])
+  assert.deepEqual(getSupabaseSocialAssetRemotePatterns('ftp://project-ref.supabase.co'), [])
+})
+
+test('social migrations remain ordered and additive without an exact filename list', () => {
+  assert.deepEqual(validateSocialMigrationEntries(readSocialMigrationEntries()), [])
+})
+
+test('social migration validation accepts a new additive migration filename', () => {
+  const entries = [
+    { file: SOCIAL_MIGRATION_BASELINE, sql: 'create table public.social_posts ();' },
+    { file: '20260714090000_add_social_review_index.sql', sql: 'create index social_review_idx on public.social_posts(id);' },
+  ]
+
+  assert.deepEqual(validateSocialMigrationEntries(entries), [])
+})
+
+test('social migration validation rejects duplicate timestamps', () => {
+  const errors = validateSocialMigrationEntries([
+    { file: SOCIAL_MIGRATION_BASELINE, sql: '' },
+    { file: '20260510120000_add_social_duplicate.sql', sql: '' },
+  ])
+
+  assert.match(errors.join('\n'), /timestamps must be unique/)
+})
+
+test('social migration validation rejects DROP TABLE', () => {
+  const errors = validateSocialMigrationEntries([
+    { file: SOCIAL_MIGRATION_BASELINE, sql: '' },
+    { file: '20260714090000_drop_social_cache.sql', sql: 'DROP TABLE public.social_cache;' },
+  ])
+
+  assert.match(errors.join('\n'), /destructive DROP TABLE/)
+})
+
+test('social migration validation rejects DROP COLUMN', () => {
+  const errors = validateSocialMigrationEntries([
+    { file: SOCIAL_MIGRATION_BASELINE, sql: '' },
+    { file: '20260714090000_drop_social_column.sql', sql: 'ALTER TABLE public.social_posts DROP COLUMN notes;' },
+  ])
+
+  assert.match(errors.join('\n'), /destructive DROP COLUMN/)
+})
+
+test('social RLS migrations protect each owned table policy independently', () => {
+  const sql = readSocialMigrationEntries().map((entry) => entry.sql).join('\n')
+
+  assert.deepEqual(validateOwnedTablePolicies(sql), [])
+  assert.equal(normalizeSql(sql).includes('auth.role()'), false)
+  assert.equal(normalizeSql(sql).includes('service_role'), false)
+})
+
+test('RLS helper does not borrow auth.uid from another table', () => {
+  const fakeSql = `
+    alter table public.table_a enable row level security;
+    create policy "broken a"
+      on public.table_a for all to authenticated
+      using (true) with check (true);
+
+    create policy "valid b"
+      on public.table_b for all to authenticated
+      using (auth.uid() = user_id)
+      with check (auth.uid() = user_id);
+  `
+
+  const errors = validateOwnedTablePolicies(fakeSql, ['table_a'])
+  assert.match(errors.join('\n'), /table_a: all policy lacks owned USING/)
+  assert.match(errors.join('\n'), /table_a: all policy lacks owned WITH CHECK/)
+})
+
+test('RLS helper rejects an owned update policy without WITH CHECK', () => {
+  const fakeSql = `
+    alter table public.table_a enable row level security;
+    create policy "broken update"
+      on public.table_a for update to authenticated
+      using (auth.uid() = user_id);
+  `
+
+  assert.match(
+    validateOwnedTablePolicies(fakeSql, ['table_a']).join('\n'),
+    /update policy lacks owned WITH CHECK/
+  )
+})
+
+test('social storage policies validate each operation independently', () => {
+  const migration = readSocialMigrationEntries()
+    .find((entry) => entry.file === '20260713090000_add_social_assets_and_publications.sql')
+
+  assert.ok(migration)
+  assert.match(normalizeSql(migration.sql), /values \('social-assets', 'social-assets', true\)/)
+  assert.deepEqual(validateSocialStoragePolicies(migration.sql), [])
+})
+
+test('storage insert policy rejects a bucket-only check', () => {
+  const sql = `
+    create policy "insert" on storage.objects
+      for insert to authenticated
+      with check (bucket_id = 'social-assets');
+  `
+
+  assert.match(validateSocialStoragePolicies(sql).join('\n'), /insert policy lacks owned WITH CHECK/)
+})
+
+test('storage update policy requires owned USING and WITH CHECK', () => {
+  const sql = `
+    create policy "update" on storage.objects
+      for update to authenticated
+      using (
+        bucket_id = 'social-assets'
+        and (storage.foldername(name))[1] = (select auth.uid())::text
+      );
+  `
+
+  assert.match(validateSocialStoragePolicies(sql).join('\n'), /update policy lacks owned USING or WITH CHECK/)
+})
+
+test('storage delete policy rejects a bucket-only USING clause', () => {
+  const sql = `
+    create policy "delete" on storage.objects
+      for delete to authenticated
+      using (bucket_id = 'social-assets');
+  `
+
+  assert.match(validateSocialStoragePolicies(sql).join('\n'), /delete policy lacks owned USING/)
 })

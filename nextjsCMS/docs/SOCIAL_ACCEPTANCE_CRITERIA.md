@@ -300,8 +300,25 @@ Acceptance criteria:
 
 Phase 12 validation result:
 
-- `npm run lint`: passed for Social Content OS scope with no warnings after risk-closure follow-up.
-- `npx tsc --noEmit --pretty false`: passed.
-- `npm run test:social-renderer`: passed, 27 tests including migration/RLS/storage hardening checks.
-- `npm run build`: passed when rerun outside the Windows sandbox after sandbox-only `spawn EPERM`.
-- Supabase CLI was unavailable, so live migration reset/integration tests were not run locally.
+- npm run lint: passed with no warnings.
+- npx tsc --noEmit --pretty false: passed independently from next build.
+- npm run test:social-renderer: passed, 40 tests.
+- npm run build: sandbox run compiled then failed with Windows spawn EPERM; elevated rerun passed.
+- Production smoke: /login returned 200 and unauthenticated /cms/social returned 307 to /login.
+- Supabase CLI/live database validation was unavailable.
+- Authenticated browser/mobile asset QA was not executed because browser automation and test credentials were unavailable.
+
+## Known Technical Limitations
+
+Non-blocking known limitations:
+
+- Renderer text overflow measurement remains heuristic; long Indonesian copy fixtures and visual regression checks remain required.
+- Carousel ZIP uses a base64 Server Action payload; large packs may require a streaming Route Handler.
+- Screenshot metric extraction depends on a configured vision provider and always requires user confirmation.
+- typescript.ignoreBuildErrors remains enabled; separate tsc --noEmit validation is mandatory.
+
+External acceptance prerequisites:
+
+- Apply/reset Social migrations on the target Supabase project.
+- Complete authenticated Visual and Publish tab QA on desktop and mobile.
+- Confirm asset previews have no Next Image host, unconfigured host, or hydration error.

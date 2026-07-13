@@ -802,3 +802,62 @@ Risk status:
 - Social `<img>` lint warnings: resolved.
 - RLS/storage static-only review: mitigated with automated tests, but live Supabase reset still requires Supabase CLI plus local database tooling.
 - Browser/mobile QA: mitigated with production-server smoke test. Full visual browser QA remains dependent on a browser automation runtime or authenticated test account.
+
+## 2026-07-13 - Final Hardening Regression Fix
+
+Temuan awal:
+
+- Public Supabase asset URLs were rendered by next/image without a matching remotePatterns entry.
+- Migration, RLS, and Storage tests used broad cross-statement regex and an exact migration filename list.
+- Renderer measurement, base64 ZIP transport, and vision-provider dependency had been removed from the gap report without code changes.
+- Authenticated asset QA had not been executed.
+
+Files changed:
+
+- next.config.ts
+- src/lib/social/supabase-image-pattern.ts
+- scripts/test-social-renderer.cjs
+- docs/SOCIAL_FINAL_GAP_REPORT.md
+- docs/SOCIAL_ACCEPTANCE_CRITERIA.md
+- docs/SOCIAL_IMPLEMENTATION_LOG.md
+
+Migration created:
+
+- None.
+
+Technical decisions:
+
+- Derived a strict public social-assets image pattern from NEXT_PUBLIC_SUPABASE_URL; no project hostname is hardcoded.
+- Kept next/image previews unoptimized.
+- Parsed each SQL policy statement independently and validated operation-specific clauses.
+- Replaced exact migration filename assertions with baseline, filename, ordering, uniqueness, and destructive-operation invariants.
+- Kept typescript.ignoreBuildErrors unchanged because it is a project-wide setting; independent typecheck remains required.
+- Restored unresolved limitations as non-blocking known limitations.
+
+Tests added:
+
+- HTTPS, local HTTP, empty, invalid, and path-restricted Supabase image patterns.
+- Isolated table ownership policies, missing WITH CHECK, and cross-table false-positive fixtures.
+- Storage INSERT, UPDATE, and DELETE negative ownership fixtures.
+- Migration filename extensibility, duplicate timestamp, DROP TABLE, and DROP COLUMN fixtures.
+
+Validation:
+
+- npm run lint: passed with no warnings.
+- npx tsc --noEmit --pretty false: passed.
+- npm run test:social-renderer: passed, 40 tests.
+- npm run build: sandbox run compiled then failed with Windows spawn EPERM; elevated rerun passed.
+- Production smoke: /login returned 200; unauthenticated /cms/social returned 307 to /login.
+
+## Known Technical Limitations
+
+- Renderer text measurement remains heuristic.
+- Carousel ZIP transport remains base64 through a Server Action.
+- Screenshot extraction remains dependent on a configured vision provider.
+- typescript.ignoreBuildErrors remains enabled, so build never replaces independent typecheck.
+
+## Remaining External Prerequisites
+
+- Live Supabase migration apply/reset and policy verification.
+- Authenticated desktop/mobile Visual and Publish tab QA.
+- Meta API/autopost remains intentionally out of scope.
