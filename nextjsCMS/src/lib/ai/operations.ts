@@ -95,6 +95,7 @@ import {
   type GenerateSeoRepairPlanOutput,
   type GenerateGapDraftInput,
   type GenerateGapDraftOutput,
+  type SocialVisualSpec,
   type AIOperation,
 } from './schemas'
 
@@ -396,6 +397,61 @@ function normalizeGapDraftOutput(output: GenerateGapDraftOutput): GenerateGapDra
   }
 }
 
+function normalizeSocialVisualSpec(spec: SocialVisualSpec): SocialVisualSpec {
+  return {
+    ...spec,
+    template_id: normalizeSingleLine(spec.template_id),
+    scene_prompt: normalizePromptText(spec.scene_prompt),
+    label: limitSingleLine(spec.label, 80),
+    headline: limitSingleLine(spec.headline, 90),
+    subheadline: limitSingleLine(spec.subheadline, 180),
+    information_blocks: spec.information_blocks
+      .map((block) => ({
+        title: block.title ? limitSingleLine(block.title, 80) : undefined,
+        text: limitSingleLine(block.text, 180),
+        icon: block.icon ? limitSingleLine(block.icon, 40) : undefined,
+      }))
+      .filter((block) => block.text)
+      .slice(0, 6),
+    emphasis_text: limitSingleLine(spec.emphasis_text, 120),
+    footer: spec.footer || 'ArkaraWeb.com | Survive with Knowledge',
+    alt_text: limitSingleLine(spec.alt_text, 300),
+  }
+}
+
+function withLegacyVisualPrompt<T extends { visual_prompt?: string; visual_spec: SocialVisualSpec }>(output: T): T {
+  const visualSpec = normalizeSocialVisualSpec(output.visual_spec)
+  return {
+    ...output,
+    visual_spec: visualSpec,
+    visual_prompt: normalizePromptText(output.visual_prompt || visualSpec.scene_prompt),
+  }
+}
+
+function normalizeFacebookWeeklyPlanOutput(output: GenerateFacebookWeeklyPlanOutput): GenerateFacebookWeeklyPlanOutput {
+  return {
+    ...output,
+    posts: output.posts.map((post) => ({
+      ...withLegacyVisualPrompt(post),
+      slides: post.slides.map((slide) => withLegacyVisualPrompt(slide)),
+    })),
+  }
+}
+
+function normalizeFacebookPostOutput(output: GenerateFacebookPostOutput): GenerateFacebookPostOutput {
+  return withLegacyVisualPrompt(output)
+}
+
+function normalizeFacebookCarouselOutput(output: GenerateFacebookCarouselOutput): GenerateFacebookCarouselOutput {
+  return {
+    slides: output.slides.map((slide) => withLegacyVisualPrompt(slide)),
+  }
+}
+
+function normalizeFacebookVisualPromptOutput(output: GenerateFacebookVisualPromptOutput): GenerateFacebookVisualPromptOutput {
+  return withLegacyVisualPrompt(output)
+}
+
 function coerceSourceEntry(value: unknown): Record<string, unknown> | null {
   if (!value) {
     return null
@@ -634,7 +690,7 @@ export async function generateFacebookWeeklyPlan(
     GenerateFacebookWeeklyPlanInputSchema,
     GenerateFacebookWeeklyPlanOutputSchema,
     (input) => prompts.buildFacebookWeeklyPlanPrompt(input),
-    undefined,
+    normalizeFacebookWeeklyPlanOutput,
     ctx,
     { maxTokens: 5000 }
   )
@@ -650,7 +706,7 @@ export async function generateFacebookPost(
     GenerateFacebookPostInputSchema,
     GenerateFacebookPostOutputSchema,
     (input) => prompts.buildFacebookPostPrompt(input),
-    undefined,
+    normalizeFacebookPostOutput,
     ctx,
     { maxTokens: 2600 }
   )
@@ -666,7 +722,7 @@ export async function generateFacebookCarousel(
     GenerateFacebookCarouselInputSchema,
     GenerateFacebookCarouselOutputSchema,
     (input) => prompts.buildFacebookCarouselPrompt(input),
-    undefined,
+    normalizeFacebookCarouselOutput,
     ctx,
     { maxTokens: 3600 }
   )
@@ -682,7 +738,7 @@ export async function generateFacebookVisualPrompt(
     GenerateFacebookVisualPromptInputSchema,
     GenerateFacebookVisualPromptOutputSchema,
     (input) => prompts.buildFacebookVisualPrompt(input),
-    undefined,
+    normalizeFacebookVisualPromptOutput,
     ctx,
     { maxTokens: 1200 }
   )

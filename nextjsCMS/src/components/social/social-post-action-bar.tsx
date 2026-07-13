@@ -107,7 +107,7 @@ export function SocialPostActionBar({
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Bot className="h-4 w-4" />
-            Visual
+            Visual Spec
           </button>
           <button
             type="button"

@@ -25,7 +25,7 @@ export function SocialCarouselEditor({
       slides
         .map(
           (slide) =>
-            `Slide ${slide.slide_number}: ${slide.title_text}\n${slide.visual_prompt ?? ""}`,
+            `${slide.slide_number}. ${slide.purpose ?? "Slide"}: ${slide.title_text}\n${slide.visual_spec?.scene_prompt ?? slide.visual_prompt ?? ""}`,
         )
         .join("\n\n"),
     );
@@ -78,9 +78,11 @@ export function SocialCarouselEditor({
               createCarouselSlide({
                 post_id: post.id!,
                 slide_number: slides.length + 1,
+                purpose: "",
                 title_text: `Slide ${slides.length + 1}`,
                 paragraph_text: "",
                 visual_prompt: "",
+                visual_spec: null,
                 image_status: "needed",
               }),
             )

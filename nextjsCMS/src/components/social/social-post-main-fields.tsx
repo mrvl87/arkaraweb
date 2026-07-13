@@ -2,6 +2,7 @@
 
 import { Copy } from "lucide-react";
 import { SocialEditorField } from "./social-editor-field";
+import { SocialVisualSpecEditor } from "./social-visual-spec-editor";
 import type { PostDraft, PostDraftUpdater } from "./social-post-editor-types";
 
 interface SocialPostMainFieldsProps {
@@ -73,11 +74,19 @@ export function SocialPostMainFields({
           className="input-social"
         />
       </SocialEditorField>
-      <SocialEditorField label="Text-to-Image Prompt">
+
+      <SocialVisualSpecEditor
+        title={post.title}
+        aspectRatio={post.aspect_ratio}
+        visualSpec={post.visual_spec}
+        update={update}
+      />
+
+      <SocialEditorField label="Legacy Scene Prompt">
         <div className="rounded-lg border border-gray-200 bg-white">
           <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
             <span className="text-xs font-bold text-gray-400">
-              Poster prompt dengan teks di dalam gambar
+              Legacy fallback dari scene_prompt
             </span>
             <button
               type="button"

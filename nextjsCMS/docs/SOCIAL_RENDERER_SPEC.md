@@ -222,3 +222,19 @@ Legacy visual prompt can be shown as:
 - Background contrast can vary; renderer needs overlay and contrast defaults.
 - Template count should stay small until validation is proven.
 - Live `media` schema must be verified before storing poster asset references.
+
+## Phase 3 Structured Visual Specification
+
+AI social visual generation now produces `visual_spec` instead of poster text-in-image instructions.
+
+Renderer principles remain:
+
+- AI describes only the background scene in `scene_prompt`.
+- AI must not ask the image model to render logo, footer, headline, panel text, typography, or Indonesian copy.
+- CMS owns deterministic rendering of label, headline, subheadline, information blocks, emphasis text, and footer.
+- Legacy `visual_prompt` is preserved as a scene prompt fallback and should mirror `visual_spec.scene_prompt`.
+- Footer is fixed as `ArkaraWeb.com | Survive with Knowledge` unless a future template explicitly overrides it.
+- Supported aspect ratios remain `1:1`, `4:5`, and `9:16`.
+- Text overflow validation remains a renderer responsibility for future phases.
+
+Current implementation stores structured specs for posts and generated carousel slides. It does not render final posters yet.

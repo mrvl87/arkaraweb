@@ -39,8 +39,9 @@ export function SocialPostEditor({
   };
   const captionValue = buildCaption(post);
   const copyVisualPrompt = async () => {
-    if (!post.visual_prompt) return;
-    await navigator.clipboard.writeText(post.visual_prompt);
+    const scenePrompt = post.visual_spec?.scene_prompt ?? post.visual_prompt;
+    if (!scenePrompt) return;
+    await navigator.clipboard.writeText(scenePrompt);
   };
   const handleCopyCaption = () => {
     if (!post.id) return;

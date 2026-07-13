@@ -264,3 +264,62 @@ Acceptance criteria status:
 - RLS owner policies added: done.
 - TypeScript types updated: done.
 - Dashboard data model updated: done.
+
+## 2026-07-13 - Phase 3 Structured Visual Specification
+
+### Files Inspected
+
+- `src/lib/ai/schemas.ts`
+- `src/lib/ai/operations.ts`
+- `src/lib/ai/prompt-profiles.ts`
+- `src/app/cms/social/actions.ts`
+- `src/types/social.ts`
+- `src/components/social/social-post-editor.tsx`
+- `src/components/social/social-post-main-fields.tsx`
+- `src/components/social/social-carousel-editor.tsx`
+- `src/components/social/social-slide-editor.tsx`
+- `supabase/migrations/20260510120000_create_social_tracker.sql`
+- `supabase/migrations/20260713090000_add_social_assets_and_publications.sql`
+- `package.json`
+
+### Files Changed
+
+- `src/lib/ai/schemas.ts`
+- `src/lib/ai/operations.ts`
+- `src/lib/ai/prompt-profiles.ts`
+- `src/app/cms/social/actions.ts`
+- `src/types/social.ts`
+- `src/components/social/social-post-editor.tsx`
+- `src/components/social/social-post-main-fields.tsx`
+- `src/components/social/social-carousel-editor.tsx`
+- `src/components/social/social-slide-editor.tsx`
+- `src/components/social/social-visual-spec-editor.tsx`
+- `docs/SOCIAL_DATA_MODEL.md`
+- `docs/SOCIAL_RENDERER_SPEC.md`
+- `docs/SOCIAL_ACCEPTANCE_CRITERIA.md`
+- `docs/SOCIAL_IMPLEMENTATION_LOG.md`
+
+### Migration Created
+
+- `supabase/migrations/20260713100000_add_social_carousel_slide_visual_spec.sql`
+
+Supabase CLI was not available in this Windows environment, so the migration file was created directly in the existing migrations folder.
+
+### Completed
+
+- Added `SocialVisualSpec` TypeScript type and Zod schema.
+- Added validation limits for headline, subheadline, information blocks, block text, emphasis text, footer, and supported aspect ratios.
+- Refactored Facebook weekly plan, post, carousel, and visual generation prompts to produce structured visual specs.
+- Added operation normalizers so legacy `visual_prompt` is filled from `visual_spec.scene_prompt`.
+- Persisted post-level `visual_spec`, `alt_text`, `selected_template_id`, and `aspect_ratio` from AI outputs.
+- Persisted carousel slide `purpose` and `visual_spec` from AI outputs.
+- Added `regenerateFacebookVisualSpecForPost` action for old posts.
+- Added structured visual spec editor for post-level visual fields.
+- Updated carousel slide editing for purpose and generated visual spec scene/headline fields.
+
+### Risks Remaining
+
+- Renderer and text overflow validation are still future phases.
+- Existing carousel regeneration remains destructive and replaces prior slides.
+- Zod validation rejects obvious text-in-image scene prompt instructions, but AI can still fail validation and require regenerate.
+- Supabase migration was not executed locally because no Supabase CLI is installed.

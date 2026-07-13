@@ -198,12 +198,40 @@ export const FacebookObjectiveSchema = z.enum([
   'brand_positioning',
 ])
 
+export const SocialAspectRatioSchema = z.enum(['1:1', '4:5', '9:16'])
+
+const scenePromptForbiddenPattern = /\b(write text|add text|include text|text in image|headline|subheadline|footer|logo|typography|lettering|watermark|panel teks|text panel|arkaraweb)\b/i
+
+export const SocialVisualInformationBlockSchema = z.object({
+  title: z.string().trim().min(1).max(80).optional(),
+  text: z.string().trim().min(1).max(180),
+  icon: z.string().trim().min(1).max(40).optional(),
+})
+
+export const SocialVisualSpecSchema = z.object({
+  template_id: z.string().trim().min(1).max(80),
+  aspect_ratio: SocialAspectRatioSchema.default('1:1'),
+  scene_prompt: z.string().trim().min(1).max(2200).refine(
+    (value) => !scenePromptForbiddenPattern.test(value),
+    'Scene prompt must describe only the background image and must not ask the image model to render text, logo, footer, headline, or typography.'
+  ),
+  label: z.string().trim().min(1).max(80),
+  headline: z.string().trim().min(1).max(90),
+  subheadline: z.string().trim().min(1).max(180),
+  information_blocks: z.array(SocialVisualInformationBlockSchema).min(2).max(6),
+  emphasis_text: z.string().trim().min(1).max(120),
+  footer: z.string().trim().min(1).max(80).default('ArkaraWeb.com | Survive with Knowledge'),
+  alt_text: z.string().trim().min(1).max(300),
+})
+export type SocialVisualSpec = z.infer<typeof SocialVisualSpecSchema>
+
 export const FacebookCarouselSlideDraftSchema = z.object({
   slide_number: z.number().int().min(1).max(12),
   purpose: z.string().trim().min(1).max(120),
   title_text: z.string().trim().min(1).max(140),
   paragraph_text: z.string().trim().max(360).optional().default(''),
-  visual_prompt: z.string().trim().min(1).max(2200),
+  visual_prompt: z.string().trim().max(2200).optional().default(''),
+  visual_spec: SocialVisualSpecSchema,
 })
 export type FacebookCarouselSlideDraft = z.infer<typeof FacebookCarouselSlideDraftSchema>
 
@@ -219,6 +247,7 @@ export const FacebookSocialPostDraftSchema = z.object({
   objective: z.string().trim().min(1).max(120),
   content_pillar: z.string().trim().min(1).max(160),
   visual_prompt: z.string().trim().max(2200).optional().default(''),
+  visual_spec: SocialVisualSpecSchema,
   slides: z.array(FacebookCarouselSlideDraftSchema).max(10).optional().default([]),
 })
 export type FacebookSocialPostDraft = z.infer<typeof FacebookSocialPostDraftSchema>
@@ -253,6 +282,7 @@ export const GenerateFacebookPostInputSchema = z.object({
   primary_goal: z.string().trim().max(240).optional(),
   content_pillar: z.string().trim().max(180).optional(),
   tone_note: z.string().trim().max(500).optional(),
+  aspect_ratio: SocialAspectRatioSchema.optional().default('1:1'),
 })
 export type GenerateFacebookPostInput = z.infer<typeof GenerateFacebookPostInputSchema>
 
@@ -261,7 +291,8 @@ export const GenerateFacebookPostOutputSchema = z.object({
   hook: z.string().trim().min(1).max(320),
   body: z.string().trim().min(1).max(5000),
   cta: z.string().trim().min(1).max(500),
-  visual_prompt: z.string().trim().min(1).max(2200),
+  visual_prompt: z.string().trim().max(2200).optional().default(''),
+  visual_spec: SocialVisualSpecSchema,
 })
 export type GenerateFacebookPostOutput = z.infer<typeof GenerateFacebookPostOutputSchema>
 
@@ -284,7 +315,8 @@ export const GenerateFacebookVisualPromptInputSchema = z.object({
 export type GenerateFacebookVisualPromptInput = z.infer<typeof GenerateFacebookVisualPromptInputSchema>
 
 export const GenerateFacebookVisualPromptOutputSchema = z.object({
-  visual_prompt: z.string().trim().min(1).max(2200),
+  visual_prompt: z.string().trim().max(2200).optional().default(''),
+  visual_spec: SocialVisualSpecSchema,
 })
 export type GenerateFacebookVisualPromptOutput = z.infer<typeof GenerateFacebookVisualPromptOutputSchema>
 

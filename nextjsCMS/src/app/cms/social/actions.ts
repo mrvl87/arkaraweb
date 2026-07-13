@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { SocialVisualSpecSchema } from '@/lib/ai/schemas'
 import { getPanduanPath, getPostPath } from '@/lib/slugs'
 import {
   generateFacebookCarousel,
@@ -75,7 +76,7 @@ const socialPostSchema = z.object({
   visual_prompt: optionalTextSchema,
   first_comment: optionalTextSchema,
   alt_text: optionalTextSchema,
-  visual_spec: z.record(z.string(), z.unknown()).nullable().optional().default(null),
+  visual_spec: SocialVisualSpecSchema.nullable().optional().default(null),
   selected_template_id: optionalTextSchema,
   aspect_ratio: z.enum(['1:1', '4:5', '9:16']).default('1:1'),
   utm_source: z.string().trim().optional().default('facebook'),
@@ -97,9 +98,11 @@ const carouselSlideSchema = z.object({
   id: z.string().uuid().optional(),
   post_id: z.string().uuid(),
   slide_number: z.number().int().min(1),
+  purpose: z.string().trim().optional().default(''),
   title_text: z.string().trim().min(1, 'Judul slide wajib diisi.'),
   paragraph_text: z.string().trim().optional().default(''),
   visual_prompt: z.string().trim().optional().default(''),
+  visual_spec: SocialVisualSpecSchema.nullable().optional().default(null),
   image_status: z.enum(['needed', 'prompt_ready', 'generated', 'uploaded', 'approved']).default('needed'),
 })
 
@@ -148,6 +151,18 @@ function buildSourceSummary(parts: Array<string | null | undefined>, limit = SOU
 function nullIfEmpty(value?: string | null) {
   const trimmed = value?.trim()
   return trimmed ? trimmed : null
+}
+
+function visualSpecPostPatch(visualSpec: z.infer<typeof SocialVisualSpecSchema> | null | undefined) {
+  if (!visualSpec) return {}
+
+  return {
+    visual_spec: visualSpec,
+    visual_prompt: visualSpec.scene_prompt,
+    alt_text: visualSpec.alt_text,
+    selected_template_id: visualSpec.template_id,
+    aspect_ratio: visualSpec.aspect_ratio,
+  }
 }
 
 async function getSourceByPost(
@@ -580,12 +595,12 @@ export async function createSocialPost(rawInput: z.infer<typeof socialPostSchema
     source_id: data.source_type === 'none' || data.source_type === 'external' ? null : data.source_id ?? null,
     scheduled_date: nullIfEmpty(data.scheduled_date),
     scheduled_time: nullIfEmpty(data.scheduled_time),
-    visual_prompt: nullIfEmpty(data.visual_prompt),
+    visual_prompt: data.visual_spec?.scene_prompt ?? nullIfEmpty(data.visual_prompt),
     first_comment: nullIfEmpty(data.first_comment),
-    alt_text: nullIfEmpty(data.alt_text),
+    alt_text: data.visual_spec?.alt_text ?? nullIfEmpty(data.alt_text),
     visual_spec: data.visual_spec ?? null,
-    selected_template_id: nullIfEmpty(data.selected_template_id),
-    aspect_ratio: data.aspect_ratio,
+    selected_template_id: data.visual_spec?.template_id ?? nullIfEmpty(data.selected_template_id),
+    aspect_ratio: data.visual_spec?.aspect_ratio ?? data.aspect_ratio,
     utm_source: nullIfEmpty(data.utm_source) ?? 'facebook',
     utm_medium: nullIfEmpty(data.utm_medium) ?? 'social',
     utm_campaign: nullIfEmpty(data.utm_campaign),
@@ -620,12 +635,12 @@ export async function updateSocialPost(rawInput: z.infer<typeof socialPostSchema
       source_id: data.source_type === 'none' || data.source_type === 'external' ? null : data.source_id ?? null,
       scheduled_date: nullIfEmpty(data.scheduled_date),
       scheduled_time: nullIfEmpty(data.scheduled_time),
-      visual_prompt: nullIfEmpty(data.visual_prompt),
-      first_comment: nullIfEmpty(data.first_comment),
-      alt_text: nullIfEmpty(data.alt_text),
-      visual_spec: data.visual_spec ?? null,
-      selected_template_id: nullIfEmpty(data.selected_template_id),
-      aspect_ratio: data.aspect_ratio,
+      visual_prompt: data.visual_spec?.scene_prompt ?? nullIfEmpty(data.visual_prompt),
+    first_comment: nullIfEmpty(data.first_comment),
+    alt_text: data.visual_spec?.alt_text ?? nullIfEmpty(data.alt_text),
+    visual_spec: data.visual_spec ?? null,
+    selected_template_id: data.visual_spec?.template_id ?? nullIfEmpty(data.selected_template_id),
+    aspect_ratio: data.visual_spec?.aspect_ratio ?? data.aspect_ratio,
       utm_source: nullIfEmpty(data.utm_source) ?? 'facebook',
       utm_medium: nullIfEmpty(data.utm_medium) ?? 'social',
       utm_campaign: nullIfEmpty(data.utm_campaign),
@@ -725,8 +740,10 @@ export async function createCarouselSlide(rawInput: z.infer<typeof carouselSlide
   const { error } = await supabase.from('social_carousel_slides').insert({
     ...input,
     user_id: user.id,
+    purpose: nullIfEmpty(input.purpose),
     paragraph_text: nullIfEmpty(input.paragraph_text),
-    visual_prompt: nullIfEmpty(input.visual_prompt),
+    visual_prompt: input.visual_spec?.scene_prompt ?? nullIfEmpty(input.visual_prompt),
+    visual_spec: input.visual_spec ?? null,
   })
 
   if (error) return { error: error.message }
@@ -745,8 +762,10 @@ export async function updateCarouselSlide(rawInput: z.infer<typeof carouselSlide
     .from('social_carousel_slides')
     .update({
       ...data,
+      purpose: nullIfEmpty(data.purpose),
       paragraph_text: nullIfEmpty(data.paragraph_text),
-      visual_prompt: nullIfEmpty(data.visual_prompt),
+      visual_prompt: data.visual_spec?.scene_prompt ?? nullIfEmpty(data.visual_prompt),
+      visual_spec: data.visual_spec ?? null,
     })
     .eq('id', id)
     .eq('user_id', user.id)
@@ -866,12 +885,16 @@ export async function generateWeeklyFacebookPlan(campaignId: string, sourceKey?:
         scheduled_time: draft.scheduled_time,
         timezone: 'Asia/Jayapura',
         status: 'drafting',
-        visual_prompt: nullIfEmpty(draft.visual_prompt),
+        visual_prompt: nullIfEmpty(draft.visual_prompt) ?? draft.visual_spec.scene_prompt,
+        visual_spec: draft.visual_spec,
+        alt_text: draft.visual_spec.alt_text,
+        selected_template_id: draft.visual_spec.template_id,
+        aspect_ratio: draft.visual_spec.aspect_ratio,
         objective: draft.objective,
         content_pillar: draft.content_pillar,
         caption_done: Boolean(draft.body),
         cta_done: Boolean(draft.cta),
-        visual_prompt_done: Boolean(draft.visual_prompt),
+        visual_prompt_done: Boolean(draft.visual_prompt || draft.visual_spec),
       })
       .select('id')
       .single()
@@ -886,9 +909,11 @@ export async function generateWeeklyFacebookPlan(campaignId: string, sourceKey?:
           user_id: user.id,
           post_id: insertedPost.id,
           slide_number: slide.slide_number,
+          purpose: slide.purpose,
           title_text: slide.title_text,
           paragraph_text: nullIfEmpty(slide.paragraph_text),
-          visual_prompt: slide.visual_prompt,
+          visual_prompt: nullIfEmpty(slide.visual_prompt) ?? slide.visual_spec.scene_prompt,
+          visual_spec: slide.visual_spec,
           image_status: 'prompt_ready',
         }))
       )
@@ -929,6 +954,7 @@ export async function generateFacebookPostDraft(postId: string) {
       source_url: source?.url,
       content_pillar: post.content_pillar || undefined,
       tone_note: post.notes || undefined,
+      aspect_ratio: post.aspect_ratio || '1:1',
     },
     { userId: user.id, targetType: 'social', targetId: postId }
   )
@@ -942,7 +968,8 @@ export async function generateFacebookPostDraft(postId: string) {
       hook: result.data.hook,
       body: result.data.body,
       cta: result.data.cta,
-      visual_prompt: result.data.visual_prompt,
+      ...visualSpecPostPatch(result.data.visual_spec),
+      visual_prompt: result.data.visual_prompt || result.data.visual_spec.scene_prompt,
       status: 'drafting',
       caption_done: true,
       cta_done: true,
@@ -978,6 +1005,7 @@ export async function generateFacebookCarouselSlides(postId: string) {
       source_url: source?.url,
       content_pillar: post.content_pillar || undefined,
       tone_note: post.notes || undefined,
+      aspect_ratio: post.aspect_ratio || '1:1',
       slide_count: 7,
     },
     { userId: user.id, targetType: 'social', targetId: postId }
@@ -992,10 +1020,12 @@ export async function generateFacebookCarouselSlides(postId: string) {
       user_id: user.id,
       post_id: postId,
       slide_number: slide.slide_number,
-      title_text: slide.title_text,
-      paragraph_text: nullIfEmpty(slide.paragraph_text),
-      visual_prompt: slide.visual_prompt,
-      image_status: 'prompt_ready',
+          purpose: slide.purpose,
+          title_text: slide.title_text,
+          paragraph_text: nullIfEmpty(slide.paragraph_text),
+          visual_prompt: nullIfEmpty(slide.visual_prompt) ?? slide.visual_spec.scene_prompt,
+          visual_spec: slide.visual_spec,
+          image_status: 'prompt_ready',
     }))
   )
 
@@ -1026,7 +1056,9 @@ export async function generateFacebookVisualPromptForPost(postId: string) {
     {
       title: post.title,
       context: [post.hook, post.body, post.cta].filter(Boolean).join('\n\n') || post.title,
-      layout_type: post.post_type === 'carousel' ? 'Facebook carousel cover, 1:1' : 'Facebook feed image, 1:1',
+      layout_type: post.post_type === 'carousel'
+        ? 'Facebook carousel cover, ' + (post.aspect_ratio || '1:1')
+        : 'Facebook feed image, ' + (post.aspect_ratio || '1:1'),
       tone_note: post.notes || undefined,
     },
     { userId: user.id, targetType: 'social', targetId: postId }
@@ -1036,11 +1068,20 @@ export async function generateFacebookVisualPromptForPost(postId: string) {
 
   const { error: updateError } = await supabase
     .from('social_posts')
-    .update({ visual_prompt: result.data.visual_prompt, visual_prompt_done: true })
+    .update({
+      ...visualSpecPostPatch(result.data.visual_spec),
+      visual_prompt: result.data.visual_prompt || result.data.visual_spec.scene_prompt,
+      visual_prompt_done: true,
+    })
     .eq('id', postId)
     .eq('user_id', user.id)
 
   if (updateError) return { error: updateError.message }
   revalidatePath(SOCIAL_PATH)
   return { success: true }
+}
+
+
+export async function regenerateFacebookVisualSpecForPost(postId: string) {
+  return generateFacebookVisualPromptForPost(postId)
 }

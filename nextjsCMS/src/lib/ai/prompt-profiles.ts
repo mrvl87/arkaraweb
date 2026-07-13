@@ -25,7 +25,7 @@ import type {
   GenerateGapDraftInput,
 } from './schemas'
 
-export const PROMPT_VERSION = 'v15'
+export const PROMPT_VERSION = 'v16'
 
 export type AIContentProfile = 'post' | 'panduan' | 'workspace'
 
@@ -816,17 +816,65 @@ Aturan Facebook Arkara:
 - Semua output wajib JSON valid tanpa teks tambahan.`
 }
 
-function getFacebookImagePromptRules(): string {
-  return `Aturan prompt gambar Arkara yang WAJIB:
-- Prompt text-to-image adalah artifact utama. Gambar final harus memuat informasi postingan di dalam gambar, bukan bergantung pada caption.
-- Prompt harus komprehensif dan siap copy untuk membuat poster informatif 1:1.
-- Prompt harus menyebutkan teks Indonesia yang harus muncul di gambar: label kecil, headline, subheadline, 3-6 blok informasi, CTA/penekanan bawah, dan footer "ArkaraWeb.com | Survive with Knowledge".
-- Gunakan gaya poster editorial Arkara: deep forest green (#1A2E1A), warm amber (#D4AF37), off-white cream, serious practical Indonesian urban household preparedness.
-- Visual: editorial illustration with graphic novel influence, detailed painterly quality, bold clean linework, cinematic but calm, modern Indonesian household or urban setting.
-- Layout harus text-heavy tetapi tetap rapi: typography-safe zones, hierarchy jelas, panel teks cream/white, amber dividers/checkmarks, heading forest green.
-- Informasi harus mudah dibaca di social feed. Jangan membuat teks terlalu kecil.
+function getFacebookVisualSpecRules(): string {
+  return `Aturan visual specification Arkara yang WAJIB:
+- AI tidak boleh meminta image model menulis teks ke gambar.
+- scene_prompt hanya mendeskripsikan background illustration, suasana, objek, ruang, pencahayaan, dan komposisi kosong untuk overlay CMS.
+- scene_prompt dilarang meminta logo, footer, headline, subheadline, panel teks, typography, watermark, lettering, atau tulisan apa pun.
+- Background wajib menyediakan negative space yang jelas agar CMS bisa merender teks secara deterministic.
+- Semua tulisan Indonesia disimpan di visual_spec: label, headline, subheadline, information_blocks, emphasis_text, footer, alt_text.
+- Footer wajib bernilai "ArkaraWeb.com | Survive with Knowledge" dan akan dirender CMS, bukan image model.
+- Gunakan visual language Arkara: editorial illustration, graphic novel influence, painterly quality, bold clean linework, cinematic but calm, deep forest green, warm amber, off-white accents.
+- Visual harus relevan dengan rumah tangga Indonesia: dapur kecil, ruang keluarga, balkon, rak logistik, galon, listrik padam, hujan kota, alat rumah tangga, atau situasi urban realistis.
 - Hindari logo brand pihak ketiga, watermark, gore, kekerasan eksplisit, chaos berlebihan, atau suasana panik.
-- Website "ArkaraWeb.com" wajib terlihat di setiap gambar.`
+- template_id harus singkat dan stabil, contoh: ar_block_left, ar_split_panel, ar_carousel_series.
+- aspect_ratio hanya boleh "1:1", "4:5", atau "9:16".`
+}
+
+function getFacebookVisualSpecJsonExample(includeSlides: boolean): string {
+  const baseSpec = `"visual_spec": {
+        "template_id": "ar_block_left",
+        "aspect_ratio": "1:1",
+        "scene_prompt": "Editorial illustration of a realistic Indonesian apartment kitchen during a calm evening power outage, family preparation items on a small table, warm lantern light, detailed painterly graphic novel style, empty calm space on the left side for CMS overlay",
+        "label": "RUMAH SIAGA",
+        "headline": "Kalau listrik padam malam ini",
+        "subheadline": "Rumah yang siap bukan yang punya alat mahal, tapi yang tahu prioritas pertama.",
+        "information_blocks": [
+          { "title": "Prioritas", "text": "Lampu, air minum, komunikasi, dan makanan cepat saji." },
+          { "title": "Reality check", "text": "Gangguan kecil terasa besar saat semua bergantung listrik." }
+        ],
+        "emphasis_text": "Mulai dari audit 10 menit malam ini.",
+        "footer": "ArkaraWeb.com | Survive with Knowledge",
+        "alt_text": "Ilustrasi dapur apartemen Indonesia saat listrik padam dengan perlengkapan darurat di meja."
+      }`
+
+  if (!includeSlides) return baseSpec
+
+  return `${baseSpec},
+      "slides": [
+        {
+          "slide_number": 1,
+          "purpose": "Hook",
+          "title_text": "24 Jam Tanpa Listrik",
+          "paragraph_text": "Apa yang paling dulu rusak di rumah?",
+          "visual_prompt": "Editorial illustration of a compact Indonesian living room during a calm blackout, lantern glow, fridge silhouette, empty upper area for CMS overlay",
+          "visual_spec": {
+            "template_id": "ar_carousel_series",
+            "aspect_ratio": "1:1",
+            "scene_prompt": "Editorial illustration of a compact Indonesian living room during a calm blackout, lantern glow, fridge silhouette, empty upper area for CMS overlay",
+            "label": "SLIDE 1",
+            "headline": "24 Jam Tanpa Listrik",
+            "subheadline": "Yang rusak duluan biasanya bukan alat, tapi urutan prioritas.",
+            "information_blocks": [
+              { "title": "Mulai cek", "text": "Lampu, air, kulkas, dan komunikasi keluarga." },
+              { "title": "Jangan tunggu", "text": "Audit kecil lebih berguna sebelum padam terjadi." }
+            ],
+            "emphasis_text": "Urutan lebih penting dari panik.",
+            "footer": "ArkaraWeb.com | Survive with Knowledge",
+            "alt_text": "Ruang keluarga kecil Indonesia saat listrik padam dengan lampu darurat menyala."
+          }
+        }
+      ]`
 }
 
 export function buildFacebookWeeklyPlanPrompt(input: GenerateFacebookWeeklyPlanInput): AIMessage[] {
@@ -875,8 +923,8 @@ Balas JSON valid persis seperti struktur ini:
       "cta": "CTA lembut satu kalimat",
       "objective": "awareness",
       "content_pillar": "Krisis Rumah Tangga",
-      "visual_prompt": "prompt gambar poster text-heavy 1:1 yang memuat informasi utama di dalam gambar",
-      "slides": []
+      "visual_prompt": "legacy scene_prompt saja, tanpa instruksi teks-in-image",
+      ${getFacebookVisualSpecJsonExample(true)}
     }
   ]
 }
@@ -885,12 +933,13 @@ Aturan:
 - Wajib tepat 7 posts.
 - scheduled_date harus berurutan dari start date.
 - scheduled_time pakai WIT dan realistis untuk Facebook.
-- Caption Facebook harus singkat. Informasi utama harus berada di visual_prompt sebagai teks di dalam gambar.
+- Caption Facebook tetap singkat, tetapi informasi visual utama masuk ke visual_spec, bukan ke scene_prompt.
 - Wednesday carousel wajib punya 5-7 slides.
-- Untuk carousel, setiap slide wajib punya slide_number, purpose, title_text, paragraph_text, visual_prompt.
-- visual_prompt post dan slide wajib menyebutkan exact Indonesian text yang harus tampil di gambar dan footer ArkaraWeb.com.
+- Untuk carousel, setiap slide wajib punya slide_number, purpose, title_text, paragraph_text, visual_prompt, dan visual_spec.
+- Semua slide carousel harus terasa sebagai satu seri visual yang konsisten.
+- visual_prompt adalah legacy fallback dan wajib sama atau setara dengan visual_spec.scene_prompt.
 - Friday article_link harus mengarahkan pembaca ke source URL jika URL tersedia.
-- ${getFacebookImagePromptRules()}`,
+- ${getFacebookVisualSpecRules()}`,
     },
   ]
 }
@@ -907,13 +956,14 @@ URL: ${input.source_url || '-'}`
     { role: 'system', content: buildFacebookSystemPrompt() },
     {
       role: 'user',
-      content: `Buat draft Facebook post Arkara. Fokus utama adalah prompt gambar poster informatif; caption hanya pendamping singkat.
+      content: `Buat draft Facebook post Arkara dengan visual specification terstruktur. Caption hanya pendamping singkat.
 
 Title: ${input.title}
 Post type: ${input.post_type}
 Hook awal jika ada: ${input.hook || '-'}
 Primary goal: ${input.primary_goal || '-'}
 Content pillar: ${input.content_pillar || '-'}
+Aspect ratio: ${input.aspect_ratio || '1:1'}
 Tone note: ${input.tone_note || 'Praktis, tenang, serius, tidak panik'}${sourceContext}
 
 Balas JSON valid:
@@ -922,15 +972,16 @@ Balas JSON valid:
   "hook": "hook kuat tetapi grounded",
   "body": "caption Facebook singkat maksimal 2-3 kalimat sebagai pengantar",
   "cta": "CTA lembut satu kalimat",
-  "visual_prompt": "prompt text-to-image komprehensif untuk poster text-heavy yang memuat informasi utama postingan di dalam gambar"
+  "visual_prompt": "legacy scene_prompt saja, tanpa instruksi teks-in-image",
+  ${getFacebookVisualSpecJsonExample(false)}
 }
 
 Aturan:
 - Caption body harus singkat. Jangan menaruh seluruh informasi di caption.
-- Semua informasi utama harus ditransfer ke visual_prompt sebagai instruksi teks-in-image.
-- visual_prompt wajib menyertakan exact Indonesian text yang perlu tampil pada poster, termasuk footer ArkaraWeb.com.
+- Semua informasi poster yang akan dibaca manusia harus masuk ke visual_spec.
+- visual_prompt wajib sama atau setara dengan visual_spec.scene_prompt.
 - Jika ada URL sumber, CTA boleh mengarah ke artikel/panduan lengkap.
-- ${getFacebookImagePromptRules()}`,
+- ${getFacebookVisualSpecRules()}`,
     },
   ]
 }
@@ -947,13 +998,14 @@ URL: ${input.source_url || '-'}`
     { role: 'system', content: buildFacebookSystemPrompt() },
     {
       role: 'user',
-      content: `Buat struktur carousel Facebook Arkara. Setiap slide adalah poster informatif kecil yang membawa teks utama di dalam gambar.
+      content: `Buat struktur carousel Facebook Arkara dengan visual specification per slide.
 
 Title: ${input.title}
 Hook: ${input.hook || '-'}
 Jumlah slide: ${input.slide_count || 7}
 Primary goal: ${input.primary_goal || 'share/save'}
 Content pillar: ${input.content_pillar || '-'}
+Aspect ratio: ${input.aspect_ratio || '1:1'}
 Tone note: ${input.tone_note || 'Praktis, tenang, serius, tidak panik'}${sourceContext}
 
 Balas JSON valid:
@@ -964,7 +1016,22 @@ Balas JSON valid:
       "purpose": "Hook",
       "title_text": "teks judul slide",
       "paragraph_text": "teks pendek slide",
-      "visual_prompt": "prompt gambar 1:1 siap copy"
+      "visual_prompt": "legacy scene_prompt saja, tanpa instruksi teks-in-image",
+      "visual_spec": {
+        "template_id": "ar_carousel_series",
+        "aspect_ratio": "1:1",
+        "scene_prompt": "Editorial illustration of a realistic Indonesian household preparedness scene, same visual series style, empty calm area for CMS overlay",
+        "label": "SLIDE 1",
+        "headline": "judul utama slide",
+        "subheadline": "penjelasan ringkas slide",
+        "information_blocks": [
+          { "title": "Poin 1", "text": "teks blok singkat" },
+          { "title": "Poin 2", "text": "teks blok singkat" }
+        ],
+        "emphasis_text": "kalimat penekanan",
+        "footer": "ArkaraWeb.com | Survive with Knowledge",
+        "alt_text": "deskripsi aksesibilitas slide"
+      }
     }
   ]
 }
@@ -973,8 +1040,11 @@ Aturan:
 - Minimal 3 slide, ideal 5-7 slide.
 - Struktur yang disarankan: Hook, Masalah, Dampak, Kesalahan umum, Solusi kecil, Checklist, CTA.
 - Setiap slide harus ringkas dan layak dibaca di layar HP.
-- visual_prompt setiap slide wajib komprehensif dan menyertakan exact Indonesian text untuk slide tersebut, termasuk footer kecil ArkaraWeb.com.
-- ${getFacebookImagePromptRules()}`,
+- purpose slide tetap dipertahankan.
+- scene_prompt setiap slide harus konsisten sebagai satu seri.
+- title_text dan paragraph_text tetap terpisah dari visual_spec untuk kompatibilitas editor lama.
+- visual_prompt wajib sama atau setara dengan visual_spec.scene_prompt.
+- ${getFacebookVisualSpecRules()}`,
     },
   ]
 }
@@ -984,7 +1054,7 @@ export function buildFacebookVisualPrompt(input: GenerateFacebookVisualPromptInp
     { role: 'system', content: buildFacebookSystemPrompt() },
     {
       role: 'user',
-      content: `Buat satu prompt text-to-image untuk konten Facebook Arkara. Prompt harus menghasilkan poster informatif yang memuat teks utama di dalam gambar.
+      content: `Buat visual specification terstruktur untuk konten Facebook Arkara. Jangan membuat prompt poster text-in-image.
 
 Title: ${input.title}
 Context: ${input.context}
@@ -993,19 +1063,18 @@ Tone note: ${input.tone_note || 'Serius, calm, practical'}
 
 Balas JSON valid:
 {
-  "visual_prompt": "prompt lengkap siap copy"
+  "visual_prompt": "legacy scene_prompt saja, tanpa instruksi teks-in-image",
+  ${getFacebookVisualSpecJsonExample(false)}
 }
 
 Aturan:
-- Tulis prompt dalam bahasa Inggris agar stabil untuk image model.
-- Di dalam prompt, sertakan exact Indonesian text yang harus muncul pada poster.
-- Struktur poster wajib punya label kecil, headline, subheadline, beberapa blok informasi, CTA/penekanan bawah, dan footer ArkaraWeb.com.
-- ${getFacebookImagePromptRules()}
-- Output hanya prompt di field visual_prompt.`,
+- visual_prompt wajib sama atau setara dengan visual_spec.scene_prompt.
+- Semua tulisan Indonesia wajib masuk ke visual_spec, bukan scene_prompt.
+- ${getFacebookVisualSpecRules()}
+- Output hanya JSON sesuai struktur di atas.`,
     },
   ]
 }
-
 export function buildRewritePrompt(
   input: RewriteSectionInput,
   profile: AIContentProfile = 'workspace'

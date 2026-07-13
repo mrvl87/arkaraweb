@@ -133,3 +133,17 @@ Acceptance criteria:
 - Learning output cites the metric fields used.
 - No external Meta API dependency is required.
 - AI suggestions remain reviewable before becoming strategy or draft changes.
+
+## Phase 3 - Structured Visual Specification
+
+Acceptance criteria:
+
+- AI social visual generation outputs validated `visual_spec` objects.
+- `scene_prompt` describes only background illustration and is not used for text-in-image instructions.
+- `visual_prompt` is preserved as legacy fallback and stores the safe scene prompt.
+- `social_posts.visual_spec` is saved for weekly plan, post draft generation, and regenerate visual spec actions.
+- `social_carousel_slides.visual_spec` and `purpose` are available through additive migration.
+- Generated carousel slides preserve `purpose`, `title_text`, `paragraph_text`, `visual_prompt`, and `visual_spec`.
+- Old posts and slides with null `visual_spec` remain editable.
+- Editor can edit structured post headline, subheadline, information blocks, emphasis text, footer, alt text, and scene prompt without regenerating the scene.
+- Renderer is still future scope; no poster image generation is added in this phase.

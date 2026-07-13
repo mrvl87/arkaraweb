@@ -49,6 +49,25 @@ export type SocialChecklistKey = (typeof SOCIAL_CHECKLIST_KEYS)[number]
 export const SOCIAL_ASPECT_RATIOS = ['1:1', '4:5', '9:16'] as const
 export type SocialAspectRatio = (typeof SOCIAL_ASPECT_RATIOS)[number]
 
+export interface SocialVisualInformationBlock {
+  title?: string
+  text: string
+  icon?: string
+}
+
+export interface SocialVisualSpec {
+  template_id: string
+  aspect_ratio: SocialAspectRatio
+  scene_prompt: string
+  label: string
+  headline: string
+  subheadline: string
+  information_blocks: SocialVisualInformationBlock[]
+  emphasis_text: string
+  footer: string
+  alt_text: string
+}
+
 export const SOCIAL_ASSET_TYPES = [
   'background',
   'poster',
@@ -112,7 +131,7 @@ export interface SocialPost {
   visual_prompt: string | null
   first_comment: string | null
   alt_text: string | null
-  visual_spec: Record<string, unknown> | null
+  visual_spec: SocialVisualSpec | null
   selected_template_id: string | null
   aspect_ratio: SocialAspectRatio
   utm_source: string
@@ -137,9 +156,11 @@ export interface SocialCarouselSlide {
   post_id: string
   user_id: string
   slide_number: number
+  purpose: string | null
   title_text: string
   paragraph_text: string | null
   visual_prompt: string | null
+  visual_spec: SocialVisualSpec | null
   image_status: CarouselImageStatus
   created_at: string
   updated_at: string

@@ -266,3 +266,7 @@ Optional later dependency:
 - Existing `post_type`, `status`, and `image_status` enums should not be narrowed.
 - Legacy localStorage state is no longer the source of truth for copied or posted status.
 - Existing AI generation logs must remain compatible with current operation names.
+
+## Phase 3 Product Behavior
+
+Visual generation now produces a structured visual specification. Editors can adjust headline, subheadline, information blocks, emphasis text, footer, alt text, and scene prompt separately. AI-generated background prompts are treated as background-only scene prompts; CMS rendering remains responsible for all visible Indonesian copy in future renderer phases.

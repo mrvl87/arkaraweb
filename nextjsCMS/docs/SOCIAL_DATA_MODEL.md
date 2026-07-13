@@ -454,3 +454,41 @@ Rules:
 - Public read is enabled because assets are social publishing materials.
 - Authenticated users can insert, update, and delete only object paths whose first folder is their own `user_id`.
 - Expected folder convention: `user_id/post_id/filename`.
+
+## Phase 3 Additive Data Model
+
+Migration: `supabase/migrations/20260713100000_add_social_carousel_slide_visual_spec.sql`
+
+### `social_carousel_slides` Additions
+
+- `purpose text`
+- `visual_spec jsonb`
+
+Rules:
+
+- Existing `visual_prompt` remains for legacy compatibility.
+- `visual_spec` stores the structured slide visual contract used by deterministic CMS rendering.
+- `purpose` preserves the slide role such as Hook, Problem, Impact, Checklist, or CTA.
+- `visual_spec` is nullable so old carousel slides remain readable.
+- New generated slides should persist both `visual_spec` and legacy `visual_prompt`, with `visual_prompt` set to `visual_spec.scene_prompt`.
+
+### Structured Visual Spec Contract
+
+`social_posts.visual_spec` and `social_carousel_slides.visual_spec` use this shape:
+
+```ts
+type SocialVisualSpec = {
+  template_id: string
+  aspect_ratio: '1:1' | '4:5' | '9:16'
+  scene_prompt: string
+  label: string
+  headline: string
+  subheadline: string
+  information_blocks: Array<{ title?: string; text: string; icon?: string }>
+  emphasis_text: string
+  footer: string
+  alt_text: string
+}
+```
+
+Validation limits live in `src/lib/ai/schemas.ts`.
