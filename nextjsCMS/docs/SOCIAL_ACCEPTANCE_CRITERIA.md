@@ -300,8 +300,8 @@ Acceptance criteria:
 
 Phase 12 validation result:
 
-- `npm run lint`: passed for Social Content OS scope with 2 non-blocking `<img>` warnings.
+- `npm run lint`: passed for Social Content OS scope with no warnings after risk-closure follow-up.
 - `npx tsc --noEmit --pretty false`: passed.
-- `npm run test:social-renderer`: passed, 24 tests.
+- `npm run test:social-renderer`: passed, 27 tests including migration/RLS/storage hardening checks.
 - `npm run build`: passed when rerun outside the Windows sandbox after sandbox-only `spawn EPERM`.
 - Supabase CLI was unavailable, so live migration reset/integration tests were not run locally.

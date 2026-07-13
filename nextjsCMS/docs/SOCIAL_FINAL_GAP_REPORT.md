@@ -4,52 +4,54 @@ Date: 2026-07-13
 
 ## Final Status
 
-Social Content OS is hardened for the manual-publishing workflow delivered through Phase 11.
+Social Content OS is hardened for the manual-publishing workflow delivered through Phase 11 and Phase 12 follow-up.
 
 Validated locally:
 
-- Social lint scope passes.
+- Social lint scope passes with no warnings.
 - Typecheck passes.
-- Social renderer/unit tests pass with 24 tests.
+- Social renderer/hardening test suite passes with 27 tests.
 - Production build passes outside the Windows sandbox.
-- Static ownership, RLS, storage path, and server/client boundary checks were completed.
+- Production server smoke checks pass for `/login` and unauthenticated `/cms/social` auth redirect.
+- Static ownership, RLS, storage path, and server/client boundary checks are covered by automated tests.
 
-## Remaining Gaps
+## Closed Risks
 
-1. Supabase CLI unavailable
+1. Social asset preview `<img>` warnings
 
-- `supabase --version` is not available in this workspace.
-- Migrations and RLS were verified statically from SQL files, not by local database reset.
+- Replaced raw social asset preview images with `next/image` using `unoptimized` for public storage URLs.
+- `npm run lint` now passes without warnings.
 
-2. Browser/mobile QA not executed
+2. RLS/storage static review only
 
-- Phase 12 did not run a Playwright/mobile visual QA session.
-- Build verifies route compilation, but not every dialog and responsive layout interaction.
+- Added automated migration tests for additive order, owner RLS policies, and `social-assets` storage ownership policies.
+- This does not replace applying migrations to a real Supabase database, but it makes the repo-level RLS/storage regression check executable.
 
-3. Social asset previews use `<img>`
+3. Basic route smoke QA
 
-- `social-asset-history.tsx` and `social-publish-pack.tsx` still warn under `@next/next/no-img-element`.
-- This is acceptable for now because the images are public storage assets and changing image loading behavior was outside final hardening scope.
+- Started the production server locally after build.
+- `/login` returned 200.
+- Unauthenticated `/cms/social` returned 307 to `/login`, then loaded `/login` with 200.
 
-4. Renderer measurement remains approximate
+## Remaining External Prerequisites
 
-- SVG text checks are deterministic and tested, but still approximate without a full layout engine.
-- Keep fixture-based regression tests for long Indonesian copy.
+1. Live Supabase migration reset/apply
 
-5. Publish ZIP delivery may need streaming later
+- Supabase CLI is not installed.
+- `supabase/config.toml` is not present.
+- Docker and `psql` are not available in this environment.
+- Live migration application must be run in the target Supabase workflow or a prepared local Supabase environment.
 
-- Carousel ZIP is returned as base64 through a Server Action.
-- This works for normal packs, but large packs may require a route handler stream later.
+2. Authenticated browser/mobile visual QA
 
-6. Screenshot metrics extraction is optional-provider dependent
+- No Playwright, Puppeteer, Chrome, or Edge runtime is available in this workspace.
+- The route smoke test verifies production route availability and auth boundary, but not authenticated visual layout after login.
+- Full visual QA needs an authenticated test account and browser automation runtime.
 
-- Extraction needs a configured vision model.
-- User confirmation remains mandatory by design.
+3. Meta API/autopost
 
-7. Meta API/autopost not implemented
-
-- Manual publishing is the release workflow.
-- Meta API and autopost remain future integration only.
+- Still intentionally not implemented.
+- Manual publishing remains the release workflow.
 
 ## Backward Compatibility
 
@@ -63,4 +65,4 @@ Preserved:
 
 ## Release Recommendation
 
-Release Social Content OS as a manual publishing system after migrations are applied in the target Supabase environment and a quick browser smoke test is completed on `/cms/social`.
+Release Social Content OS as a manual publishing system after migrations are applied in the target Supabase environment and one authenticated browser smoke test is completed on `/cms/social`.

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { CheckCircle2, Copy, Download, ExternalLink, Loader2, PackageCheck } from "lucide-react";
 import {
@@ -101,6 +102,7 @@ export function SocialPublishPack({
   const finalCaption = buildSocialCaptionWithUtm(post as SocialPost);
   const approvedPoster = getApprovedPoster(assets, post.id);
   const latestPoster = getLatestPoster(assets, post.id);
+  const latestPosterUrl = latestPoster ? resolveSocialAssetUrl(latestPoster.storage_path) : "";
   const slideAssets = useMemo(() => getApprovedSlideAssets(assets, slides), [assets, slides]);
   const latestPublication = publications[0] ?? null;
 
@@ -217,7 +219,9 @@ export function SocialPublishPack({
           </div>
         ) : latestPoster ? (
           <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
-            <img src={resolveSocialAssetUrl(latestPoster.storage_path)} alt="Final poster" className="aspect-square rounded-lg border border-gray-100 object-cover" />
+            <div className="relative aspect-square overflow-hidden rounded-lg border border-gray-100">
+              {latestPosterUrl ? <Image src={latestPosterUrl} alt="Final poster" fill sizes="160px" className="object-cover" unoptimized /> : null}
+            </div>
             <div className="text-sm text-gray-600">
               <AssetChip asset={latestPoster} />
               {!approvedPoster ? <div className="mt-2 text-xs font-bold text-amber-700">Latest poster belum approved.</div> : null}

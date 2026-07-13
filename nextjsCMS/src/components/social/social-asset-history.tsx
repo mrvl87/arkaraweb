@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Archive, CheckCircle2, Download } from "lucide-react";
 import { updateSocialAssetStatus } from "@/app/cms/social/actions";
 import { resolveSocialAssetUrl } from "@/lib/social/social-asset-url";
@@ -43,10 +44,10 @@ export function SocialAssetHistory({
             <button
               type="button"
               onClick={() => onSelectAsset?.(asset.id)}
-              className={`h-20 overflow-hidden rounded-md border bg-gray-100 ${selected ? "border-arkara-amber ring-2 ring-arkara-amber/30" : "border-gray-100"}`}
+              className={`relative h-20 overflow-hidden rounded-md border bg-gray-100 ${selected ? "border-arkara-amber ring-2 ring-arkara-amber/30" : "border-gray-100"}`}
             >
               {url ? (
-                <img src={url} alt={`Asset v${asset.version}`} className="h-full w-full object-cover" />
+                <Image src={url} alt={`Asset v${asset.version}`} fill sizes="88px" className="object-cover" unoptimized />
               ) : null}
             </button>
             <div className="min-w-0 text-xs">

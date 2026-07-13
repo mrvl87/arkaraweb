@@ -389,3 +389,67 @@ test('zip entry names remove traversal segments', () => {
   assert.equal(sanitizeZipEntryName('carousel\\..\\02-slide.png'), 'carousel/02-slide.png')
   assert.equal(sanitizeZipEntryName('/'), 'asset')
 })
+test('social migrations remain additive and ordered', () => {
+  const migrationDir = require('node:path').join(__dirname, '..', 'supabase', 'migrations')
+  const socialMigrations = fs.readdirSync(migrationDir)
+    .filter((file) => file.includes('social') && file.endsWith('.sql'))
+    .sort()
+
+  assert.deepEqual(socialMigrations, [
+    '20260510120000_create_social_tracker.sql',
+    '20260713090000_add_social_assets_and_publications.sql',
+    '20260713100000_add_social_carousel_slide_visual_spec.sql',
+    '20260713120000_extend_social_post_derivative_types.sql',
+    '20260713130000_create_social_post_variants.sql',
+    '20260713140000_extend_social_post_metrics_analytics.sql',
+    '20260713150000_create_social_learnings.sql',
+    '20260713160000_add_social_metric_ingestion.sql',
+  ])
+
+  const additiveSql = socialMigrations
+    .slice(1)
+    .map((file) => fs.readFileSync(require('node:path').join(migrationDir, file), 'utf8').toLowerCase())
+    .join('\n')
+
+  assert.equal(/drop\s+table\b/.test(additiveSql), false)
+  assert.equal(/drop\s+column\b/.test(additiveSql), false)
+})
+
+test('social RLS migrations protect owned rows', () => {
+  const migrationDir = require('node:path').join(__dirname, '..', 'supabase', 'migrations')
+  const sql = fs.readdirSync(migrationDir)
+    .filter((file) => file.includes('social') && file.endsWith('.sql'))
+    .map((file) => fs.readFileSync(require('node:path').join(migrationDir, file), 'utf8').toLowerCase())
+    .join('\n')
+
+  for (const table of [
+    'social_campaigns',
+    'social_posts',
+    'social_carousel_slides',
+    'social_post_metrics',
+    'social_assets',
+    'social_publications',
+    'social_post_variants',
+    'social_learnings',
+    'social_metric_imports',
+  ]) {
+    assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`))
+    assert.match(sql, new RegExp(String.raw`on public\.${table}[\s\S]*auth\.uid\(\)\) = user_id|on public\.${table}[\s\S]*auth\.uid\(\) = user_id|on public\.${table}[\s\S]*user_id = auth\.uid\(\)`))
+  }
+
+  assert.equal(sql.includes('auth.role()'), false)
+  assert.equal(sql.includes('service_role'), false)
+})
+
+test('social storage policies keep writes in user-owned folders', () => {
+  const migration = fs.readFileSync(
+    require('node:path').join(__dirname, '..', 'supabase', 'migrations', '20260713090000_add_social_assets_and_publications.sql'),
+    'utf8'
+  ).toLowerCase()
+
+  assert.match(migration, /values \('social-assets', 'social-assets', true\)/)
+  assert.match(migration, /on storage\.objects[\s\S]*for select[\s\S]*bucket_id = 'social-assets'/)
+  assert.match(migration, /for insert[\s\S]*bucket_id = 'social-assets'[\s\S]*\(storage\.foldername\(name\)\)\[1\] = (?:\(select auth\.uid\(\)\)|\(auth\.uid\(\)\))::text/)
+  assert.match(migration, /for update[\s\S]*bucket_id = 'social-assets'[\s\S]*\(storage\.foldername\(name\)\)\[1\] = (?:\(select auth\.uid\(\)\)|\(auth\.uid\(\)\))::text/)
+  assert.match(migration, /for delete[\s\S]*bucket_id = 'social-assets'[\s\S]*\(storage\.foldername\(name\)\)\[1\] = (?:\(select auth\.uid\(\)\)|\(auth\.uid\(\)\))::text/)
+})

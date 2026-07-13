@@ -773,3 +773,32 @@ Features intentionally not built:
 Future integration:
 
 - Meta API/autopost can be added later as a separate integration behind explicit permissions, token storage, retry handling, and publication audit logs. It is intentionally outside the Social Content OS manual-publishing release.
+## 2026-07-13 - Phase 12 Risk Closure Follow-up
+
+Scope executed:
+
+- Converted social asset preview images from raw `<img>` to `next/image` with `unoptimized` for public storage URLs.
+- Added automated SQL migration tests for additive ordering, RLS ownership policies, and `social-assets` storage ownership policies.
+- Ran production-server smoke checks for `/login` and `/cms/social` auth redirect.
+
+Files changed:
+
+- `src/components/social/social-asset-history.tsx`
+- `src/components/social/social-publish-pack.tsx`
+- `scripts/test-social-renderer.cjs`
+- `docs/SOCIAL_FINAL_GAP_REPORT.md`
+- `docs/SOCIAL_IMPLEMENTATION_LOG.md`
+
+Validation:
+
+- `npm run lint`: passed with no warnings.
+- `npx tsc --noEmit --pretty false`: passed.
+- `npm run test:social-renderer`: passed, 27 tests.
+- `npm run build`: sandbox run compiled then failed with Windows `spawn EPERM`; elevated rerun passed.
+- Production server smoke: `/login` returned 200; unauthenticated `/cms/social` returned 307 to `/login`; redirected request returned 200.
+
+Risk status:
+
+- Social `<img>` lint warnings: resolved.
+- RLS/storage static-only review: mitigated with automated tests, but live Supabase reset still requires Supabase CLI plus local database tooling.
+- Browser/mobile QA: mitigated with production-server smoke test. Full visual browser QA remains dependent on a browser automation runtime or authenticated test account.
