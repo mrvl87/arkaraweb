@@ -147,3 +147,17 @@ Acceptance criteria:
 - Old posts and slides with null `visual_spec` remain editable.
 - Editor can edit structured post headline, subheadline, information blocks, emphasis text, footer, alt text, and scene prompt without regenerating the scene.
 - Renderer is still future scope; no poster image generation is added in this phase.
+
+## Phase 4 - Deterministic Social Renderer
+
+Acceptance criteria:
+
+- Post render action can produce a PNG buffer and upload it as a `poster` asset.
+- Carousel slide render action can produce PNG per slide and upload it as a `carousel_slide` asset.
+- Batch carousel render action renders all slides and marks the post asset checklist complete.
+- Renderer works without a background image using deterministic fallback backgrounds.
+- Background image, when present as latest ready/approved `background` asset, is loaded from Supabase Storage and placed behind CMS-rendered text.
+- Footer and headline are rendered by CMS templates, not by the image model.
+- Asset versions increment and old files are not overwritten.
+- Storage path begins with `user_id/post_id`.
+- Unit tests cover dimensions, missing visual spec, long headline, too many blocks, aspect ratios, registry, version increment, and storage ownership path.

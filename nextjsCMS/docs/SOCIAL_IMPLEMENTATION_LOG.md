@@ -323,3 +323,69 @@ Supabase CLI was not available in this Windows environment, so the migration fil
 - Existing carousel regeneration remains destructive and replaces prior slides.
 - Zod validation rejects obvious text-in-image scene prompt instructions, but AI can still fail validation and require regenerate.
 - Supabase migration was not executed locally because no Supabase CLI is installed.
+
+## 2026-07-13 - Phase 4 Deterministic Social Renderer
+
+### Files Inspected
+
+- `package.json`
+- `src/app/cms/social/actions.ts`
+- `src/app/cms/media/actions.ts`
+- `src/lib/supabase/server.ts`
+- `src/app/globals.css`
+- `docs/SOCIAL_RENDERER_SPEC.md`
+- `supabase/migrations/20260713090000_add_social_assets_and_publications.sql`
+
+### Files Changed
+
+- `package.json`
+- `src/app/cms/social/actions.ts`
+- `docs/SOCIAL_RENDERER_SPEC.md`
+- `docs/SOCIAL_ACCEPTANCE_CRITERIA.md`
+- `docs/SOCIAL_DATA_MODEL.md`
+- `docs/SOCIAL_IMPLEMENTATION_LOG.md`
+
+### Files Added
+
+- `src/lib/social/render/types.ts`
+- `src/lib/social/render/dimensions.ts`
+- `src/lib/social/render/template-registry.ts`
+- `src/lib/social/render/text-validation.ts`
+- `src/lib/social/render/render-social-asset.ts`
+- `src/lib/social/render/templates/svg-utils.ts`
+- `src/lib/social/render/templates/editorial-opinion-v1.tsx`
+- `src/lib/social/render/templates/editorial-checklist-v1.tsx`
+- `src/lib/social/render/templates/editorial-carousel-v1.tsx`
+- `src/lib/social/render/__fixtures__/visual-spec.ts`
+- `scripts/test-social-renderer.cjs`
+
+### Migration Created
+
+- None. Phase 4 uses existing `social_assets` and `social_posts.asset_done` from previous phases.
+
+### Completed
+
+- Implemented deterministic SVG renderer with existing `sharp` dependency.
+- Added dimensions for `1:1`, `4:5`, and `9:16`.
+- Added template registry with `editorial-opinion-v1`, `editorial-checklist-v1`, and `editorial-carousel-v1`.
+- Added fallback mapping for legacy template ids such as `ar_block_left`, `ar_split_panel`, and `ar_carousel_series`.
+- Added hard validation for missing visual spec, headline limit, unsupported aspect ratio, and too many information blocks.
+- Added warning collection for near-overflow text conditions and background download failure.
+- Added post, slide, and full carousel render server actions.
+- Uploaded rendered PNGs to Supabase Storage bucket `social-assets` under `user_id/post_id` ownership paths.
+- Inserted versioned `social_assets` rows without overwriting old versions.
+- Added unit test runner and renderer fixtures.
+
+### Tests Run
+
+- `npx tsc --noEmit --pretty false` passed.
+- `npm run test:social-renderer` passed, 8 tests.
+- `npm run lint` failed because the existing script `next lint` is treated by Next 16 as project path `lint`.
+- `npm run build` compiled successfully, then failed with existing Windows `spawn EPERM` environment error.
+
+### Risks Remaining
+
+- Supabase Storage upload actions require the deployed `social-assets` bucket and storage policies from Phase 2.
+- No UI button calls the render actions yet; this is expected for Phase 4.
+- SVG text measurement is approximate by design; template warnings catch risk but do not replace visual QA.
+- Project has no bundled local font file; renderer uses the existing CSS typography stack and local/system fallback.

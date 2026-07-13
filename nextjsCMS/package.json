@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:social-renderer": "node scripts/test-social-renderer.cjs",
     "bulk-index": "node --env-file=.env.local --experimental-vm-modules scripts/bulk-index.js",
     "bulk-index:dry": "node --env-file=.env.local --experimental-vm-modules scripts/bulk-index.js --dry-run"
   },

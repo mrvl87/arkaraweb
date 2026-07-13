@@ -492,3 +492,18 @@ type SocialVisualSpec = {
 ```
 
 Validation limits live in `src/lib/ai/schemas.ts`.
+
+## Phase 4 Asset Storage Behavior
+
+No new database migration is required in Phase 4.
+
+Renderer writes to existing Phase 2 tables:
+
+- `social_assets.asset_type = 'poster'` for post-level rendered PNG.
+- `social_assets.asset_type = 'carousel_slide'` for carousel slide PNG.
+- `social_assets.version` increments from existing rows for the same owner/post/asset type and slide when applicable.
+- `social_assets.storage_path` follows `user_id/post_id/filename` ownership folders.
+- `social_assets.metadata.render_warnings` stores non-blocking renderer warnings.
+- `social_posts.asset_done` becomes true after post poster render or full carousel batch render.
+
+Old asset versions remain in storage and database.

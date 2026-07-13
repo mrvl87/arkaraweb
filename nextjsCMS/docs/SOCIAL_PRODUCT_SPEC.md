@@ -270,3 +270,7 @@ Optional later dependency:
 ## Phase 3 Product Behavior
 
 Visual generation now produces a structured visual specification. Editors can adjust headline, subheadline, information blocks, emphasis text, footer, alt text, and scene prompt separately. AI-generated background prompts are treated as background-only scene prompts; CMS rendering remains responsible for all visible Indonesian copy in future renderer phases.
+
+## Phase 4 Product Behavior
+
+Social posts and carousel slides can now be rendered into deterministic PNG assets from `visual_spec`. The renderer is server-side, versioned, and manual-action ready. It does not publish to Meta and does not require browser automation. UI controls for triggering these actions are reserved for a later phase.

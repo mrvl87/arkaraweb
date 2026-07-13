@@ -238,3 +238,51 @@ Renderer principles remain:
 - Text overflow validation remains a renderer responsibility for future phases.
 
 Current implementation stores structured specs for posts and generated carousel slides. It does not render final posters yet.
+
+## Phase 4 Deterministic Renderer
+
+Implemented renderer path:
+
+- Uses existing `sharp` dependency.
+- Composes deterministic SVG from `SocialVisualSpec`.
+- Rasterizes SVG to PNG with `sharp`.
+- Does not use browser automation.
+- Does not fetch fonts or assets from external URLs during render.
+- Uses the project typography stack declared in CSS: `Inter, -apple-system, sans-serif`; SVG fallback includes `Inter, Arial, sans-serif` because no project-local font file exists.
+
+Initial templates:
+
+- `editorial-opinion-v1`
+- `editorial-checklist-v1`
+- `editorial-carousel-v1`
+
+Renderer module:
+
+- `src/lib/social/render/types.ts`
+- `src/lib/social/render/dimensions.ts`
+- `src/lib/social/render/template-registry.ts`
+- `src/lib/social/render/text-validation.ts`
+- `src/lib/social/render/render-social-asset.ts`
+- `src/lib/social/render/templates/*`
+
+Server actions:
+
+- `renderSocialPostAsset(postId)`
+- `renderCarouselSlideAsset(slideId)`
+- `renderAllCarouselAssets(postId)`
+
+Storage behavior:
+
+- PNG files are uploaded to Supabase Storage bucket `social-assets`.
+- Object paths use `user_id/post_id/...` ownership folders.
+- Old versions are preserved; each render increments `social_assets.version`.
+- Rendered rows are inserted into `social_assets` with status `ready`.
+- Post render and full carousel batch mark `social_posts.asset_done = true`.
+
+Validation behavior:
+
+- Missing visual spec rejects render.
+- Headline over template hard limit rejects render.
+- Information blocks over template hard limit reject render.
+- Near-overflow conditions return warnings.
+- Normal fixture renders without warnings for `1:1`, `4:5`, and `9:16`.
