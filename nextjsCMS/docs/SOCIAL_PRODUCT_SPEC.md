@@ -274,3 +274,18 @@ Visual generation now produces a structured visual specification. Editors can ad
 ## Phase 4 Product Behavior
 
 Social posts and carousel slides can now be rendered into deterministic PNG assets from `visual_spec`. The renderer is server-side, versioned, and manual-action ready. It does not publish to Meta and does not require browser automation. UI controls for triggering these actions are reserved for a later phase.
+
+## Phase 5 Product Behavior
+
+Social Post Editor is now organized into tabs: Content, Visual, Publish, and Metrics.
+
+Visual Studio behavior:
+
+- Content tab owns internal title, hook, body, CTA, target URL, first comment, alt text, and read-only combined caption preview.
+- Visual tab owns template selection, aspect ratio, scene prompt, structured copy fields, background upload, preview, render, and asset history.
+- Publish tab keeps the existing manual copy/checklist/status workflow until the Publish Pack phase.
+- Metrics tab keeps the existing metrics entry workflow.
+- Carousel posts expose slide-level visual tabs inside the Visual tab so each slide can have its own visual spec, background, render, and asset history.
+- Visual changes are stored in `visual_spec`, `selected_template_id`, `aspect_ratio`, `visual_prompt`, and `alt_text` without regenerating AI output.
+
+Background uploads are user-owned `social_assets` rows with `asset_type = 'background'`. Render actions can use a selected background version while preserving old generated poster versions.

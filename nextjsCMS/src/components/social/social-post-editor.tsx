@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   copyPostCaptionMark,
   deleteSocialPost,
@@ -19,17 +20,30 @@ import type {
   PostDraftUpdater,
   PostEditorProps,
 } from "./social-post-editor-types";
+import { SocialVisualStudio } from "./social-visual-studio";
 import { buildCaption } from "./social-utils";
+
+type EditorTab = "content" | "visual" | "publish" | "metrics";
+
+const EDITOR_TABS: Array<{ id: EditorTab; label: string }> = [
+  { id: "content", label: "Content" },
+  { id: "visual", label: "Visual" },
+  { id: "publish", label: "Publish" },
+  { id: "metrics", label: "Metrics" },
+];
 
 export function SocialPostEditor({
   post,
   setPost,
   slides,
+  assets,
   latestMetric,
   isPending,
   runAction,
   savePost,
 }: PostEditorProps) {
+  const [activeTab, setActiveTab] = useState<EditorTab>("content");
+
   if (!post) {
     return null;
   }
@@ -109,47 +123,83 @@ export function SocialPostEditor({
         role="dialog"
         aria-modal="true"
         aria-label="Edit social post"
-        className="absolute bottom-0 right-0 top-0 flex w-full max-w-3xl flex-col border-l border-gray-200 bg-white shadow-2xl"
+        className="absolute bottom-0 right-0 top-0 flex w-full max-w-5xl flex-col border-l border-gray-200 bg-white shadow-2xl"
       >
         <SocialPostEditorHeader onClose={() => setPost(null)} />
 
-        <div className="flex-1 space-y-5 overflow-y-auto p-5">
-          <SocialCopyReadyPanel disabled={isPending || !post.id} onCopyCaption={handleCopyCaption} />
+        <div className="border-b border-gray-100 px-5 pt-4">
+          <div className="flex gap-2 overflow-x-auto">
+            {EDITOR_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-t-lg px-4 py-2 text-sm font-black ${activeTab === tab.id ? "bg-arkara-green text-white" : "bg-gray-50 text-gray-500 hover:bg-gray-100"}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-          <SocialPostMainFields
-            post={post}
-            update={update}
-            captionValue={captionValue}
-            onCopyVisualPrompt={copyVisualPrompt}
-          />
+        <div className="flex-1 overflow-y-auto p-5">
+          {activeTab === "content" ? (
+            <div className="space-y-5">
+              <SocialPostMainFields
+                post={post}
+                update={update}
+                captionValue={captionValue}
+              />
+              {post.post_type === "carousel" ? (
+                <SocialCarouselEditor
+                  post={post}
+                  slides={slides}
+                  runAction={runAction}
+                />
+              ) : null}
+            </div>
+          ) : null}
 
-          <SocialChecklistPanel
-            post={post}
-            setPost={setPost}
-            isPending={isPending}
-            runAction={runAction}
-          />
-
-          {post.post_type === "carousel" ? (
-            <SocialCarouselEditor
+          {activeTab === "visual" ? (
+            <SocialVisualStudio
               post={post}
+              update={update}
               slides={slides}
+              assets={assets}
+              isPending={isPending}
+              runAction={runAction}
+              savePost={savePost}
+              onCopyVisualPrompt={copyVisualPrompt}
+            />
+          ) : null}
+
+          {activeTab === "publish" ? (
+            <div className="space-y-5">
+              <SocialCopyReadyPanel disabled={isPending || !post.id} onCopyCaption={handleCopyCaption} />
+              <SocialChecklistPanel
+                post={post}
+                setPost={setPost}
+                isPending={isPending}
+                runAction={runAction}
+              />
+
+            </div>
+          ) : null}
+
+          {activeTab === "metrics" ? (
+            <SocialMetricsPanel
+              post={post}
+              setPost={setPost}
+              latestMetric={latestMetric}
+              isPending={isPending}
               runAction={runAction}
             />
           ) : null}
 
-          <SocialMetricsPanel
-            post={post}
-            setPost={setPost}
-            latestMetric={latestMetric}
-            isPending={isPending}
-            runAction={runAction}
-          />
-
           <SocialPostActionBar
             post={post}
             isPending={isPending}
-            onSave={savePost}
+            onSave={() => savePost()}
             onCopyCaption={handleCopyCaption}
             onMarkReady={handleMarkReady}
             onMarkPosted={handleMarkPosted}

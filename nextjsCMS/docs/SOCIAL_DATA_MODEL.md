@@ -507,3 +507,20 @@ Renderer writes to existing Phase 2 tables:
 - `social_posts.asset_done` becomes true after post poster render or full carousel batch render.
 
 Old asset versions remain in storage and database.
+
+## Phase 5 Visual Studio Data Usage
+
+No new migration is required in Phase 5.
+
+Existing Phase 2 tables are now used by UI workflows:
+
+- Uploaded background files create `social_assets` rows with `asset_type = 'background'` and `status = 'ready'`.
+- Background storage paths use the same ownership convention: `user_id/post_id/background/...`.
+- Post-level background assets have `slide_id = null`.
+- Slide-level background assets set both `post_id` and `slide_id`.
+- Final posters continue to use `asset_type = 'poster'`.
+- Rendered carousel slide PNGs continue to use `asset_type = 'carousel_slide'`.
+- `social_assets.status` can be updated to `approved` or `archived` from asset history.
+- `social_posts.visual_spec`, `selected_template_id`, `aspect_ratio`, `visual_prompt`, and `alt_text` are updated from the Visual tab.
+
+RLS and server actions continue to filter by `user_id` before reading or mutating assets.

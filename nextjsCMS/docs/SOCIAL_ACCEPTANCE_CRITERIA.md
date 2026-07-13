@@ -161,3 +161,22 @@ Acceptance criteria:
 - Asset versions increment and old files are not overwritten.
 - Storage path begins with `user_id/post_id`.
 - Unit tests cover dimensions, missing visual spec, long headline, too many blocks, aspect ratios, registry, version increment, and storage ownership path.
+
+## Phase 5 - Social Visual Studio
+
+Acceptance criteria:
+
+- Social Post Editor is split into Content, Visual, Publish, and Metrics tabs.
+- Headline can be edited in `visual_spec` without regenerating the image prompt.
+- User can choose `editorial-opinion-v1`, `editorial-checklist-v1`, or `editorial-carousel-v1`.
+- User can change aspect ratio between `1:1`, `4:5`, and `9:16`.
+- User can edit scene prompt, label, headline, subheadline, information blocks, emphasis text, footer, and alt text.
+- Information blocks support add, remove, and reorder.
+- Live validation displays template and overflow warnings.
+- Background PNG, JPG, and WebP files can be uploaded to `social-assets` as user-owned background assets.
+- User can select a background version for preview and render.
+- User can render final poster PNG from the UI.
+- Generated asset history displays versions and provides download, approve, and archive controls.
+- Carousel Visual tab supports per-slide visual spec, preview, background upload, render, and asset history.
+- Batch carousel render continues after slide-level errors and reports per-slide result.
+- Existing Publish and Metrics workflows remain available and database-backed.

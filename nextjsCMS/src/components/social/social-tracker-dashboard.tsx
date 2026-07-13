@@ -180,9 +180,9 @@ export function SocialTrackerDashboard({
     );
   };
 
-  const savePost = () => {
-    if (!selectedPost) return;
-    runAction(async () => {
+  const savePost = (options: { closeOnSuccess?: boolean } = {}) => {
+    if (!selectedPost) return Promise.resolve({ error: 'Post belum dipilih.' });
+    return runAction(async () => {
       const payload = {
         ...selectedPost,
         platform: "facebook" as const,
@@ -214,7 +214,7 @@ export function SocialTrackerDashboard({
         ? await updateSocialPost(payload)
         : await createSocialPost(payload);
 
-      if (!result.error) setSelectedPost(null);
+      if (!result.error && options.closeOnSuccess !== false) setSelectedPost(null);
       return result;
     });
   };
@@ -225,6 +225,9 @@ export function SocialTrackerDashboard({
   const selectedMetric = selectedPost?.id
     ? (latestMetricsByPost.get(selectedPost.id) ?? null)
     : null;
+  const selectedAssets = selectedPost?.id
+    ? initialData.assets.filter((asset) => asset.post_id === selectedPost.id || selectedSlides.some((slide) => slide.id === asset.slide_id))
+    : [];
 
   useEffect(() => {
     if (!activeCampaign) return;
@@ -361,6 +364,7 @@ export function SocialTrackerDashboard({
         post={selectedPost}
         setPost={setSelectedPost}
         slides={selectedSlides}
+        assets={selectedAssets}
         latestMetric={selectedMetric}
         isPending={isPending}
         runAction={runAction}

@@ -389,3 +389,47 @@ Supabase CLI was not available in this Windows environment, so the migration fil
 - No UI button calls the render actions yet; this is expected for Phase 4.
 - SVG text measurement is approximate by design; template warnings catch risk but do not replace visual QA.
 - Project has no bundled local font file; renderer uses the existing CSS typography stack and local/system fallback.
+
+## 2026-07-13 - Phase 5 Social Visual Studio
+
+Scope executed:
+
+- Built Social Post Editor tabs: Content, Visual, Publish, Metrics.
+- Moved caption editing fields into Content tab and kept combined caption read-only.
+- Added Visual Studio for post-level visual spec editing, validation, preview, render, background upload, and asset history.
+- Added background upload action using Supabase Storage bucket `social-assets` with user-owned folder paths.
+- Added asset status action for `approved` and `archived` states.
+- Added public social asset URL helper for thumbnails and downloads.
+- Added carousel slide visual studio with per-slide visual spec editing, preview, background upload, render, and asset history.
+- Updated batch carousel render to continue after per-slide failures and return ordered results.
+- Reused Phase 4 deterministic renderer actions; no Meta API or autoposting was added.
+
+Files changed:
+
+- `src/app/cms/social/actions.ts`
+- `src/components/social/social-post-editor.tsx`
+- `src/components/social/social-post-main-fields.tsx`
+- `src/components/social/social-post-editor-types.ts`
+- `src/components/social/social-tracker-dashboard.tsx`
+- `src/components/social/social-visual-spec-editor.tsx`
+- `src/components/social/social-visual-studio.tsx`
+- `src/components/social/social-visual-preview.tsx`
+- `src/components/social/social-asset-history.tsx`
+- `src/lib/social/social-asset-url.ts`
+- `src/lib/social/render/render-social-asset.ts`
+- `docs/SOCIAL_PRODUCT_SPEC.md`
+- `docs/SOCIAL_DATA_MODEL.md`
+- `docs/SOCIAL_RENDERER_SPEC.md`
+- `docs/SOCIAL_ACCEPTANCE_CRITERIA.md`
+- `docs/SOCIAL_IMPLEMENTATION_LOG.md`
+
+Validation:
+
+- `npx tsc --noEmit --pretty false` passed.
+- `npm run test:social-renderer` passed.
+
+Known risks:
+
+- HTML preview is an approximation of SVG renderer output, though it uses the same dimensions, template registry, and validation helpers.
+- Background upload metadata depends on `sharp` being available in the server runtime.
+- Live Supabase Storage upload was not exercised against a real database in this local pass.

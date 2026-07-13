@@ -286,3 +286,27 @@ Validation behavior:
 - Information blocks over template hard limit reject render.
 - Near-overflow conditions return warnings.
 - Normal fixture renders without warnings for `1:1`, `4:5`, and `9:16`.
+
+## Phase 5 Visual Studio UI Contract
+
+The Visual tab provides a CMS-side editing surface for the same `SocialVisualSpec` consumed by the deterministic renderer.
+
+Preview behavior:
+
+- The editor preview uses the renderer template registry, dimensions, and validation helpers for template support and warnings.
+- Preview is an HTML approximation of the deterministic template, not a separate creative design system.
+- Preview displays output dimensions, aspect ratio, selected template, and live warnings.
+- Warnings include headline length, subheadline length, block count, block text length, missing footer, missing template, unsupported aspect ratio, and estimated overflow.
+
+Asset workflow:
+
+- Background uploads accept PNG, JPG, and WebP only.
+- Background upload size is limited to 8 MB.
+- Background is optional; renderer fallback remains valid.
+- Asset history shows thumbnail, version, aspect ratio, template, created date, status, download, approve, and archive controls.
+- Render buttons call the server renderer actions from Phase 4 and do not use browser automation.
+
+Carousel behavior:
+
+- Each slide has a slide-specific visual editor and preview.
+- Batch render records per-slide success or error and continues through remaining slides when one slide fails.

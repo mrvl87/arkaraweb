@@ -1,22 +1,18 @@
 "use client";
 
-import { Copy } from "lucide-react";
 import { SocialEditorField } from "./social-editor-field";
-import { SocialVisualSpecEditor } from "./social-visual-spec-editor";
 import type { PostDraft, PostDraftUpdater } from "./social-post-editor-types";
 
 interface SocialPostMainFieldsProps {
   post: PostDraft;
   update: PostDraftUpdater;
   captionValue: string;
-  onCopyVisualPrompt: () => void;
 }
 
 export function SocialPostMainFields({
   post,
   update,
   captionValue,
-  onCopyVisualPrompt,
 }: SocialPostMainFieldsProps) {
   return (
     <>
@@ -32,9 +28,7 @@ export function SocialPostMainFields({
         <SocialEditorField label="Hook">
           <textarea
             value={post.hook ?? ""}
-            onChange={(event) =>
-              update("hook", event.target.value || null)
-            }
+            onChange={(event) => update("hook", event.target.value || null)}
             rows={3}
             className="input-social resize-y text-[15px] leading-7"
           />
@@ -58,15 +52,6 @@ export function SocialPostMainFields({
         />
       </SocialEditorField>
 
-      <SocialEditorField label="Combined Caption Preview">
-        <textarea
-          value={captionValue}
-          readOnly
-          rows={6}
-          className="input-social resize-y bg-gray-50 text-[15px] leading-7 text-gray-600"
-        />
-      </SocialEditorField>
-
       <SocialEditorField label="Target URL">
         <input
           value={post.target_url ?? ""}
@@ -75,36 +60,32 @@ export function SocialPostMainFields({
         />
       </SocialEditorField>
 
-      <SocialVisualSpecEditor
-        title={post.title}
-        aspectRatio={post.aspect_ratio}
-        visualSpec={post.visual_spec}
-        update={update}
-      />
-
-      <SocialEditorField label="Legacy Scene Prompt">
-        <div className="rounded-lg border border-gray-200 bg-white">
-          <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
-            <span className="text-xs font-bold text-gray-400">
-              Legacy fallback dari scene_prompt
-            </span>
-            <button
-              type="button"
-              onClick={onCopyVisualPrompt}
-              disabled={!post.visual_prompt}
-              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-bold text-arkara-green hover:bg-arkara-cream disabled:text-gray-300"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              Copy Prompt
-            </button>
-          </div>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <SocialEditorField label="First Comment">
           <textarea
-            value={post.visual_prompt ?? ""}
-            onChange={(event) => update("visual_prompt", event.target.value)}
-            rows={18}
-            className="w-full min-h-[460px] resize-y border-0 bg-transparent px-3 py-3 font-mono text-xs leading-6 text-gray-800 outline-none"
+            value={post.first_comment ?? ""}
+            onChange={(event) => update("first_comment", event.target.value || null)}
+            rows={3}
+            className="input-social resize-y text-[15px] leading-7"
           />
-        </div>
+        </SocialEditorField>
+        <SocialEditorField label="Alt Text">
+          <textarea
+            value={post.alt_text ?? ""}
+            onChange={(event) => update("alt_text", event.target.value || null)}
+            rows={3}
+            className="input-social resize-y text-[15px] leading-7"
+          />
+        </SocialEditorField>
+      </div>
+
+      <SocialEditorField label="Combined Caption Preview">
+        <textarea
+          value={captionValue}
+          readOnly
+          rows={6}
+          className="input-social resize-y bg-gray-50 text-[15px] leading-7 text-gray-600"
+        />
       </SocialEditorField>
     </>
   );

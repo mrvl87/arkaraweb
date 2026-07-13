@@ -1,4 +1,5 @@
 import type {
+  SocialAsset,
   SocialCarouselSlide,
   SocialPost,
   SocialPostMetric,
@@ -8,6 +9,12 @@ export interface SocialActionResult {
   error?: string;
   success?: boolean;
   summary?: string;
+  storagePath?: string;
+  version?: number;
+  width?: number;
+  height?: number;
+  warnings?: string[];
+  slides?: Array<SocialActionResult & { slideId?: string; slideNumber?: number }>;
 }
 
 export type SocialActionRunner = (
@@ -30,8 +37,9 @@ export interface PostEditorProps {
   post: PostDraft | null;
   setPost: (post: PostDraft | null) => void;
   slides: SocialCarouselSlide[];
+  assets: SocialAsset[];
   latestMetric: SocialPostMetric | null;
   isPending: boolean;
   runAction: SocialActionRunner;
-  savePost: () => void;
+  savePost: (options?: { closeOnSuccess?: boolean }) => Promise<SocialActionResult>;
 }

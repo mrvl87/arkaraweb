@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from 'next/cache'
+import sharp from 'sharp'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { SocialVisualSpecSchema } from '@/lib/ai/schemas'
@@ -19,6 +20,7 @@ import {
 } from '@/lib/ai/operations'
 import type {
   SocialAsset,
+  SocialAssetStatus,
   SocialCampaign,
   SocialCarouselSlide,
   SocialChecklistKey,
@@ -34,6 +36,8 @@ const SOCIAL_PATH = '/cms/social'
 const SOURCE_SUMMARY_LIMIT = 2200
 const SOURCE_LIST_EXCERPT_LIMIT = 360
 const TRUNCATION_SUFFIX = '\n\n[Konten dipotong untuk efisiensi token.]'
+const SOCIAL_BACKGROUND_MAX_BYTES = 8 * 1024 * 1024
+const SOCIAL_BACKGROUND_MIME_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'] as const
 
 const campaignSchema = z.object({
   id: z.string().uuid().optional(),
@@ -243,7 +247,7 @@ async function getNextAssetVersion(params: {
   supabase: SocialSupabaseClient
   userId: string
   postId: string
-  assetType: 'poster' | 'carousel_slide'
+  assetType: SocialAsset['asset_type']
   slideId?: string | null
 }) {
   let query = params.supabase
@@ -255,6 +259,8 @@ async function getNextAssetVersion(params: {
 
   if (params.slideId) {
     query = query.eq('slide_id', params.slideId)
+  } else {
+    query = query.is('slide_id', null)
   }
 
   const { data, error } = await query
@@ -269,7 +275,7 @@ async function uploadRenderedSocialAsset(params: {
   userId: string
   postId: string
   slideId?: string | null
-  assetType: 'poster' | 'carousel_slide'
+  assetType: SocialAsset['asset_type']
   png: Buffer
   width: number
   height: number
@@ -325,6 +331,94 @@ async function uploadRenderedSocialAsset(params: {
   return { storagePath, version }
 }
 
+function getBackgroundExtension(mimeType: string) {
+  switch (mimeType.toLowerCase()) {
+    case 'image/png':
+      return 'png'
+    case 'image/jpeg':
+    case 'image/jpg':
+      return 'jpg'
+    case 'image/webp':
+      return 'webp'
+    default:
+      return 'bin'
+  }
+}
+
+function getNearestSocialAspectRatio(width?: number | null, height?: number | null): SocialPost['aspect_ratio'] | null {
+  if (!width || !height) return null
+  const ratio = width / height
+  const candidates: Array<{ value: SocialPost['aspect_ratio']; ratio: number }> = [
+    { value: '1:1', ratio: 1 },
+    { value: '4:5', ratio: 4 / 5 },
+    { value: '9:16', ratio: 9 / 16 },
+  ]
+  const match = candidates
+    .map((candidate) => ({ ...candidate, delta: Math.abs(candidate.ratio - ratio) }))
+    .sort((left, right) => left.delta - right.delta)[0]
+
+  return match && match.delta <= 0.04 ? match.value : null
+}
+
+async function assertOwnedSocialAssetTarget(params: {
+  supabase: SocialSupabaseClient
+  userId: string
+  postId: string
+  slideId?: string | null
+}) {
+  const { data: post, error: postError } = await params.supabase
+    .from('social_posts')
+    .select('id')
+    .eq('id', params.postId)
+    .eq('user_id', params.userId)
+    .single()
+
+  if (postError || !post) throw new Error(postError?.message || 'Post tidak ditemukan.')
+
+  if (!params.slideId) return
+
+  const { data: slide, error: slideError } = await params.supabase
+    .from('social_carousel_slides')
+    .select('id')
+    .eq('id', params.slideId)
+    .eq('post_id', params.postId)
+    .eq('user_id', params.userId)
+    .single()
+
+  if (slideError || !slide) throw new Error(slideError?.message || 'Slide tidak ditemukan.')
+}
+
+async function getSelectedSocialBackground(params: {
+  supabase: SocialSupabaseClient
+  userId: string
+  postId: string
+  slideId?: string | null
+  backgroundAssetId?: string | null
+}) {
+  if (!params.backgroundAssetId) {
+    return getLatestSocialBackground(params)
+  }
+
+  let query = params.supabase
+    .from('social_assets')
+    .select('storage_path, mime_type')
+    .eq('id', params.backgroundAssetId)
+    .eq('user_id', params.userId)
+    .eq('post_id', params.postId)
+    .eq('asset_type', 'background')
+    .in('status', ['ready', 'approved'])
+
+  if (params.slideId) {
+    query = query.eq('slide_id', params.slideId)
+  } else {
+    query = query.is('slide_id', null)
+  }
+
+  const { data, error } = await query.maybeSingle()
+  if (error) throw new Error(error.message)
+
+  return data?.storage_path ? data as { storage_path: string; mime_type: string | null } : null
+}
 async function getSourceByPost(
   supabase: Awaited<ReturnType<typeof createClient>>,
   post: Pick<SocialPost, 'source_type' | 'source_id' | 'target_url'>
@@ -1242,19 +1336,110 @@ export async function generateFacebookVisualPromptForPost(postId: string) {
 }
 
 
+export async function uploadSocialBackgroundAsset(formData: FormData) {
+  const { supabase, user } = await requireUser()
+  const file = formData.get('file') as File | null
+  const postId = String(formData.get('post_id') ?? '').trim()
+  const slideId = String(formData.get('slide_id') ?? '').trim() || null
+
+  if (!postId) return { error: 'Post id wajib ada.' }
+  if (!file) return { error: 'File background wajib dipilih.' }
+  if (!SOCIAL_BACKGROUND_MIME_TYPES.includes(file.type as (typeof SOCIAL_BACKGROUND_MIME_TYPES)[number])) {
+    return { error: 'Background harus PNG, JPG, atau WebP.' }
+  }
+  if (file.size > SOCIAL_BACKGROUND_MAX_BYTES) {
+    return { error: 'Ukuran background maksimal 8 MB.' }
+  }
+
+  try {
+    await assertOwnedSocialAssetTarget({ supabase, userId: user.id, postId, slideId })
+
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const metadata = await sharp(buffer).metadata()
+    const width = metadata.width ?? null
+    const height = metadata.height ?? null
+    const version = await getNextAssetVersion({
+      supabase,
+      userId: user.id,
+      postId,
+      slideId,
+      assetType: 'background',
+    })
+    const extension = getBackgroundExtension(file.type)
+    const basePath = buildSocialAssetStoragePath({
+      userId: user.id,
+      postId,
+      slideId,
+      assetKind: 'background',
+      version,
+    }).replace(/\.png$/, `.${extension}`)
+
+    const { error: uploadError } = await supabase.storage
+      .from(getSocialAssetsBucket())
+      .upload(basePath, buffer, {
+        contentType: file.type,
+        cacheControl: '31536000',
+        upsert: false,
+      })
+
+    if (uploadError) return { error: uploadError.message }
+
+    const { error: insertError } = await supabase.from('social_assets').insert({
+      user_id: user.id,
+      post_id: postId,
+      slide_id: slideId,
+      asset_type: 'background',
+      storage_path: basePath,
+      mime_type: file.type,
+      width,
+      height,
+      aspect_ratio: getNearestSocialAspectRatio(width, height),
+      template_id: null,
+      version,
+      generation_prompt: null,
+      metadata: { original_name: file.name, file_size: file.size },
+      status: 'ready',
+    })
+
+    if (insertError) return { error: insertError.message }
+
+    revalidatePath(SOCIAL_PATH)
+    return { success: true, summary: `Background v${version} tersimpan.` }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Upload background gagal.' }
+  }
+}
+
+export async function updateSocialAssetStatus(assetId: string, status: Extract<SocialAssetStatus, 'ready' | 'approved' | 'archived'>) {
+  const { supabase, user } = await requireUser()
+  const allowed: Array<Extract<SocialAssetStatus, 'ready' | 'approved' | 'archived'>> = ['ready', 'approved', 'archived']
+  if (!allowed.includes(status)) return { error: 'Status asset tidak valid.' }
+
+  const { error } = await supabase
+    .from('social_assets')
+    .update({ status })
+    .eq('id', assetId)
+    .eq('user_id', user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath(SOCIAL_PATH)
+  return { success: true }
+}
 async function renderSocialPostAssetInternal(params: {
   supabase: SocialSupabaseClient
   userId: string
   post: SocialPost
+  backgroundAssetId?: string | null
 }) {
   if (!params.post.visual_spec) {
     return { error: 'Visual spec belum tersedia untuk post ini.' }
   }
 
-  const background = await getLatestSocialBackground({
+  const background = await getSelectedSocialBackground({
     supabase: params.supabase,
     userId: params.userId,
     postId: params.post.id,
+    backgroundAssetId: params.backgroundAssetId,
   })
   const downloadedBackground = await downloadSocialBackground(params.supabase, background)
   const rendered = await renderSocialAsset({
@@ -1305,16 +1490,18 @@ async function renderCarouselSlideAssetInternal(params: {
   userId: string
   slide: SocialCarouselSlide
   markPostDone?: boolean
+  backgroundAssetId?: string | null
 }) {
   if (!params.slide.visual_spec) {
     return { error: `Visual spec belum tersedia untuk slide ${params.slide.slide_number}.` }
   }
 
-  const background = await getLatestSocialBackground({
+  const background = await getSelectedSocialBackground({
     supabase: params.supabase,
     userId: params.userId,
     postId: params.slide.post_id,
     slideId: params.slide.id,
+    backgroundAssetId: params.backgroundAssetId,
   })
   const downloadedBackground = await downloadSocialBackground(params.supabase, background)
   const rendered = await renderSocialAsset({
@@ -1363,7 +1550,7 @@ async function renderCarouselSlideAssetInternal(params: {
   }
 }
 
-export async function renderSocialPostAsset(postId: string) {
+export async function renderSocialPostAsset(postId: string, backgroundAssetId?: string | null) {
   const { supabase, user } = await requireUser()
   const { data: post, error } = await supabase
     .from('social_posts')
@@ -1379,6 +1566,7 @@ export async function renderSocialPostAsset(postId: string) {
       supabase,
       userId: user.id,
       post: post as SocialPost,
+      backgroundAssetId,
     })
 
     revalidatePath(SOCIAL_PATH)
@@ -1388,7 +1576,7 @@ export async function renderSocialPostAsset(postId: string) {
   }
 }
 
-export async function renderCarouselSlideAsset(slideId: string) {
+export async function renderCarouselSlideAsset(slideId: string, backgroundAssetId?: string | null) {
   const { supabase, user } = await requireUser()
   const { data: slide, error } = await supabase
     .from('social_carousel_slides')
@@ -1405,6 +1593,7 @@ export async function renderCarouselSlideAsset(slideId: string) {
       userId: user.id,
       slide: slide as SocialCarouselSlide,
       markPostDone: false,
+      backgroundAssetId,
     })
 
     revalidatePath(SOCIAL_PATH)
@@ -1436,19 +1625,33 @@ export async function renderAllCarouselAssets(postId: string) {
   if (slideError) return { error: slideError.message }
   if (!slides || slides.length === 0) return { error: 'Carousel belum memiliki slide.' }
 
-  try {
-    const renderedSlides = []
-    for (const slide of slides as SocialCarouselSlide[]) {
+  const renderedSlides = []
+  for (const slide of slides as SocialCarouselSlide[]) {
+    try {
       const result = await renderCarouselSlideAssetInternal({
         supabase,
         userId: user.id,
         slide,
         markPostDone: false,
       })
-      if (result.error) return result
-      renderedSlides.push(result)
+      renderedSlides.push({
+        slideId: slide.id,
+        slideNumber: slide.slide_number,
+        ...result,
+      })
+    } catch (renderError) {
+      renderedSlides.push({
+        slideId: slide.id,
+        slideNumber: slide.slide_number,
+        error: renderError instanceof Error ? renderError.message : 'Render slide gagal.',
+      })
     }
+  }
 
+  const hasSuccess = renderedSlides.some((result) => result.success)
+  const hasError = renderedSlides.some((result) => result.error)
+
+  if (hasSuccess && !hasError) {
     const { error: updateError } = await supabase
       .from('social_posts')
       .update({ asset_done: true })
@@ -1456,11 +1659,13 @@ export async function renderAllCarouselAssets(postId: string) {
       .eq('user_id', user.id)
 
     if (updateError) return { error: updateError.message }
+  }
 
-    revalidatePath(SOCIAL_PATH)
-    return { success: true, slides: renderedSlides }
-  } catch (renderError) {
-    return { error: renderError instanceof Error ? renderError.message : 'Render semua carousel asset gagal.' }
+  revalidatePath(SOCIAL_PATH)
+  return {
+    success: hasSuccess,
+    error: hasSuccess ? undefined : 'Semua slide gagal dirender.',
+    slides: renderedSlides,
   }
 }
 

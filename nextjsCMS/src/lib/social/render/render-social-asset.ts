@@ -31,7 +31,7 @@ export function sanitizeStorageSegment(value: string): string {
 export function buildSocialAssetStoragePath(params: {
   userId: string
   postId: string
-  assetKind: 'poster' | 'carousel-slide'
+  assetKind: 'poster' | 'carousel-slide' | 'background'
   version: number
   slideId?: string | null
 }): string {
@@ -42,7 +42,9 @@ export function buildSocialAssetStoragePath(params: {
 
   const base = params.assetKind === 'carousel-slide'
     ? `${owner}/${post}/carousel/${sanitizeStorageSegment(params.slideId || 'slide')}`
-    : `${owner}/${post}/poster`
+    : params.assetKind === 'background'
+      ? `${owner}/${post}/background/${sanitizeStorageSegment(params.slideId || 'post')}`
+      : `${owner}/${post}/poster`
 
   return `${base}-v${params.version}.png`
 }
