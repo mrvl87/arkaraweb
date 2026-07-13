@@ -1,0 +1,271 @@
+# Social Content OS Product Spec
+
+Last updated: 2026-07-13
+
+## Scope
+
+This document records phase 0 audit findings and the target product shape for the CMS social module. Phase 0 does not change application behavior.
+
+Primary module:
+
+- `src/app/cms/social`
+- `src/components/social`
+- `src/types/social.ts`
+- `src/lib/ai/schemas.ts`
+- `src/lib/ai/operations.ts`
+- `src/lib/ai/prompt-profiles.ts`
+- `supabase/migrations/20260510120000_create_social_tracker.sql`
+
+Out of scope:
+
+- Meta API integration
+- Autoposting
+- Public frontend renderer changes
+- Existing Social Tracker behavior changes during phase 0
+
+## Current Product State
+
+The current Social Tracker is a manual Facebook planning tool. It supports campaign setup, weekly post planning, post editing, caption copying, visual prompt copying, carousel slide generation, manual posted tracking, and manual metrics entry.
+
+The current UI name is "Social Tracker". The target product is "Social Content OS", but the name should not be changed until a later phase explicitly changes behavior and navigation.
+
+## Current Campaign Flow
+
+1. `/cms/social` loads dashboard data through `getSocialDashboardData()`.
+2. The server action requires an authenticated Supabase user.
+3. It loads campaigns owned by `user_id`.
+4. It chooses the selected campaign from the `campaign` query parameter, otherwise the first non-archived campaign, otherwise the first campaign.
+5. The client dashboard lets the user create, edit, delete, and switch campaigns.
+6. A campaign has title, theme, platform, start/end date, goal, pillar, tone note, and status.
+7. Campaign settings currently expose only period, title, and status in the UI. Theme, goal, pillar, and tone note are stored but not fully editable in the visible settings panel.
+
+## Current Social Post Flow
+
+1. A post belongs to a campaign and `user_id`.
+2. A user can add a manual post through the dashboard.
+3. The editor stores title, caption parts, target URL, source, schedule, status, visual prompt, objective, pillar, checklist booleans, and notes.
+4. `buildCaption()` joins hook, body, CTA, and target URL with blank lines.
+5. Copy buttons write the built caption or prompt to the clipboard.
+6. The editor can call AI actions for caption and visual prompt when the post already exists.
+7. Ready and posted states are validated by server action before save/status change.
+
+## Current Weekly Plan Generator
+
+Action: `generateWeeklyFacebookPlan(campaignId, sourceKey)`
+
+AI operation: `generateFacebookWeeklyPlan()`
+
+Output:
+
+- Exactly 7 posts.
+- Day/date/time.
+- Post type.
+- Title, hook, body, CTA.
+- Objective and content pillar.
+- Visual prompt.
+- Optional carousel slides.
+
+Persistence:
+
+- Inserts generated posts into `social_posts`.
+- Inserts carousel slides into `social_carousel_slides`.
+- Sets campaign status to `in_progress`.
+- Marks caption, CTA, and visual prompt checklist items based on generated values.
+
+Current issue for target architecture:
+
+- The prompt asks AI to place primary information as text inside image prompts.
+- Target architecture must move text rendering responsibility to CMS.
+
+## Current Caption Generator
+
+Action: `generateFacebookPostDraft(postId)`
+
+AI operation: `generateFacebookPost()`
+
+Output:
+
+- Title.
+- Hook.
+- Body.
+- CTA.
+- Visual prompt.
+
+Persistence:
+
+- Updates `social_posts`.
+- Sets status to `drafting`.
+- Marks caption, CTA, and visual prompt as done.
+
+## Current Carousel Generator
+
+Action: `generateFacebookCarouselSlides(postId)`
+
+AI operation: `generateFacebookCarousel()`
+
+Output:
+
+- 3 to 10 slides.
+- Slide purpose.
+- Title text.
+- Paragraph text.
+- Visual prompt.
+
+Persistence:
+
+- Deletes existing slides for that post and user.
+- Inserts new slides.
+- Sets `visual_prompt_done` and status `drafting` on the post.
+
+Backward compatibility risk:
+
+- Existing carousel data is destructive on regenerate. Future phases should keep this behavior until a replacement versioning flow exists.
+
+## Current Visual Prompt Generator
+
+Action: `generateFacebookVisualPromptForPost(postId)`
+
+AI operation: `generateFacebookVisualPrompt()`
+
+Output:
+
+- One text-to-image prompt string.
+
+Current prompt behavior:
+
+- It asks the image model to include exact Indonesian text in the generated image.
+- It asks for Arkara footer text inside the image.
+
+Target behavior:
+
+- AI creates scene prompt and structured visual specification only.
+- CMS renders text, layout, footer, and safe-zone constrained typography deterministically.
+
+## Current Checklist and Metrics Flow
+
+Checklist fields on `social_posts`:
+
+- `caption_done`
+- `cta_done`
+- `visual_prompt_done`
+- `asset_done`
+- `copied_done`
+- `posted_done`
+- `metrics_done`
+
+Server actions already available:
+
+- `togglePostChecklistItem(id, key, value)`
+- `copyPostCaptionMark(id)`
+- `markPostPosted(id)`
+- `updatePostStatus(id, status)`
+- `recordPostMetrics(input)`
+
+UI usage gaps:
+
+- Weekly card copy state uses `localStorage` instead of `copyPostCaptionMark()`.
+- Weekly card Facebook done state uses `localStorage` instead of `markPostPosted()` or `togglePostChecklistItem()`.
+- The metrics action exists but the current social UI does not expose a complete metrics entry panel.
+
+Metrics fields:
+
+- Reach.
+- Comments.
+- Shares.
+- Link clicks.
+- Notes.
+- Next action.
+
+## LocalStorage Duplication
+
+Current local keys:
+
+- `arkara.social.facebook_done.{postId}`
+- `arkara.social.copied.{postId}`
+
+These duplicate database fields:
+
+- `posted_done`
+- `copied_done`
+- `status = posted`
+
+Future migration path:
+
+1. Keep localStorage reads initially for compatibility.
+2. Write database state through existing server actions.
+3. Optionally clear or ignore localStorage after database state becomes the source of truth.
+
+## Target Product Flow
+
+The target Social Content OS flow is:
+
+1. Idea
+   - Capture content opportunity, source, audience, risk, and goal.
+   - Can come from manual entry, existing post, existing panduan, or future SEO/keyword signals.
+
+2. Strategy
+   - Convert idea into objective, pillar, platform assumptions, format, CTA direction, and publishing window.
+   - Campaign remains the container for weekly or thematic strategy.
+
+3. Draft
+   - Generate or edit caption, hook, body, CTA, and carousel text.
+   - Caption is the manual publishing copy.
+
+4. Visual Specification
+   - Generate structured layout data, text blocks, scene brief, background prompt, aspect ratio, template, and validation constraints.
+   - AI must not be responsible for final text placement in pixels.
+
+5. Background Image
+   - Generate or upload a text-free background image.
+   - Store it through the existing media/R2 pipeline where practical.
+
+6. Poster Render
+   - CMS renders text deterministically over the selected/generated background.
+   - Supports 1:1, 4:5, and 9:16.
+   - Validates safe zones and overflow.
+
+7. Publish Pack
+   - Groups caption, poster files, alt text, target URL, manual checklist, and publishing notes.
+   - Must be copy/download ready.
+
+8. Manual Publishing
+   - User manually posts to Facebook.
+   - CMS records copy, posted state, publish timestamp, and manual URL/permalink if entered.
+
+9. Metrics
+   - User records reach, comments, shares, link clicks, saves/reactions if added later, notes, and next action.
+
+10. Learning
+   - CMS summarizes performance by post type, pillar, hook pattern, visual template, and time window.
+   - Future AI suggestions must be grounded in owned metrics.
+
+## Dependency Decision
+
+Use the existing `sharp` dependency for phase 1 renderer implementation planning.
+
+Recommended renderer architecture:
+
+- Build deterministic SVG markup in server code.
+- Convert SVG to PNG/WebP with `sharp`.
+- Store final raster output through the existing R2/media pattern.
+
+Reason:
+
+- `sharp` is already installed.
+- Existing image pipeline already uses `sharp`.
+- SVG text measurement can be approximated and validated by template rules before rasterization.
+- No browser automation or canvas dependency is required for the first production slice.
+
+Optional later dependency:
+
+- Add a dedicated text/layout renderer only if SVG + `sharp` cannot satisfy text wrapping and validation needs.
+
+## Backward Compatibility Rules
+
+- Existing `social_campaigns`, `social_posts`, `social_carousel_slides`, and `social_post_metrics` must remain readable.
+- Existing `visual_prompt` text must not be deleted.
+- Existing checklist booleans must keep meaning until replacement fields are fully wired.
+- New planned fields/tables should be additive.
+- Existing `post_type`, `status`, and `image_status` enums should not be narrowed.
+- LocalStorage state should be migrated gently, not abruptly ignored without a UI fallback.
+- Existing AI generation logs must remain compatible with current operation names.
