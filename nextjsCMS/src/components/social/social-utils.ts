@@ -1,5 +1,6 @@
 "use client";
 
+import { buildSocialCaption } from "@/lib/social/publish-pack";
 import type { SocialPost } from "@/types/social";
 
 export const DAY_LABELS = [
@@ -32,7 +33,5 @@ export function todayDate() {
 export function buildCaption(
   post: Pick<SocialPost, "hook" | "body" | "cta" | "target_url">,
 ) {
-  return [post.hook, post.body, post.cta, post.target_url]
-    .filter(Boolean)
-    .join("\n\n");
+  return buildSocialCaption(post);
 }

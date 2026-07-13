@@ -26,6 +26,7 @@ import { SocialCampaignSettings } from "./social-campaign-settings";
 import { SocialCampaignHeader } from "./social-campaign-header";
 import type { PostDraft, SocialActionRunner } from "./social-post-editor-types";
 import { SocialPostEditor } from "./social-post-editor";
+import { SocialPublishQueue } from "./social-publish-queue";
 import { SocialWeeklyBoard } from "./social-weekly-board";
 import {
   getPostDayIndex,
@@ -228,6 +229,9 @@ export function SocialTrackerDashboard({
   const selectedAssets = selectedPost?.id
     ? initialData.assets.filter((asset) => asset.post_id === selectedPost.id || selectedSlides.some((slide) => slide.id === asset.slide_id))
     : [];
+  const selectedPublications = selectedPost?.id
+    ? initialData.publications.filter((publication) => publication.post_id === selectedPost.id)
+    : [];
 
   useEffect(() => {
     if (!activeCampaign) return;
@@ -351,13 +355,24 @@ export function SocialTrackerDashboard({
           </button>
         </div>
       ) : (
-        <SocialWeeklyBoard
-          weekPosts={weekPosts}
-          metricsByPost={latestMetricsByPost}
-          isPending={isPending}
-          runAction={runAction}
-          onEditPost={(post) => setSelectedPost(post)}
-        />
+        <>
+          <SocialPublishQueue
+            campaigns={initialData.campaigns}
+            activeCampaign={activeCampaign}
+            posts={posts}
+            slides={initialData.slides}
+            assets={initialData.assets}
+            onSelectCampaign={(campaignId) => router.push(`/cms/social?campaign=${campaignId}`)}
+            onEditPost={(post) => setSelectedPost(post)}
+          />
+          <SocialWeeklyBoard
+            weekPosts={weekPosts}
+            metricsByPost={latestMetricsByPost}
+            isPending={isPending}
+            runAction={runAction}
+            onEditPost={(post) => setSelectedPost(post)}
+          />
+        </>
       )}
 
       <SocialPostEditor
@@ -365,6 +380,7 @@ export function SocialTrackerDashboard({
         setPost={setSelectedPost}
         slides={selectedSlides}
         assets={selectedAssets}
+        publications={selectedPublications}
         latestMetric={selectedMetric}
         isPending={isPending}
         runAction={runAction}

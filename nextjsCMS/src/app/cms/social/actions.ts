@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import sharp from 'sharp'
 import { z } from 'zod'
+import { buildSocialCaptionWithUtm, buildSocialTargetUrl } from '@/lib/social/publish-pack'
+import { createStoredZip } from '@/lib/social/zip'
 import { createClient } from '@/lib/supabase/server'
 import { SocialVisualSpecSchema } from '@/lib/ai/schemas'
 import { getPanduanPath, getPostPath } from '@/lib/slugs'
@@ -116,6 +118,12 @@ const carouselSlideSchema = z.object({
   image_status: z.enum(['needed', 'prompt_ready', 'generated', 'uploaded', 'approved']).default('needed'),
 })
 
+const manualPublicationSchema = z.object({
+  post_id: z.string().uuid(),
+  facebook_url: optionalTextSchema,
+  published_at: optionalTextSchema,
+  notes: optionalTextSchema,
+})
 const metricsSchema = z.object({
   post_id: z.string().uuid(),
   reach: z.coerce.number().int().min(0).nullable().optional(),
@@ -206,6 +214,7 @@ async function getLatestSocialBackground(params: {
     .select('storage_path, mime_type')
     .eq('user_id', userId)
     .eq('post_id', postId)
+    .is('slide_id', null)
     .eq('asset_type', 'background')
     .in('status', ['ready', 'approved'])
     .order('version', { ascending: false })
@@ -920,6 +929,7 @@ export async function deleteSocialPost(id: string) {
 }
 
 export async function updatePostStatus(id: string, status: SocialPost['status']) {
+  if (status === 'posted') return { error: 'Gunakan Publish Pack untuk Mark as Posted agar publication snapshot tersimpan.' }
   const { supabase, user } = await requireUser()
   const { data: post, error: loadError } = await supabase
     .from('social_posts')
@@ -933,12 +943,7 @@ export async function updatePostStatus(id: string, status: SocialPost['status'])
   const nextPost = { ...(post as SocialPost), status }
   await validateReadyState({ supabase, post: socialPostSchema.parse(nextPost), postId: id })
 
-  const patch =
-    status === 'posted'
-      ? { status, posted_done: true, copied_done: true }
-      : { status }
-
-  const { error } = await supabase.from('social_posts').update(patch).eq('id', id).eq('user_id', user.id)
+  const { error } = await supabase.from('social_posts').update({ status }).eq('id', id).eq('user_id', user.id)
 
   if (error) return { error: error.message }
   revalidatePath(SOCIAL_PATH)
@@ -983,8 +988,8 @@ export async function copyPostCaptionMark(id: string) {
   return { success: true }
 }
 
-export async function markPostPosted(id: string) {
-  return updatePostStatus(id, 'posted')
+export async function markPostPosted(_id: string) {
+  return { error: 'Gunakan Publish Pack untuk Mark as Posted agar publication snapshot tersimpan.' }
 }
 
 export async function createCarouselSlide(rawInput: z.infer<typeof carouselSlideSchema>) {
@@ -1669,6 +1674,302 @@ export async function renderAllCarouselAssets(postId: string) {
   }
 }
 
+function getAssetFileName(asset: Pick<SocialAsset, 'asset_type' | 'version' | 'storage_path'>, fallback = 'asset') {
+  const extension = asset.storage_path.split('.').pop()?.split('?')[0] || 'png'
+  return `${asset.asset_type || fallback}-v${asset.version || 1}.${extension}`
+}
+
+async function downloadOwnedSocialAssetBuffer(params: {
+  supabase: SocialSupabaseClient
+  userId: string
+  assetId?: string
+  storagePath?: string
+}) {
+  let asset: Pick<SocialAsset, 'id' | 'storage_path' | 'mime_type' | 'asset_type' | 'version'> | null = null
+
+  if (params.assetId) {
+    const { data, error } = await params.supabase
+      .from('social_assets')
+      .select('id, storage_path, mime_type, asset_type, version')
+      .eq('id', params.assetId)
+      .eq('user_id', params.userId)
+      .single()
+
+    if (error || !data) throw new Error(error?.message || 'Asset tidak ditemukan.')
+    asset = data as Pick<SocialAsset, 'id' | 'storage_path' | 'mime_type' | 'asset_type' | 'version'>
+  } else if (params.storagePath) {
+    asset = {
+      id: '',
+      storage_path: params.storagePath,
+      mime_type: 'image/png',
+      asset_type: 'poster',
+      version: 1,
+    }
+  }
+
+  if (!asset?.storage_path) throw new Error('Asset tidak valid.')
+
+  const { data, error } = await params.supabase.storage
+    .from(getSocialAssetsBucket())
+    .download(asset.storage_path)
+
+  if (error || !data) throw new Error(error?.message || 'File asset tidak dapat diunduh.')
+
+  return {
+    asset,
+    buffer: Buffer.from(await data.arrayBuffer()),
+  }
+}
+
+async function getLatestApprovedPosterAsset(supabase: SocialSupabaseClient, userId: string, postId: string) {
+  const { data, error } = await supabase
+    .from('social_assets')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('post_id', postId)
+    .is('slide_id', null)
+    .eq('asset_type', 'poster')
+    .eq('status', 'approved')
+    .order('version', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  return data as SocialAsset | null
+}
+
+async function getLatestApprovedCarouselAssets(params: {
+  supabase: SocialSupabaseClient
+  userId: string
+  postId: string
+  slides: SocialCarouselSlide[]
+}) {
+  const { data, error } = await params.supabase
+    .from('social_assets')
+    .select('*')
+    .eq('user_id', params.userId)
+    .eq('post_id', params.postId)
+    .eq('asset_type', 'carousel_slide')
+    .eq('status', 'approved')
+    .order('version', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  const bySlide = new Map<string, SocialAsset>()
+  for (const asset of (data ?? []) as SocialAsset[]) {
+    if (asset.slide_id && !bySlide.has(asset.slide_id)) bySlide.set(asset.slide_id, asset)
+  }
+
+  const missingSlides = params.slides.filter((slide) => !bySlide.has(slide.id))
+  return {
+    bySlide,
+    orderedAssets: params.slides.map((slide) => bySlide.get(slide.id)).filter(Boolean) as SocialAsset[],
+    missingSlides,
+  }
+}
+
+async function getOwnedPostForPublish(supabase: SocialSupabaseClient, userId: string, postId: string) {
+  const { data: post, error } = await supabase
+    .from('social_posts')
+    .select('*')
+    .eq('id', postId)
+    .eq('user_id', userId)
+    .single()
+
+  if (error || !post) throw new Error(error?.message || 'Post tidak ditemukan.')
+  return post as SocialPost
+}
+
+async function getOwnedSlidesForPost(supabase: SocialSupabaseClient, userId: string, postId: string) {
+  const { data, error } = await supabase
+    .from('social_carousel_slides')
+    .select('*')
+    .eq('post_id', postId)
+    .eq('user_id', userId)
+    .order('slide_number', { ascending: true })
+
+  if (error) throw new Error(error.message)
+  return (data ?? []) as SocialCarouselSlide[]
+}
+
+async function getPublishAssetIds(params: {
+  supabase: SocialSupabaseClient
+  userId: string
+  post: SocialPost
+}) {
+  if (params.post.post_type === 'carousel') {
+    const slides = await getOwnedSlidesForPost(params.supabase, params.userId, params.post.id)
+    if (slides.length === 0) throw new Error('Carousel belum memiliki slide.')
+
+    const approved = await getLatestApprovedCarouselAssets({
+      supabase: params.supabase,
+      userId: params.userId,
+      postId: params.post.id,
+      slides,
+    })
+
+    if (approved.missingSlides.length > 0) {
+      const labels = approved.missingSlides.map((slide) => slide.slide_number).join(', ')
+      throw new Error(`Carousel belum siap. Slide tanpa approved asset: ${labels}.`)
+    }
+
+    return approved.orderedAssets.map((asset) => asset.id)
+  }
+
+  const poster = await getLatestApprovedPosterAsset(params.supabase, params.userId, params.post.id)
+  if (!poster) throw new Error('Post belum memiliki approved poster asset.')
+  return [poster.id]
+}
+
+function validatePostCanPublish(post: SocialPost, caption: string) {
+  if (!caption.trim()) throw new Error('Caption wajib ada sebelum Mark as Posted.')
+  if (post.post_type === 'article_link' && !post.target_url?.trim()) {
+    throw new Error('Article link wajib memiliki target URL sebelum Mark as Posted.')
+  }
+}
+
+export async function downloadSocialAssetFile(assetId: string) {
+  const { supabase, user } = await requireUser()
+
+  try {
+    const { asset, buffer } = await downloadOwnedSocialAssetBuffer({ supabase, userId: user.id, assetId })
+    return {
+      success: true,
+      fileName: getAssetFileName(asset),
+      mimeType: asset.mime_type || 'application/octet-stream',
+      base64: buffer.toString('base64'),
+    }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Download asset gagal.' }
+  }
+}
+
+export async function downloadCarouselPublishZip(postId: string) {
+  const { supabase, user } = await requireUser()
+
+  try {
+    const post = await getOwnedPostForPublish(supabase, user.id, postId)
+    if (post.post_type !== 'carousel') return { error: 'Post ini bukan carousel.' }
+
+    const slides = await getOwnedSlidesForPost(supabase, user.id, postId)
+    const approved = await getLatestApprovedCarouselAssets({
+      supabase,
+      userId: user.id,
+      postId,
+      slides,
+    })
+
+    if (approved.missingSlides.length > 0) {
+      const labels = approved.missingSlides.map((slide) => slide.slide_number).join(', ')
+      return { error: `Carousel belum lengkap. Slide tanpa approved asset: ${labels}.` }
+    }
+
+    const targetUrl = buildSocialTargetUrl({
+      targetUrl: post.target_url,
+      utmSource: post.utm_source,
+      utmMedium: post.utm_medium,
+      utmCampaign: post.utm_campaign,
+      baseUrl: SITE_URL,
+    })
+    const caption = buildSocialCaptionWithUtm(post, SITE_URL)
+    const notes = [
+      `Title: ${post.title}`,
+      '',
+      'Caption:',
+      caption || '-',
+      '',
+      'First comment:',
+      post.first_comment || '-',
+      '',
+      'Alt text:',
+      post.alt_text || post.visual_spec?.alt_text || '-',
+      '',
+      'Target URL:',
+      targetUrl || '-',
+      '',
+      'Slide order:',
+      ...slides.map((slide) => `${String(slide.slide_number).padStart(2, '0')}. ${slide.title_text}`),
+    ].join('\n')
+
+    const entries = []
+    for (const slide of slides) {
+      const asset = approved.bySlide.get(slide.id)
+      if (!asset) continue
+      const { buffer } = await downloadOwnedSocialAssetBuffer({
+        supabase,
+        userId: user.id,
+        storagePath: asset.storage_path,
+      })
+      const index = String(slide.slide_number).padStart(2, '0')
+      entries.push({
+        name: slide.slide_number === 1 ? `${index}-cover.png` : `${index}-slide.png`,
+        data: buffer,
+      })
+    }
+
+    entries.push({ name: 'publish-notes.txt', data: Buffer.from(notes, 'utf8') })
+    const zip = createStoredZip(entries)
+
+    return {
+      success: true,
+      fileName: `${post.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'carousel'}-publish-pack.zip`,
+      mimeType: 'application/zip',
+      base64: zip.toString('base64'),
+    }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Download carousel ZIP gagal.' }
+  }
+}
+
+export async function createManualSocialPublication(rawInput: z.infer<typeof manualPublicationSchema>) {
+  const { supabase, user } = await requireUser()
+  const input = manualPublicationSchema.parse(rawInput)
+
+  try {
+    const post = await getOwnedPostForPublish(supabase, user.id, input.post_id)
+    const captionSnapshot = buildSocialCaptionWithUtm(post, SITE_URL)
+    validatePostCanPublish(post, captionSnapshot)
+    const assetIds = await getPublishAssetIds({ supabase, userId: user.id, post })
+    const publishedAt = input.published_at ? new Date(input.published_at).toISOString() : new Date().toISOString()
+
+    const { error: insertError } = await supabase.from('social_publications').insert({
+      user_id: user.id,
+      post_id: post.id,
+      published_at: publishedAt,
+      platform: 'facebook',
+      publication_method: 'manual',
+      facebook_url: nullIfEmpty(input.facebook_url),
+      caption_snapshot: captionSnapshot,
+      first_comment_snapshot: nullIfEmpty(post.first_comment),
+      asset_ids: assetIds,
+      notes: nullIfEmpty(input.notes),
+    })
+
+    if (insertError) return { error: insertError.message }
+
+    const { error: postError } = await supabase
+      .from('social_posts')
+      .update({
+        status: 'posted',
+        copied_done: true,
+        posted_done: true,
+      })
+      .eq('id', post.id)
+      .eq('user_id', user.id)
+
+    if (postError) return { error: postError.message }
+
+    revalidatePath(SOCIAL_PATH)
+    return {
+      success: true,
+      summary: input.facebook_url ? 'Publication tersimpan.' : 'Publication tersimpan tanpa Facebook URL.',
+    }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Manual publication gagal.' }
+  }
+}
 export async function regenerateFacebookVisualSpecForPost(postId: string) {
   return generateFacebookVisualPromptForPost(postId)
 }

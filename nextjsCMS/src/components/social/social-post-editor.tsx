@@ -6,16 +6,15 @@ import {
   deleteSocialPost,
   generateFacebookPostDraft,
   generateFacebookVisualPromptForPost,
-  markPostPosted,
   updatePostStatus,
 } from "@/app/cms/social/actions";
 import { SocialCarouselEditor } from "./social-carousel-editor";
 import { SocialChecklistPanel } from "./social-checklist-panel";
-import { SocialCopyReadyPanel } from "./social-copy-ready-panel";
 import { SocialMetricsPanel } from "./social-metrics-panel";
 import { SocialPostActionBar } from "./social-post-action-bar";
 import { SocialPostEditorHeader } from "./social-post-editor-header";
 import { SocialPostMainFields } from "./social-post-main-fields";
+import { SocialPublishPack } from "./social-publish-pack";
 import type {
   PostDraftUpdater,
   PostEditorProps,
@@ -37,6 +36,7 @@ export function SocialPostEditor({
   setPost,
   slides,
   assets,
+  publications,
   latestMetric,
   isPending,
   runAction,
@@ -44,19 +44,19 @@ export function SocialPostEditor({
 }: PostEditorProps) {
   const [activeTab, setActiveTab] = useState<EditorTab>("content");
 
-  if (!post) {
-    return null;
-  }
+  if (!post) return null;
 
   const update: PostDraftUpdater = (key, value) => {
     setPost({ ...post, [key]: value });
   };
   const captionValue = buildCaption(post);
+
   const copyVisualPrompt = async () => {
     const scenePrompt = post.visual_spec?.scene_prompt ?? post.visual_prompt;
     if (!scenePrompt) return;
     await navigator.clipboard.writeText(scenePrompt);
   };
+
   const handleCopyCaption = () => {
     if (!post.id) return;
     const previousPost = post;
@@ -68,6 +68,7 @@ export function SocialPostEditor({
       if (result.error) setPost(previousPost);
     });
   };
+
   const handleMarkReady = () => {
     if (!post.id) return;
     const previousPost = post;
@@ -76,14 +77,11 @@ export function SocialPostEditor({
       if (result.error) setPost(previousPost);
     });
   };
+
   const handleMarkPosted = () => {
-    if (!post.id) return;
-    const previousPost = post;
-    setPost({ ...post, status: "posted", posted_done: true, copied_done: true });
-    runAction(() => markPostPosted(post.id!)).then((result) => {
-      if (result.error) setPost(previousPost);
-    });
+    setActiveTab("publish");
   };
+
   const handleMarkReviewed = () => {
     if (!post.id) return;
     const previousPost = post;
@@ -92,22 +90,21 @@ export function SocialPostEditor({
       if (result.error) setPost(previousPost);
     });
   };
+
   const handleGenerateCaption = () => {
     if (!post.id) return;
     runAction(() => generateFacebookPostDraft(post.id!));
   };
+
   const handleGenerateVisual = () => {
     if (!post.id) return;
     runAction(() => generateFacebookVisualPromptForPost(post.id!));
   };
+
   const handleDeletePost = () => {
     if (!post.id) return;
-
-    const confirmed = window.confirm(
-      `Hapus post "${post.title}" secara permanen?`,
-    );
+    const confirmed = window.confirm(`Hapus post "${post.title}" secara permanen?`);
     if (!confirmed) return;
-
     runAction(() => deleteSocialPost(post.id!));
   };
 
@@ -145,17 +142,9 @@ export function SocialPostEditor({
         <div className="flex-1 overflow-y-auto p-5">
           {activeTab === "content" ? (
             <div className="space-y-5">
-              <SocialPostMainFields
-                post={post}
-                update={update}
-                captionValue={captionValue}
-              />
+              <SocialPostMainFields post={post} update={update} captionValue={captionValue} />
               {post.post_type === "carousel" ? (
-                <SocialCarouselEditor
-                  post={post}
-                  slides={slides}
-                  runAction={runAction}
-                />
+                <SocialCarouselEditor post={post} slides={slides} runAction={runAction} />
               ) : null}
             </div>
           ) : null}
@@ -175,14 +164,15 @@ export function SocialPostEditor({
 
           {activeTab === "publish" ? (
             <div className="space-y-5">
-              <SocialCopyReadyPanel disabled={isPending || !post.id} onCopyCaption={handleCopyCaption} />
-              <SocialChecklistPanel
+              <SocialPublishPack
                 post={post}
-                setPost={setPost}
+                slides={slides}
+                assets={assets}
+                publications={publications}
                 isPending={isPending}
                 runAction={runAction}
               />
-
+              <SocialChecklistPanel post={post} setPost={setPost} isPending={isPending} runAction={runAction} />
             </div>
           ) : null}
 

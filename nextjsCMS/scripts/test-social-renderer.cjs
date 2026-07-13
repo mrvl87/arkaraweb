@@ -103,3 +103,43 @@ test('storage path starts with user id and preserves ownership folder', () => {
   assert.equal(path.startsWith('user-123/post-456/'), true)
   assert.equal(path, 'user-123/post-456/carousel/slide-id-789-v3.png')
 })
+const { buildSocialTargetUrl, buildSocialCaptionWithUtm } = require('../src/lib/social/publish-pack.ts')
+const { createStoredZip } = require('../src/lib/social/zip.ts')
+
+test('publish pack target URL preserves query and adds UTM parameters', () => {
+  const url = buildSocialTargetUrl({
+    targetUrl: 'https://arkaraweb.com/panduan?existing=1#read',
+    utmSource: 'facebook',
+    utmMedium: 'social',
+    utmCampaign: 'rumah siaga',
+  })
+
+  assert.equal(url, 'https://arkaraweb.com/panduan?existing=1&utm_source=facebook&utm_medium=social&utm_campaign=rumah+siaga#read')
+})
+
+test('publish pack caption uses UTM URL', () => {
+  const caption = buildSocialCaptionWithUtm({
+    hook: 'Hook',
+    body: 'Body',
+    cta: 'CTA',
+    target_url: 'https://arkaraweb.com/a?x=1',
+    utm_source: 'facebook',
+    utm_medium: 'social',
+    utm_campaign: 'campaign',
+  })
+
+  assert.match(caption, /utm_source=facebook/)
+  assert.match(caption, /utm_campaign=campaign/)
+})
+
+test('stored zip contains local and central directory signatures', () => {
+  const zip = createStoredZip([
+    { name: '01-cover.png', data: Buffer.from('cover') },
+    { name: 'publish-notes.txt', data: Buffer.from('notes') },
+  ])
+
+  assert.equal(zip.readUInt32LE(0), 0x04034b50)
+  assert.equal(zip.includes(Buffer.from('01-cover.png')), true)
+  assert.equal(zip.includes(Buffer.from('publish-notes.txt')), true)
+  assert.equal(zip.readUInt32LE(zip.length - 22), 0x06054b50)
+})

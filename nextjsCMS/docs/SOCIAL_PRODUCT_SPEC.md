@@ -289,3 +289,32 @@ Visual Studio behavior:
 - Visual changes are stored in `visual_spec`, `selected_template_id`, `aspect_ratio`, `visual_prompt`, and `alt_text` without regenerating AI output.
 
 Background uploads are user-owned `social_assets` rows with `asset_type = 'background'`. Render actions can use a selected background version while preserving old generated poster versions.
+
+## Phase 6 Product Behavior
+
+Facebook Publish Pack now consolidates manual publishing materials inside the Publish tab.
+
+Publish Pack includes:
+
+- Final caption built from hook, body, CTA, and target URL with UTM parameters.
+- First comment.
+- Alt text.
+- Target URL with preserved existing query parameters and `utm_source`, `utm_medium`, `utm_campaign`.
+- Approved final poster or approved carousel slide assets.
+- Manual schedule, objective, content pillar, post type, and status context.
+- Manual publishing session fields for published time, Facebook URL, and notes.
+- Publication history from `social_publications`.
+
+Manual publishing remains human-operated:
+
+1. Copy caption and optional first comment.
+2. Download poster or ordered carousel ZIP.
+3. Open Facebook manually.
+4. Publish outside CMS.
+5. Return to CMS.
+6. Save Facebook URL, published time, and notes.
+7. CMS creates a `social_publications` snapshot and marks the post as posted.
+
+No Meta API, access token, or fake autopost behavior is implemented.
+
+A Publish Queue section now shows ready posts for the active campaign, with filters for campaign, post type, and date. Queue rows show missing requirements such as caption, target URL, approved poster, or approved carousel slide assets.

@@ -180,3 +180,22 @@ Acceptance criteria:
 - Carousel Visual tab supports per-slide visual spec, preview, background upload, render, and asset history.
 - Batch carousel render continues after slide-level errors and reports per-slide result.
 - Existing Publish and Metrics workflows remain available and database-backed.
+
+## Phase 6 - Facebook Publish Pack
+
+Acceptance criteria:
+
+- Publish tab shows schedule, timezone, objective, content pillar, final caption, first comment, alt text, target URL with UTM, final poster or carousel slide assets, and checklist state.
+- User can copy caption, first comment, link, and alt text from one place.
+- User can download a poster through an ownership-checked server action.
+- User can download carousel assets as an ordered ZIP with `publish-notes.txt`.
+- User can open Facebook manually; no Meta API or token is requested.
+- Manual Mark as Posted creates a `social_publications` record.
+- Publication stores caption, first comment, and asset id snapshots.
+- Later caption edits do not change existing publication history.
+- Mark as Posted is blocked without caption.
+- `article_link` Mark as Posted is blocked without target URL.
+- Non-carousel Mark as Posted is blocked without an approved poster.
+- Carousel Mark as Posted is blocked if any slide lacks an approved asset.
+- Facebook URL may be empty, but the UI warns before save.
+- Publish Queue shows only ready posts for the active campaign and displays missing requirements.

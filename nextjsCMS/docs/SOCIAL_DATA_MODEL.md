@@ -524,3 +524,34 @@ Existing Phase 2 tables are now used by UI workflows:
 - `social_posts.visual_spec`, `selected_template_id`, `aspect_ratio`, `visual_prompt`, and `alt_text` are updated from the Visual tab.
 
 RLS and server actions continue to filter by `user_id` before reading or mutating assets.
+
+## Phase 6 Publish Pack Data Usage
+
+No new migration is required in Phase 6.
+
+Existing tables used:
+
+- `social_posts` supplies caption fields, schedule, timezone, objective, content pillar, URL and UTM fields.
+- `social_assets` supplies approved poster and approved carousel slide assets.
+- `social_publications` records manual publishing events.
+
+Publication rows store snapshots so later edits do not change history:
+
+- `caption_snapshot` stores the final caption with UTM URL at publication time.
+- `first_comment_snapshot` stores the first comment at publication time.
+- `asset_ids` stores the approved asset ids used for that publication.
+- `facebook_url` can be null, but UI warns when it is empty.
+
+Server-side validation before creating a publication:
+
+- Caption must not be empty.
+- `article_link` posts must have `target_url`.
+- Non-carousel posts must have an approved poster asset.
+- Carousel posts must have an approved `carousel_slide` asset for every slide.
+- All publication writes are filtered by `user_id`.
+
+Post update after publication:
+
+- `status = posted`
+- `copied_done = true`
+- `posted_done = true`

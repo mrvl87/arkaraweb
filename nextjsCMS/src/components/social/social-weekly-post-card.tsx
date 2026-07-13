@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, Copy, Loader2 } from "lucide-react";
-import {
-  copyPostCaptionMark,
-  markPostPosted,
-} from "@/app/cms/social/actions";
+import { copyPostCaptionMark } from "@/app/cms/social/actions";
 import type { SocialPost, SocialPostMetric } from "@/types/social";
 import type { SocialActionRunner } from "./social-post-editor-types";
 import {
@@ -31,7 +28,6 @@ export function SocialWeeklyPostCard({
   const [copied, setCopied] = useState(post.copied_done);
   const [posted, setPosted] = useState(post.posted_done || post.status === "posted" || post.status === "reviewed");
   const [copying, setCopying] = useState(false);
-  const [posting, setPosting] = useState(false);
 
   useEffect(() => {
     setCopied(post.copied_done);
@@ -52,52 +48,31 @@ export function SocialWeeklyPostCard({
     }
   };
 
-  const handlePosted = async () => {
-    const previousCopied = copied;
-    const previousPosted = posted;
-    setCopied(true);
-    setPosted(true);
-    setPosting(true);
-
-    try {
-      const result = await runAction(() => markPostPosted(post.id));
-      if (result.error) {
-        setCopied(previousCopied);
-        setPosted(previousPosted);
-      }
-    } finally {
-      setPosting(false);
-    }
-  };
-
   const statusLabel = post.status.replace("_", " ");
 
   return (
-    <div
-      className={`rounded-lg border bg-white p-3 transition-colors ${posted ? "border-gray-200 opacity-80" : "border-blue-200"}`}
-    >
+    <div className={`rounded-lg border bg-white p-3 transition-colors ${posted ? "border-gray-200 opacity-80" : "border-blue-200"}`}>
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-gray-500">
             {post.post_type.replace("_", " ")}
           </span>
           <p className="mt-1 text-[11px] font-medium text-gray-400">
-            {post.scheduled_date || "Tanpa tanggal"}{" "}
-            {post.scheduled_time?.slice(0, 5) || ""}
+            {post.scheduled_date || "Tanpa tanggal"} {post.scheduled_time?.slice(0, 5) || ""}
           </p>
         </div>
         <button
           type="button"
-          title={posted ? "Sudah dibuat di Facebook" : "Tandai sudah dibuat di Facebook"}
-          onClick={handlePosted}
-          disabled={posted || isPending || posting}
+          title={posted ? "Sudah dibuat di Facebook" : "Buka Publish Pack"}
+          onClick={onEdit}
+          disabled={posted || isPending}
           className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition-colors disabled:cursor-not-allowed ${
             posted
               ? "bg-gray-200 text-gray-500"
               : "bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
           }`}
         >
-          {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          <Check className="h-4 w-4" />
         </button>
       </div>
 
@@ -127,9 +102,7 @@ export function SocialWeeklyPostCard({
       ) : null}
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold text-gray-400">
-          {getPostDayLabel(post)}
-        </span>
+        <span className="text-[11px] font-bold text-gray-400">{getPostDayLabel(post)}</span>
         <button
           type="button"
           title={copied ? "Caption sudah dicopy" : "Copy caption"}
@@ -141,13 +114,7 @@ export function SocialWeeklyPostCard({
               : "bg-arkara-amber text-arkara-green hover:bg-arkara-green hover:text-white"
           }`}
         >
-          {copying ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : copied ? (
-            <Check className="h-3.5 w-3.5" />
-          ) : (
-            <Copy className="h-3.5 w-3.5" />
-          )}
+          {copying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
           {copied ? "Copied" : "Copy"}
         </button>
       </div>

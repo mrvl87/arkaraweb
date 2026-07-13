@@ -310,3 +310,15 @@ Carousel behavior:
 
 - Each slide has a slide-specific visual editor and preview.
 - Batch render records per-slide success or error and continues through remaining slides when one slide fails.
+
+## Phase 6 Publish Pack Asset Export
+
+Final rendered assets are consumed by the Publish tab but still produced by the deterministic renderer from Phase 4.
+
+Asset export behavior:
+
+- Poster download uses a server action that verifies asset ownership before reading from Supabase Storage.
+- Carousel ZIP generation downloads the latest approved asset per slide and packages them in slide order.
+- Carousel ZIP filenames use ordered names: `01-cover.png`, `02-slide.png`, etc.
+- `publish-notes.txt` is included in the ZIP and contains caption, first comment, alt text, target URL, and slide order.
+- ZIP generation uses an internal stored ZIP writer and does not add a new runtime dependency.

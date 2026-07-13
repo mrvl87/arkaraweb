@@ -433,3 +433,42 @@ Known risks:
 - HTML preview is an approximation of SVG renderer output, though it uses the same dimensions, template registry, and validation helpers.
 - Background upload metadata depends on `sharp` being available in the server runtime.
 - Live Supabase Storage upload was not exercised against a real database in this local pass.
+
+## 2026-07-13 - Phase 6 Facebook Publish Pack
+
+Scope executed:
+
+- Added shared publish pack helpers for caption with UTM and target URL building.
+- Added server-side stored ZIP writer for carousel publish packs without adding dependencies.
+- Added server actions for ownership-checked asset download, carousel ZIP download, and manual publication creation.
+- Added server validation for manual publication requirements.
+- Updated legacy `markPostPosted` and `updatePostStatus(..., posted)` paths so posted state must go through Publish Pack.
+- Added Publish Pack UI inside the Publish tab.
+- Added Publish Queue section for ready posts, filters, and missing requirement display.
+- Updated weekly cards so the Facebook done button opens the editor instead of bypassing publication validation.
+- Added tests for UTM URL building, caption with UTM, and ZIP signature generation.
+
+Files changed:
+
+- `src/app/cms/social/actions.ts`
+- `src/components/social/social-publish-pack.tsx`
+- `src/components/social/social-publish-queue.tsx`
+- `src/components/social/social-post-editor.tsx`
+- `src/components/social/social-post-editor-types.ts`
+- `src/components/social/social-tracker-dashboard.tsx`
+- `src/components/social/social-utils.ts`
+- `src/components/social/social-weekly-post-card.tsx`
+- `src/lib/social/publish-pack.ts`
+- `src/lib/social/zip.ts`
+- `scripts/test-social-renderer.cjs`
+- Social documentation files
+
+Validation:
+
+- `npx tsc --noEmit --pretty false` passed.
+- `npm run test:social-renderer` passed with 11 tests.
+
+Known risks:
+
+- Carousel ZIP is returned through a Server Action as base64; very large carousels may need a streamed route handler later.
+- Live Supabase Storage download and publication insert were not executed against a live browser session in this pass.
