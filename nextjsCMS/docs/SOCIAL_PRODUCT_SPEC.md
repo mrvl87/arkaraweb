@@ -353,3 +353,35 @@ Deduplication:
 - Proposed titles are compared with the user's social posts from the last 90 days.
 - Similar titles show warnings in the content map UI.
 - Warnings do not block creation because a similar title can still have a different editorial angle.
+
+## Phase 8 Product Behavior
+
+Hook Lab adds versioned content variants for post copy and visual direction without deleting previous work.
+
+Variant workflow:
+
+1. User opens a saved social post.
+2. User chooses variant type: hook, headline, caption, CTA, first comment, or visual direction.
+3. AI generates variants, default 5.
+4. User compares variants side by side.
+5. User can edit label and content for any variant.
+6. User selects a winner.
+7. The selected variant is copied into the main post field.
+8. Previous variants remain in history and are not deleted.
+
+Variant score language:
+
+- Scores are displayed as heuristic editorial score only.
+- Scores are not predictions of real performance.
+- Analytics and performance learning remain separate future workflows.
+
+Selection behavior:
+
+- Only one variant can be selected per post and variant type.
+- Selecting a new winner unselects the previous winner but preserves it in history.
+- Hook updates `social_posts.hook`.
+- Caption updates `social_posts.body`.
+- CTA updates `social_posts.cta`.
+- First comment updates `social_posts.first_comment`.
+- Headline updates `social_posts.visual_spec.headline`.
+- Visual direction updates `social_posts.visual_prompt`.

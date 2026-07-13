@@ -107,6 +107,8 @@ const { buildSocialTargetUrl, buildSocialCaptionWithUtm } = require('../src/lib/
 const { createStoredZip } = require('../src/lib/social/zip.ts')
 const { calculateTitleSimilarity, findClosestTitleMatch } = require('../src/lib/social/content-map.ts')
 const { SOCIAL_STRATEGY_PRESETS, CONTENT_DERIVATIVE_POST_TYPES } = require('../src/lib/social/strategy-presets.ts')
+const { getVariantReadabilityStats, normalizeHeuristicScores, getVariantScoreAverage } = require('../src/lib/social/variants.ts')
+const { GenerateFacebookVariantsOutputSchema } = require('../src/lib/ai/schemas.ts')
 
 test('publish pack target URL preserves query and adds UTM parameters', () => {
   const url = buildSocialTargetUrl({
@@ -171,4 +173,39 @@ test('content map title similarity produces similarity warning data', () => {
   ])
 
   assert.equal(warning.matchedPostId, 'post-1')
+})
+test('variant helpers calculate readability and clamp heuristic scores', () => {
+  const stats = getVariantReadabilityStats('Kalau listrik padam malam ini, air habis lebih cepat dari yang Anda kira.', 'headline')
+  assert.equal(stats.characters > 0, true)
+  assert.equal(stats.hardLimit, 90)
+  assert.equal(stats.overLimit, false)
+
+  const scores = normalizeHeuristicScores({ clarity: 11, curiosity: -1, relevance: 8.44, brand_fit: 7, clickbait_risk: 3 })
+  assert.equal(scores.clarity, 10)
+  assert.equal(scores.curiosity, 0)
+  assert.equal(scores.relevance, 8.4)
+  assert.equal(getVariantScoreAverage(scores), 6.3)
+})
+
+test('facebook variants schema accepts heuristic editorial scores', () => {
+  const parsed = GenerateFacebookVariantsOutputSchema.parse({
+    variants: [
+      {
+        label: 'Direct consequence',
+        content: 'Kalau air berhenti malam ini, stok kecil di dapur langsung jadi keputusan besar.',
+        direction: 'direct_consequence',
+        heuristic_scores: {
+          clarity: 8,
+          curiosity: 7,
+          relevance: 9,
+          brand_fit: 8,
+          clickbait_risk: 2,
+        },
+        rationale: 'Konsekuensi jelas tanpa panik.',
+      },
+    ],
+  })
+
+  assert.equal(parsed.variants[0].direction, 'direct_consequence')
+  assert.equal(parsed.variants[0].heuristic_scores.clickbait_risk, 2)
 })

@@ -14,6 +14,7 @@ import type {
   GenerateClusterIdeasInput,
   GenerateFacebookWeeklyPlanInput,
   GenerateFacebookContentMapInput,
+  GenerateFacebookVariantsInput,
   GenerateFacebookPostInput,
   GenerateFacebookCarouselInput,
   GenerateFacebookVisualPromptInput,
@@ -26,7 +27,7 @@ import type {
   GenerateGapDraftInput,
 } from './schemas'
 
-export const PROMPT_VERSION = 'v17'
+export const PROMPT_VERSION = 'v18'
 
 export type AIContentProfile = 'post' | 'panduan' | 'workspace'
 
@@ -1008,6 +1009,75 @@ Aturan:
 - visual_direction hanya menjelaskan arah visual CMS/background; jangan meminta teks, logo, headline, footer, panel teks, atau typography di image model.
 - estimated_production_complexity hanya: low, medium, high.
 - Bahasa Indonesia, tajam, grounded, dan relevan dengan rumah tangga urban Indonesia.
+- Output hanya JSON sesuai struktur di atas.`,
+    },
+  ]
+}
+
+export function buildFacebookVariantsPrompt(input: GenerateFacebookVariantsInput): AIMessage[] {
+  const sourceContext = input.source_title
+    ? `\n\nSumber:\nJudul: ${input.source_title}\nRingkasan: ${input.source_summary || '-'}`
+    : ''
+  const historicalContext = input.historical_learnings
+    ? `\n\nHistorical learnings editorial:\n${input.historical_learnings}`
+    : ''
+
+  const hookDirectionRule = input.variant_type === 'hook'
+    ? `\n- Untuk hook, hasilkan variasi yang mewakili arah ini: direct_consequence, question, scenario, concrete_number, contrarian_statement. Isi field direction dengan salah satu nilai itu.`
+    : ''
+
+  return [
+    { role: 'system', content: buildFacebookSystemPrompt() },
+    {
+      role: 'user',
+      content: `Buat beberapa content variants untuk Facebook Arkara. Ini Hook Lab/editorial variant, bukan prediksi performa.
+
+Post title: ${input.post_title}
+Post type: ${input.post_type}
+Variant type: ${input.variant_type}
+Desired count: ${input.desired_count || 5}
+Tone: ${input.tone || 'tenang, tajam, realistis, tidak clickbait'}
+Campaign objective: ${input.campaign_objective || '-'}
+
+Konten saat ini:
+Hook: ${input.hook || '-'}
+Body/caption: ${input.body || '-'}
+CTA: ${input.cta || '-'}
+First comment: ${input.first_comment || '-'}
+Visual headline: ${input.visual_headline || '-'}
+Visual direction: ${input.visual_direction || '-'}${sourceContext}${historicalContext}
+
+Balas JSON valid persis seperti struktur ini:
+{
+  "variants": [
+    {
+      "label": "Direct consequence",
+      "content": "isi variant",
+      "direction": "direct_consequence",
+      "heuristic_scores": {
+        "clarity": 8,
+        "curiosity": 7,
+        "relevance": 9,
+        "brand_fit": 8,
+        "clickbait_risk": 2
+      },
+      "rationale": "alasan editorial singkat"
+    }
+  ]
+}
+
+Aturan:
+- Hasilkan tepat ${input.desired_count || 5} variants.
+- Jangan menyebut skor sebagai prediksi performa; skor hanya heuristic editorial score.
+- clarity, curiosity, relevance, brand_fit, dan clickbait_risk bernilai 0 sampai 10.
+- clickbait_risk makin tinggi berarti makin berisiko; jangan sengaja membuat clickbait kosong.
+- Bahasa Indonesia.
+- Jaga suara Arkara: tenang, grounded, serius, dekat dengan rumah tangga urban Indonesia.
+- Untuk headline, maksimal 90 karakter dan tetap kuat untuk poster CMS.
+- Untuk CTA, satu kalimat lembut dan realistis.
+- Untuk caption, tulis body caption yang bisa menggantikan field body, bukan gabungan hook+CTA.
+- Untuk first_comment, buat komentar lanjutan yang relevan dan tidak mengulang caption.
+- Untuk visual_direction, jelaskan arah visual background/presenter, tanpa meminta image model menulis teks, logo, footer, headline, panel teks, typography, watermark, atau signage.${hookDirectionRule}
 - Output hanya JSON sesuai struktur di atas.`,
     },
   ]

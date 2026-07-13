@@ -41,6 +41,8 @@ import {
   GenerateFacebookWeeklyPlanOutputSchema,
   GenerateFacebookContentMapInputSchema,
   GenerateFacebookContentMapOutputSchema,
+  GenerateFacebookVariantsInputSchema,
+  GenerateFacebookVariantsOutputSchema,
   GenerateFacebookPostInputSchema,
   GenerateFacebookPostOutputSchema,
   GenerateFacebookCarouselInputSchema,
@@ -79,6 +81,8 @@ import {
   type GenerateFacebookWeeklyPlanOutput,
   type GenerateFacebookContentMapInput,
   type GenerateFacebookContentMapOutput,
+  type GenerateFacebookVariantsInput,
+  type GenerateFacebookVariantsOutput,
   type GenerateFacebookPostInput,
   type GenerateFacebookPostOutput,
   type GenerateFacebookCarouselInput,
@@ -476,6 +480,37 @@ function normalizeFacebookContentMapOutput(output: GenerateFacebookContentMapOut
   }
 }
 
+function normalizeFacebookVariantsOutput(output: GenerateFacebookVariantsOutput): GenerateFacebookVariantsOutput {
+  const seen = new Set<string>()
+  const variants = output.variants
+    .map((variant, index) => ({
+      ...variant,
+      label: limitSingleLine(variant.label || `Variant ${index + 1}`, 80),
+      content: variant.content.replace(/\r\n/g, '\n').trim(),
+      rationale: variant.rationale ? limitSingleLine(variant.rationale, 320) : undefined,
+      heuristic_scores: {
+        clarity: variant.heuristic_scores?.clarity,
+        curiosity: variant.heuristic_scores?.curiosity,
+        relevance: variant.heuristic_scores?.relevance,
+        brand_fit: variant.heuristic_scores?.brand_fit,
+        clickbait_risk: variant.heuristic_scores?.clickbait_risk,
+      },
+    }))
+    .filter((variant) => {
+      if (!variant.content) return false
+      const key = variant.content.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+
+  if (variants.length === 0) {
+    throw new Error('AI tidak menghasilkan variant unik. Silakan generate ulang.')
+  }
+
+  return { variants }
+}
+
 function normalizeFacebookPostOutput(output: GenerateFacebookPostOutput): GenerateFacebookPostOutput {
   return withLegacyVisualPrompt(output)
 }
@@ -747,6 +782,22 @@ export async function generateFacebookContentMap(
     normalizeFacebookContentMapOutput,
     ctx,
     { maxTokens: 4200 }
+  )
+}
+
+export async function generateFacebookVariants(
+  rawInput: GenerateFacebookVariantsInput,
+  ctx?: OperationContext
+): Promise<OperationResponse<GenerateFacebookVariantsOutput>> {
+  return runOperation(
+    'generate_facebook_variants',
+    rawInput,
+    GenerateFacebookVariantsInputSchema,
+    GenerateFacebookVariantsOutputSchema,
+    (input) => prompts.buildFacebookVariantsPrompt(input),
+    normalizeFacebookVariantsOutput,
+    ctx,
+    { maxTokens: 2600 }
   )
 }
 

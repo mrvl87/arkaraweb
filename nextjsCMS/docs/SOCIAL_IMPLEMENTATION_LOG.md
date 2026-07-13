@@ -514,3 +514,49 @@ Known risks:
 - Content maps are transient UI state by design; closing or refreshing before Create Selected Posts discards the generated map.
 - Similarity uses token overlap, not semantic embeddings, so warnings are conservative and editorial review remains required.
 - Selected content molecules create planned posts with molecule notes, but full post draft and visual spec generation remain separate downstream steps.
+
+## 2026-07-13 - Phase 8 Hook Lab and Content Variants
+
+Scope executed:
+
+- Added `social_post_variants` migration with RLS, owner policy, indexes, updated_at trigger, and unique selected variant per post/type.
+- Added TypeScript types for variant types, heuristic scores, and variant rows.
+- Added AI schema, operation, and prompt builder for `generateFacebookVariants`.
+- Added variant helper utilities for readability stats and heuristic score normalization.
+- Added dashboard loading for active-campaign variants.
+- Added server actions for variant generation, variant editing, and selecting/applying a winner.
+- Added Hook Lab UI in the Content tab.
+- Added side-by-side variant comparison with editable label/content, length, readability density, heuristic editorial scores, and history.
+- Added tests for variant helper behavior and AI variant schema parsing.
+
+Files changed:
+
+- `supabase/migrations/20260713130000_create_social_post_variants.sql`
+- `src/types/social.ts`
+- `src/lib/social/variants.ts`
+- `src/lib/ai/schemas.ts`
+- `src/lib/ai/operations.ts`
+- `src/lib/ai/prompt-profiles.ts`
+- `src/app/cms/social/actions.ts`
+- `src/components/social/social-hook-lab.tsx`
+- `src/components/social/social-post-editor.tsx`
+- `src/components/social/social-post-editor-types.ts`
+- `src/components/social/social-tracker-dashboard.tsx`
+- `scripts/test-social-renderer.cjs`
+- Social documentation files
+
+Migration created:
+
+- `20260713130000_create_social_post_variants.sql`
+
+Validation:
+
+- `npx tsc --noEmit --pretty false` passed during implementation.
+- `npm run test:social-renderer` passed with 15 tests.
+
+Known risks:
+
+- Variant selection uses a safe server-action sequence plus a unique partial index, not a database transaction wrapper.
+- Headline variants create a minimal visual spec if a post has no `visual_spec` yet.
+- Visual direction variants update `visual_prompt`; deeper structured visual spec regeneration remains a separate workflow.
+- Heuristic scores are editorial guidance only and intentionally disconnected from analytics.

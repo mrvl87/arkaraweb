@@ -3,6 +3,7 @@ import type {
   SocialCarouselSlide,
   SocialPost,
   SocialPostMetric,
+  SocialPostVariant,
   SocialPublication,
 } from "@/types/social";
 
@@ -43,6 +44,7 @@ export interface PostEditorProps {
   slides: SocialCarouselSlide[];
   assets: SocialAsset[];
   publications: SocialPublication[];
+  variants: SocialPostVariant[];
   latestMetric: SocialPostMetric | null;
   isPending: boolean;
   runAction: SocialActionRunner;

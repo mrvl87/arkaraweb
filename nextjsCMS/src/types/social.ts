@@ -53,6 +53,24 @@ export type SocialChecklistKey = (typeof SOCIAL_CHECKLIST_KEYS)[number]
 export const SOCIAL_ASPECT_RATIOS = ['1:1', '4:5', '9:16'] as const
 export type SocialAspectRatio = (typeof SOCIAL_ASPECT_RATIOS)[number]
 
+export const SOCIAL_POST_VARIANT_TYPES = [
+  'hook',
+  'headline',
+  'caption',
+  'cta',
+  'first_comment',
+  'visual_direction',
+] as const
+export type SocialPostVariantType = (typeof SOCIAL_POST_VARIANT_TYPES)[number]
+
+export interface SocialVariantHeuristicScores {
+  clarity?: number
+  curiosity?: number
+  relevance?: number
+  brand_fit?: number
+  clickbait_risk?: number
+}
+
 export interface SocialVisualInformationBlock {
   title?: string
   text: string
@@ -204,6 +222,20 @@ export interface SocialAsset {
   updated_at: string
 }
 
+export interface SocialPostVariant {
+  id: string
+  user_id: string
+  post_id: string
+  variant_type: SocialPostVariantType
+  label: string | null
+  content: string
+  metadata: Record<string, unknown>
+  heuristic_scores: SocialVariantHeuristicScores
+  is_selected: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface SocialPublication {
   id: string
   user_id: string
@@ -237,5 +269,6 @@ export interface SocialDashboardData {
   metrics: SocialPostMetric[]
   assets: SocialAsset[]
   publications: SocialPublication[]
+  variants: SocialPostVariant[]
   sources: SocialSourceOption[]
 }

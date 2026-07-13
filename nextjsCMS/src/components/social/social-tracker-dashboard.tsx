@@ -19,6 +19,7 @@ import type {
   SocialDashboardData,
   SocialPost,
   SocialPostMetric,
+  SocialPostVariant,
 } from "@/types/social";
 import { SocialStrategyEnginePanel } from "./social-strategy-engine-panel";
 import { SocialCampaignList } from "./social-campaign-list";
@@ -115,6 +116,16 @@ export function SocialTrackerDashboard({
     }
     return map;
   }, [initialData.slides]);
+  const variantsByPost = useMemo(() => {
+    const map = new Map<string, SocialPostVariant[]>();
+    for (const variant of initialData.variants) {
+      const current = map.get(variant.post_id) ?? [];
+      current.push(variant);
+      map.set(variant.post_id, current);
+    }
+    return map;
+  }, [initialData.variants]);
+
   const latestMetricsByPost = useMemo(() => {
     const map = new Map<string, SocialPostMetric>();
     for (const metric of initialData.metrics) {
@@ -230,6 +241,9 @@ export function SocialTrackerDashboard({
     : [];
   const selectedPublications = selectedPost?.id
     ? initialData.publications.filter((publication) => publication.post_id === selectedPost.id)
+    : [];
+  const selectedVariants = selectedPost?.id
+    ? (variantsByPost.get(selectedPost.id) ?? [])
     : [];
 
   useEffect(() => {
@@ -378,6 +392,7 @@ export function SocialTrackerDashboard({
         slides={selectedSlides}
         assets={selectedAssets}
         publications={selectedPublications}
+        variants={selectedVariants}
         latestMetric={selectedMetric}
         isPending={isPending}
         runAction={runAction}

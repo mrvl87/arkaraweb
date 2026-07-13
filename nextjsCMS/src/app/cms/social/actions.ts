@@ -5,6 +5,7 @@ import sharp from 'sharp'
 import { z } from 'zod'
 import { findClosestTitleMatch, buildContentMapNotes } from '@/lib/social/content-map'
 import { buildSocialCaptionWithUtm, buildSocialTargetUrl } from '@/lib/social/publish-pack'
+import { normalizeHeuristicScores } from '@/lib/social/variants'
 import { createStoredZip } from '@/lib/social/zip'
 import { createClient } from '@/lib/supabase/server'
 import { SocialVisualSpecSchema } from '@/lib/ai/schemas'
@@ -18,6 +19,7 @@ import {
 import {
   generateFacebookCarousel,
   generateFacebookContentMap,
+  generateFacebookVariants,
   generateFacebookPost,
   generateFacebookVisualPrompt,
   generateFacebookWeeklyPlan,
@@ -39,6 +41,7 @@ import type {
   SocialPost,
   SocialPostMetric,
   SocialPostType,
+  SocialPostVariant,
   SocialPublication,
   SocialSourceOption,
 } from '@/types/social'
@@ -199,6 +202,33 @@ const createSelectedContentMapPostsSchema = z.object({
   items: z.array(selectedContentMapItemSchema).min(1).max(12),
 })
 
+const socialVariantTypeSchema = z.enum([
+  'hook',
+  'headline',
+  'caption',
+  'cta',
+  'first_comment',
+  'visual_direction',
+])
+
+const generateVariantsSchema = z.object({
+  post_id: z.string().uuid(),
+  variant_type: socialVariantTypeSchema,
+  desired_count: z.coerce.number().int().min(1).max(8).default(5),
+  tone: optionalTextSchema,
+  historical_learnings: optionalTextSchema,
+})
+
+const updateVariantSchema = z.object({
+  id: z.string().uuid(),
+  label: z.string().trim().min(1).max(80),
+  content: z.string().trim().min(1).max(5000),
+})
+
+const selectVariantSchema = z.object({
+  id: z.string().uuid(),
+})
+
 async function requireUser() {
   const supabase = await createClient()
   const {
@@ -245,6 +275,53 @@ function visualSpecPostPatch(visualSpec: z.infer<typeof SocialVisualSpecSchema> 
     alt_text: visualSpec.alt_text,
     selected_template_id: visualSpec.template_id,
     aspect_ratio: visualSpec.aspect_ratio,
+  }
+}
+
+function makeServerBlankVisualSpec(post: Pick<SocialPost, 'title' | 'aspect_ratio'>): z.infer<typeof SocialVisualSpecSchema> {
+  return {
+    template_id: 'editorial-opinion-v1',
+    aspect_ratio: post.aspect_ratio || '1:1',
+    scene_prompt: 'Editorial illustration of a realistic Indonesian household preparedness scene, calm cinematic lighting, detailed painterly graphic novel style, clear empty space for CMS overlay.',
+    label: 'RUMAH SIAGA',
+    headline: (post.title || 'Headline visual').slice(0, 90),
+    subheadline: 'Ringkasan visual singkat untuk poster Facebook Arkara.',
+    information_blocks: [
+      { title: 'Poin 1', text: 'Tulis poin visual pertama.' },
+      { title: 'Poin 2', text: 'Tulis poin visual kedua.' },
+    ],
+    emphasis_text: 'Kalimat penekanan singkat.',
+    footer: 'ArkaraWeb.com | Survive with Knowledge',
+    alt_text: 'Ilustrasi rumah tangga Indonesia sesuai topik post Arkara.',
+  }
+}
+
+function buildVariantPostPatch(post: SocialPost, variant: Pick<SocialPostVariant, 'variant_type' | 'content'>) {
+  const content = variant.content.trim()
+
+  switch (variant.variant_type) {
+    case 'hook':
+      return { hook: content }
+    case 'caption':
+      return { body: content, caption_done: true }
+    case 'cta':
+      return { cta: content, cta_done: true }
+    case 'first_comment':
+      return { first_comment: content }
+    case 'visual_direction':
+      return { visual_prompt: content, visual_prompt_done: true }
+    case 'headline': {
+      const visualSpec = post.visual_spec ?? makeServerBlankVisualSpec(post)
+      const nextVisualSpec = { ...visualSpec, headline: content.slice(0, 90) }
+      return {
+        visual_spec: nextVisualSpec,
+        selected_template_id: nextVisualSpec.template_id,
+        aspect_ratio: nextVisualSpec.aspect_ratio,
+        alt_text: nextVisualSpec.alt_text,
+      }
+    }
+    default:
+      return {}
   }
 }
 
@@ -761,6 +838,7 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
     { data: metrics, error: metricsError },
     { data: assets, error: assetError },
     { data: publications, error: publicationError },
+    { data: variants, error: variantError },
   ] = activeCampaign
     ? await Promise.all([
         supabase
@@ -790,8 +868,14 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
           .select('*')
           .eq('user_id', user.id)
           .order('published_at', { ascending: false }),
+        supabase
+          .from('social_post_variants')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
       ])
     : [
+        { data: [], error: null },
         { data: [], error: null },
         { data: [], error: null },
         { data: [], error: null },
@@ -804,6 +888,7 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
   if (metricsError) throw new Error(metricsError.message)
   if (assetError) throw new Error(assetError.message)
   if (publicationError) throw new Error(publicationError.message)
+  if (variantError) throw new Error(variantError.message)
 
   const campaignPostIds = new Set(((socialPosts ?? []) as SocialPost[]).map((post) => post.id))
   const campaignSlideIds = new Set(
@@ -844,6 +929,7 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
       (asset.slide_id ? campaignSlideIds.has(asset.slide_id) : false)
     ),
     publications: ((publications ?? []) as SocialPublication[]).filter((publication) => campaignPostIds.has(publication.post_id)),
+    variants: ((variants ?? []) as SocialPostVariant[]).filter((variant) => campaignPostIds.has(variant.post_id)),
     sources,
   }
 }
@@ -1202,6 +1288,138 @@ export async function recordPostMetrics(rawInput: z.infer<typeof metricsSchema>)
 
   revalidatePath(SOCIAL_PATH)
   return { success: true }
+}
+
+export async function generateFacebookVariantsForPost(rawInput: z.infer<typeof generateVariantsSchema>) {
+  const { supabase, user } = await requireUser()
+  const input = generateVariantsSchema.parse(rawInput)
+
+  const { data: post, error } = await supabase
+    .from('social_posts')
+    .select('*')
+    .eq('id', input.post_id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (error || !post) return { error: error?.message || 'Post tidak ditemukan.' }
+
+  const typedPost = post as SocialPost
+  const source = await getSourceByPost(supabase, typedPost)
+  const result = await generateFacebookVariants(
+    {
+      post_title: typedPost.title,
+      post_type: typedPost.post_type,
+      hook: typedPost.hook || undefined,
+      body: typedPost.body || undefined,
+      cta: typedPost.cta || undefined,
+      first_comment: typedPost.first_comment || undefined,
+      visual_headline: typedPost.visual_spec?.headline || undefined,
+      visual_direction: typedPost.visual_prompt || typedPost.visual_spec?.scene_prompt || undefined,
+      source_title: source?.title,
+      source_summary: source?.summary,
+      variant_type: input.variant_type,
+      desired_count: input.desired_count,
+      tone: nullIfEmpty(input.tone) ?? undefined,
+      campaign_objective: typedPost.objective || undefined,
+      historical_learnings: nullIfEmpty(input.historical_learnings) ?? undefined,
+    },
+    { userId: user.id, targetType: 'social', targetId: input.post_id }
+  )
+
+  if (!result.success) return { error: result.error }
+
+  const rows = result.data.variants.map((variant) => ({
+    user_id: user.id,
+    post_id: input.post_id,
+    variant_type: input.variant_type,
+    label: variant.label,
+    content: variant.content,
+    metadata: {
+      direction: variant.direction ?? null,
+      rationale: variant.rationale ?? null,
+      tone: nullIfEmpty(input.tone),
+      generated_at: new Date().toISOString(),
+    },
+    heuristic_scores: normalizeHeuristicScores(variant.heuristic_scores),
+    is_selected: false,
+  }))
+
+  const { error: insertError } = await supabase.from('social_post_variants').insert(rows)
+  if (insertError) return { error: insertError.message }
+
+  revalidatePath(SOCIAL_PATH)
+  return { success: true, summary: `${rows.length} variant ${input.variant_type} dibuat.` }
+}
+
+export async function updateSocialPostVariant(rawInput: z.infer<typeof updateVariantSchema>) {
+  const { supabase, user } = await requireUser()
+  const input = updateVariantSchema.parse(rawInput)
+
+  const { error } = await supabase
+    .from('social_post_variants')
+    .update({
+      label: input.label,
+      content: input.content,
+    })
+    .eq('id', input.id)
+    .eq('user_id', user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath(SOCIAL_PATH)
+  return { success: true, summary: 'Variant disimpan.' }
+}
+
+export async function selectSocialPostVariant(rawInput: z.infer<typeof selectVariantSchema>) {
+  const { supabase, user } = await requireUser()
+  const input = selectVariantSchema.parse(rawInput)
+
+  const { data: variant, error: variantError } = await supabase
+    .from('social_post_variants')
+    .select('*')
+    .eq('id', input.id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (variantError || !variant) return { error: variantError?.message || 'Variant tidak ditemukan.' }
+
+  const typedVariant = variant as SocialPostVariant
+  const { data: post, error: postError } = await supabase
+    .from('social_posts')
+    .select('*')
+    .eq('id', typedVariant.post_id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (postError || !post) return { error: postError?.message || 'Post tidak ditemukan.' }
+
+  const { error: resetError } = await supabase
+    .from('social_post_variants')
+    .update({ is_selected: false })
+    .eq('user_id', user.id)
+    .eq('post_id', typedVariant.post_id)
+    .eq('variant_type', typedVariant.variant_type)
+
+  if (resetError) return { error: resetError.message }
+
+  const { error: selectError } = await supabase
+    .from('social_post_variants')
+    .update({ is_selected: true })
+    .eq('id', typedVariant.id)
+    .eq('user_id', user.id)
+
+  if (selectError) return { error: selectError.message }
+
+  const patch = buildVariantPostPatch(post as SocialPost, typedVariant)
+  const { error: updatePostError } = await supabase
+    .from('social_posts')
+    .update(patch)
+    .eq('id', typedVariant.post_id)
+    .eq('user_id', user.id)
+
+  if (updatePostError) return { error: updatePostError.message }
+
+  revalidatePath(SOCIAL_PATH)
+  return { success: true, summary: 'Variant terpilih diterapkan ke post.' }
 }
 
 export async function generateFacebookContentMapForCampaign(rawInput: z.infer<typeof generateContentMapSchema>) {

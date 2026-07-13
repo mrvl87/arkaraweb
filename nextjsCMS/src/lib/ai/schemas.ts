@@ -23,6 +23,7 @@ export const AI_OPERATIONS = [
   'generate_gap_draft',
   'generate_facebook_weekly_plan',
   'generate_facebook_content_map',
+  'generate_facebook_variants',
   'generate_facebook_post',
   'generate_facebook_carousel',
   'generate_facebook_visual_prompt',
@@ -203,6 +204,31 @@ export const FacebookStrategyPresetSchema = z.enum([
   'classic_weekly',
 ])
 
+export const FacebookVariantTypeSchema = z.enum([
+  'hook',
+  'headline',
+  'caption',
+  'cta',
+  'first_comment',
+  'visual_direction',
+])
+
+export const FacebookHookDirectionSchema = z.enum([
+  'direct_consequence',
+  'question',
+  'scenario',
+  'concrete_number',
+  'contrarian_statement',
+])
+
+export const FacebookVariantHeuristicScoresSchema = z.object({
+  clarity: z.number().min(0).max(10).optional(),
+  curiosity: z.number().min(0).max(10).optional(),
+  relevance: z.number().min(0).max(10).optional(),
+  brand_fit: z.number().min(0).max(10).optional(),
+  clickbait_risk: z.number().min(0).max(10).optional(),
+})
+
 export const FacebookObjectiveSchema = z.enum([
   'awareness',
   'trust_building',
@@ -333,6 +359,38 @@ export const GenerateFacebookContentMapOutputSchema = z.object({
   relationship_between_items: z.string().trim().min(1).max(900),
 })
 export type GenerateFacebookContentMapOutput = z.infer<typeof GenerateFacebookContentMapOutputSchema>
+
+export const GenerateFacebookVariantsInputSchema = z.object({
+  post_title: z.string().trim().min(1).max(180),
+  post_type: FacebookPostTypeSchema,
+  hook: z.string().trim().max(500).optional(),
+  body: z.string().trim().max(5000).optional(),
+  cta: z.string().trim().max(700).optional(),
+  first_comment: z.string().trim().max(1200).optional(),
+  visual_headline: z.string().trim().max(120).optional(),
+  visual_direction: z.string().trim().max(1200).optional(),
+  source_title: z.string().trim().max(180).optional(),
+  source_summary: z.string().trim().max(2200).optional(),
+  variant_type: FacebookVariantTypeSchema,
+  desired_count: z.number().int().min(1).max(8).optional().default(5),
+  tone: z.string().trim().max(240).optional(),
+  campaign_objective: z.string().trim().max(240).optional(),
+  historical_learnings: z.string().trim().max(1600).optional(),
+})
+export type GenerateFacebookVariantsInput = z.infer<typeof GenerateFacebookVariantsInputSchema>
+
+export const FacebookVariantDraftSchema = z.object({
+  label: z.string().trim().min(1).max(80),
+  content: z.string().trim().min(1).max(5000),
+  direction: FacebookHookDirectionSchema.optional(),
+  heuristic_scores: FacebookVariantHeuristicScoresSchema.default({}),
+  rationale: z.string().trim().max(320).optional(),
+})
+
+export const GenerateFacebookVariantsOutputSchema = z.object({
+  variants: z.array(FacebookVariantDraftSchema).min(1).max(8),
+})
+export type GenerateFacebookVariantsOutput = z.infer<typeof GenerateFacebookVariantsOutputSchema>
 
 export const GenerateFacebookPostInputSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(180),

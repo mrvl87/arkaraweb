@@ -337,3 +337,15 @@ When a selected content molecule becomes a post, deterministic rendering still d
 - Render final poster through CMS templates.
 
 Renderer rules from Phase 4 remain unchanged.
+
+## Phase 8 Variant Relationship to Renderer
+
+Hook Lab does not render images directly.
+
+Headline variants can update `visual_spec.headline`, which is later consumed by the deterministic renderer. The renderer rules remain unchanged:
+
+- CMS renders headline text.
+- Text overflow is still validated by renderer templates.
+- AI variant generation does not place text into background images.
+
+Visual direction variants update `visual_prompt` as editorial direction. A later visual specification regeneration or manual Visual Studio edit can convert that direction into a structured background scene and poster layout.

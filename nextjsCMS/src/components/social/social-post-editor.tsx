@@ -10,6 +10,7 @@ import {
 } from "@/app/cms/social/actions";
 import { SocialCarouselEditor } from "./social-carousel-editor";
 import { SocialChecklistPanel } from "./social-checklist-panel";
+import { SocialHookLab } from "./social-hook-lab";
 import { SocialMetricsPanel } from "./social-metrics-panel";
 import { SocialPostActionBar } from "./social-post-action-bar";
 import { SocialPostEditorHeader } from "./social-post-editor-header";
@@ -37,6 +38,7 @@ export function SocialPostEditor({
   slides,
   assets,
   publications,
+  variants,
   latestMetric,
   isPending,
   runAction,
@@ -143,6 +145,7 @@ export function SocialPostEditor({
           {activeTab === "content" ? (
             <div className="space-y-5">
               <SocialPostMainFields post={post} update={update} captionValue={captionValue} />
+              <SocialHookLab post={post} variants={variants} isPending={isPending} runAction={runAction} />
               {post.post_type === "carousel" ? (
                 <SocialCarouselEditor post={post} slides={slides} runAction={runAction} />
               ) : null}

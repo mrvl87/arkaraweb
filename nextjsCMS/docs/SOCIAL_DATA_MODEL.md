@@ -590,3 +590,56 @@ Ownership rules remain unchanged:
 - All inserted posts include `user_id`.
 - Campaign loading and insertion are filtered by `user_id`.
 - RLS on `social_posts` continues to enforce row ownership.
+
+## Phase 8 Content Variants Data Model
+
+Migration:
+
+- `supabase/migrations/20260713130000_create_social_post_variants.sql`
+
+### `social_post_variants`
+
+Purpose:
+
+- Store generated and edited variants for post hooks, headlines, captions, CTAs, first comments, and visual direction.
+
+Columns:
+
+- `id uuid primary key default gen_random_uuid()`
+- `user_id uuid not null references auth.users(id) on delete cascade`
+- `post_id uuid not null references social_posts(id) on delete cascade`
+- `variant_type text not null`
+- `label text`
+- `content text not null`
+- `metadata jsonb default '{}'`
+- `heuristic_scores jsonb default '{}'`
+- `is_selected boolean default false`
+- `created_at timestamptz default now()`
+- `updated_at timestamptz default now()`
+
+Supported `variant_type` values:
+
+- `hook`
+- `headline`
+- `caption`
+- `cta`
+- `first_comment`
+- `visual_direction`
+
+Indexes:
+
+- `idx_social_post_variants_user`
+- `idx_social_post_variants_post`
+- `idx_social_post_variants_post_type`
+- Unique partial index `idx_social_post_variants_one_selected` on `(user_id, post_id, variant_type)` where `is_selected` is true.
+
+RLS:
+
+- Enabled.
+- Authenticated users can manage only rows where `user_id = auth.uid()`.
+- Insert/update checks also require the referenced `social_posts` row to belong to the same authenticated user.
+
+Compatibility:
+
+- No existing post fields are removed.
+- Selected variant content is copied into existing main fields, so old UI and publish pack workflows remain compatible.
