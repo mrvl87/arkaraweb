@@ -23,6 +23,7 @@ import type {
 } from "@/types/social";
 import { SocialStrategyEnginePanel } from "./social-strategy-engine-panel";
 import { SocialAnalyticsDashboard } from "./social-analytics-dashboard";
+import { SocialLearningEngine } from "./social-learning-engine";
 import { SocialCampaignList } from "./social-campaign-list";
 import { SocialCampaignSettings } from "./social-campaign-settings";
 import { SocialCampaignHeader } from "./social-campaign-header";
@@ -383,6 +384,14 @@ export function SocialTrackerDashboard({
             posts={initialData.analyticsPosts}
             metrics={initialData.analyticsMetrics}
             publications={initialData.analyticsPublications}
+            onEditPost={(post) => setSelectedPost(post)}
+          />
+          <SocialLearningEngine
+            activeCampaign={activeCampaign}
+            learnings={initialData.learnings}
+            posts={initialData.analyticsPosts}
+            isPending={isPending}
+            runAction={runAction}
             onEditPost={(post) => setSelectedPost(post)}
           />
           <SocialWeeklyBoard

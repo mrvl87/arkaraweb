@@ -409,3 +409,31 @@ Rate formulas:
 - `interaction_rate = (reactions + comments + shares + link_clicks) / reach`
 
 If reach is missing or zero, rate displays as `N/A`. Small samples show a caution message and must not be treated as a strong conclusion.
+
+## Phase 10 - Performance Learning Engine
+
+Phase 10 turns manual analytics into reviewable editorial learning.
+
+Workflow:
+
+1. User opens an active campaign with published posts and manual metrics.
+2. User clicks Campaign Retrospective.
+3. Server loads campaign, published posts, publication snapshots, metrics, variants, and template data owned by the user.
+4. AI generates a retrospective with campaign summary, observations, patterns worth testing, repeat/stop suggestions, next experiment, and proposed learnings.
+5. Proposed learnings are saved as `social_learnings` with `status = proposed`.
+6. User can approve, reject, or archive each learning.
+7. Only approved learnings become bounded context for later weekly plan, content map, post draft, and variant generation.
+
+AI guardrails:
+
+- Retrospective must cite evidence count.
+- Small samples reduce confidence.
+- Single-post observations must be treated as anecdotal.
+- The language must stay probabilistic: "terlihat", "berdasarkan sampel saat ini", and "perlu diuji kembali".
+- AI must not invent unavailable metrics or claim causality from correlation.
+
+Context reuse:
+
+- Approved learning context is limited to 8 relevant items.
+- Relevance considers campaign goal, content pillar, post type, template, publishing time, confidence, and evidence count.
+- Rejected and archived learnings are never sent back into AI prompts.

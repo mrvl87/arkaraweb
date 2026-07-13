@@ -248,3 +248,17 @@ Acceptance criteria:
 - Per-post metrics tab displays latest metrics, history, rates, publication snapshot, next action, and notes.
 - CSV export uses stable column headers and includes post title, campaign, publish date, raw metrics, and calculated rates.
 - No CSV import or screenshot extraction is included in this phase.
+
+## Phase 10 - Performance Learning Engine
+
+- Migration creates `social_learnings` with indexes, RLS, owner policy, and updated_at trigger.
+- AI operation `generateSocialPerformanceReview` exists.
+- Campaign Retrospective uses real campaign posts, publication snapshots, metrics, variants, and templates.
+- Retrospective output includes campaign summary, strongest observations, weak observations, patterns worth testing, content to repeat, content to stop, next experiment, and proposed learnings.
+- Proposed learnings require user approval before reuse.
+- Rejected and archived learnings are not injected into future AI prompts.
+- Small samples and single-post observations are forced toward low confidence or anecdotal language.
+- Approved learnings are retrieved by relevance and capped at 8 items.
+- Approved learning context is integrated into weekly plan, content map, post draft, and variant generation.
+- No Meta API or autoposting is added.
+- Documentation and implementation log are updated.

@@ -66,6 +66,15 @@ export type SocialPostVariantType = (typeof SOCIAL_POST_VARIANT_TYPES)[number]
 export const SOCIAL_METRIC_SOURCES = ['manual', 'csv', 'screenshot'] as const
 export type SocialMetricSource = (typeof SOCIAL_METRIC_SOURCES)[number]
 
+export const SOCIAL_LEARNING_SCOPE_TYPES = ['global', 'campaign', 'content_pillar', 'post_type', 'template', 'publishing_time'] as const
+export type SocialLearningScopeType = (typeof SOCIAL_LEARNING_SCOPE_TYPES)[number]
+
+export const SOCIAL_LEARNING_CONFIDENCE = ['low', 'medium', 'high'] as const
+export type SocialLearningConfidence = (typeof SOCIAL_LEARNING_CONFIDENCE)[number]
+
+export const SOCIAL_LEARNING_STATUSES = ['proposed', 'approved', 'rejected', 'archived'] as const
+export type SocialLearningStatus = (typeof SOCIAL_LEARNING_STATUSES)[number]
+
 export interface SocialVariantHeuristicScores {
   clarity?: number
   curiosity?: number
@@ -245,6 +254,22 @@ export interface SocialPostVariant {
   updated_at: string
 }
 
+export interface SocialLearning {
+  id: string
+  user_id: string
+  scope_type: SocialLearningScopeType
+  scope_id: string | null
+  title: string
+  observation: string
+  evidence: Record<string, unknown>
+  evidence_count: number
+  confidence: SocialLearningConfidence
+  recommendation: string
+  status: SocialLearningStatus
+  created_at: string
+  updated_at: string
+}
+
 export interface SocialPublication {
   id: string
   user_id: string
@@ -279,6 +304,7 @@ export interface SocialDashboardData {
   assets: SocialAsset[]
   publications: SocialPublication[]
   variants: SocialPostVariant[]
+  learnings: SocialLearning[]
   analyticsPosts: SocialPost[]
   analyticsMetrics: SocialPostMetric[]
   analyticsAssets: SocialAsset[]

@@ -584,3 +584,47 @@ Risks:
 
 - Supabase CLI is not installed in this workspace, so the migration was written as a committed SQL file and not applied locally.
 - Dashboard charts use responsive HTML tables and CSS bars because no chart library exists in the project dependencies.
+
+## 2026-07-13 - Phase 10 Performance Learning Engine
+
+Scope executed:
+
+- Added `social_learnings` migration with RLS, owner policy, indexes, status/confidence/scope constraints, and updated_at trigger.
+- Added TypeScript types for learning scope, confidence, status, and dashboard data.
+- Added AI schemas, prompt builder, operation, and output normalization for `generateSocialPerformanceReview`.
+- Added server action to generate campaign retrospectives from owned campaign data, publication snapshots, metrics, variants, and templates.
+- Added server action to approve, reject, or archive proposed learnings.
+- Added relevance helper for retrieving at most 8 approved learnings for future AI calls.
+- Integrated approved learning context into weekly plan, content map, post draft, carousel draft, and variant generation.
+- Added Social Learning Engine UI with Campaign Retrospective, proposed learnings, approved learnings, evidence links, and status actions.
+- Added schema tests for retrospective output and approved learning prompt context.
+
+Files changed:
+
+- `supabase/migrations/20260713150000_create_social_learnings.sql`
+- `src/types/social.ts`
+- `src/lib/ai/schemas.ts`
+- `src/lib/ai/operations.ts`
+- `src/lib/ai/prompt-profiles.ts`
+- `src/app/cms/social/actions.ts`
+- `src/components/social/social-learning-engine.tsx`
+- `src/components/social/social-tracker-dashboard.tsx`
+- `scripts/test-social-renderer.cjs`
+- Social documentation files
+
+Validation:
+
+- `npx tsc --noEmit --pretty false` passed.
+- `npm run test:social-renderer` passed with 18 tests.
+- `git diff --check` passed; only CRLF conversion warnings were reported.
+- `npm run lint` failed before linting because the existing `next lint` script is not supported by the installed Next 16 CLI and is interpreted as project path `lint`.
+- `npx eslint ...` failed because the repo has no `eslint.config.(js|mjs|cjs)` for ESLint 9.
+- `npm run build` compiled successfully, then failed with the existing Windows `spawn EPERM` environment error.
+- `supabase --version` failed because Supabase CLI is not installed in this environment.
+
+Known risks:
+
+- Supabase CLI is not installed in this workspace, so the migration was written as SQL and not applied locally.
+- Retrospective quality depends on manual metrics completeness.
+- `scope_id` is only populated for campaign-scoped learnings; text-scoped categories use title/observation matching for relevance.
+- Campaign retrospective summary is appended to `social_campaigns.tone_note` because no dedicated campaign notes column exists yet.

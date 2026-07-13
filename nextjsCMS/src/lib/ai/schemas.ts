@@ -24,6 +24,7 @@ export const AI_OPERATIONS = [
   'generate_facebook_weekly_plan',
   'generate_facebook_content_map',
   'generate_facebook_variants',
+  'generate_social_performance_review',
   'generate_facebook_post',
   'generate_facebook_carousel',
   'generate_facebook_visual_prompt',
@@ -229,6 +230,27 @@ export const FacebookVariantHeuristicScoresSchema = z.object({
   clickbait_risk: z.number().min(0).max(10).optional(),
 })
 
+export const SocialLearningScopeTypeSchema = z.enum([
+  'global',
+  'campaign',
+  'content_pillar',
+  'post_type',
+  'template',
+  'publishing_time',
+])
+export const SocialLearningConfidenceSchema = z.enum(['low', 'medium', 'high'])
+export const SocialLearningStatusSchema = z.enum(['proposed', 'approved', 'rejected', 'archived'])
+
+export const ApprovedSocialLearningContextSchema = z.object({
+  scope_type: SocialLearningScopeTypeSchema,
+  title: z.string().trim().min(1).max(180),
+  observation: z.string().trim().min(1).max(600),
+  recommendation: z.string().trim().min(1).max(600),
+  evidence_count: z.number().int().min(0).max(1000),
+  confidence: SocialLearningConfidenceSchema,
+})
+export type ApprovedSocialLearningContext = z.infer<typeof ApprovedSocialLearningContextSchema>
+
 export const FacebookObjectiveSchema = z.enum([
   'awareness',
   'trust_building',
@@ -306,6 +328,7 @@ export const GenerateFacebookWeeklyPlanInputSchema = z.object({
   source_title: z.string().trim().max(180).optional(),
   source_summary: z.string().trim().max(2200).optional(),
   source_url: z.string().trim().max(500).optional(),
+  approved_learnings: z.array(ApprovedSocialLearningContextSchema).max(8).optional().default([]),
 })
 export type GenerateFacebookWeeklyPlanInput = z.infer<typeof GenerateFacebookWeeklyPlanInputSchema>
 
@@ -335,6 +358,7 @@ export const GenerateFacebookContentMapInputSchema = z.object({
   end_date: z.string().trim().max(20).optional(),
   editor_notes: z.string().trim().max(1200).optional(),
   previous_campaign_summary: z.string().trim().max(1600).optional(),
+  approved_learnings: z.array(ApprovedSocialLearningContextSchema).max(8).optional().default([]),
 })
 export type GenerateFacebookContentMapInput = z.infer<typeof GenerateFacebookContentMapInputSchema>
 
@@ -376,6 +400,7 @@ export const GenerateFacebookVariantsInputSchema = z.object({
   tone: z.string().trim().max(240).optional(),
   campaign_objective: z.string().trim().max(240).optional(),
   historical_learnings: z.string().trim().max(1600).optional(),
+  approved_learnings: z.array(ApprovedSocialLearningContextSchema).max(8).optional().default([]),
 })
 export type GenerateFacebookVariantsInput = z.infer<typeof GenerateFacebookVariantsInputSchema>
 
@@ -392,6 +417,105 @@ export const GenerateFacebookVariantsOutputSchema = z.object({
 })
 export type GenerateFacebookVariantsOutput = z.infer<typeof GenerateFacebookVariantsOutputSchema>
 
+export const SocialPerformanceReviewCampaignSchema = z.object({
+  id: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(1).max(180),
+  theme: z.string().trim().max(1200).optional(),
+  primary_goal: z.string().trim().max(240).optional(),
+  content_pillar: z.string().trim().max(180).optional(),
+  start_date: z.string().trim().max(20).optional(),
+  end_date: z.string().trim().max(20).optional(),
+})
+
+export const SocialPerformanceReviewPostSchema = z.object({
+  id: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(1).max(180),
+  post_type: FacebookPostTypeSchema,
+  objective: z.string().trim().max(180).optional(),
+  content_pillar: z.string().trim().max(180).optional(),
+  template_id: z.string().trim().max(120).optional(),
+  aspect_ratio: SocialAspectRatioSchema.optional(),
+  scheduled_date: z.string().trim().max(20).optional(),
+  scheduled_time: z.string().trim().max(10).optional(),
+  status: z.string().trim().max(40).optional(),
+})
+
+export const SocialPerformanceReviewPublicationSchema = z.object({
+  post_id: z.string().trim().min(1).max(80),
+  published_at: z.string().trim().max(40).optional(),
+  caption_snapshot: z.string().trim().max(1200).optional(),
+  facebook_url: z.string().trim().max(500).optional(),
+})
+
+export const SocialPerformanceReviewMetricSchema = z.object({
+  post_id: z.string().trim().min(1).max(80),
+  recorded_at: z.string().trim().max(40),
+  reach: z.number().nullable().optional(),
+  reactions: z.number().nullable().optional(),
+  comments: z.number().nullable().optional(),
+  shares: z.number().nullable().optional(),
+  link_clicks: z.number().nullable().optional(),
+  video_views: z.number().nullable().optional(),
+  average_watch_time_seconds: z.number().nullable().optional(),
+  followers_gained: z.number().nullable().optional(),
+  metric_window_hours: z.number().nullable().optional(),
+  source: z.enum(['manual', 'csv', 'screenshot']).optional(),
+  next_action: z.string().trim().max(500).optional(),
+})
+
+export const SocialPerformanceReviewVariantSchema = z.object({
+  post_id: z.string().trim().min(1).max(80),
+  variant_type: FacebookVariantTypeSchema,
+  label: z.string().trim().max(120).optional(),
+  content: z.string().trim().max(600).optional(),
+  is_selected: z.boolean().optional(),
+})
+
+export const GenerateSocialPerformanceReviewInputSchema = z.object({
+  campaign: SocialPerformanceReviewCampaignSchema,
+  published_posts: z.array(SocialPerformanceReviewPostSchema).min(1).max(80),
+  publication_snapshots: z.array(SocialPerformanceReviewPublicationSchema).max(120).default([]),
+  metrics: z.array(SocialPerformanceReviewMetricSchema).min(1).max(240),
+  variants: z.array(SocialPerformanceReviewVariantSchema).max(160).default([]),
+  templates: z.array(z.string().trim().min(1).max(120)).max(40).default([]),
+  date_range: z.object({
+    start_date: z.string().trim().max(20).optional(),
+    end_date: z.string().trim().max(20).optional(),
+  }).default({}),
+})
+export type GenerateSocialPerformanceReviewInput = z.infer<typeof GenerateSocialPerformanceReviewInputSchema>
+
+export const SocialPerformanceObservationSchema = z.object({
+  title: z.string().trim().min(1).max(180),
+  observation: z.string().trim().min(1).max(700),
+  evidence_count: z.number().int().min(1).max(1000),
+  confidence: SocialLearningConfidenceSchema,
+  evidence_post_ids: z.array(z.string().trim().min(1).max(80)).max(20).default([]),
+})
+
+export const ProposedSocialLearningSchema = z.object({
+  scope_type: SocialLearningScopeTypeSchema,
+  scope_id: z.string().trim().max(80).nullable().optional(),
+  title: z.string().trim().min(1).max(180),
+  observation: z.string().trim().min(1).max(900),
+  evidence: z.record(z.string(), z.unknown()).default({}),
+  evidence_count: z.number().int().min(1).max(1000),
+  confidence: SocialLearningConfidenceSchema,
+  recommendation: z.string().trim().min(1).max(900),
+})
+
+export const GenerateSocialPerformanceReviewOutputSchema = z.object({
+  campaign_summary: z.string().trim().min(1).max(900),
+  strongest_observations: z.array(SocialPerformanceObservationSchema).max(6).default([]),
+  weak_observations: z.array(SocialPerformanceObservationSchema).max(6).default([]),
+  patterns_worth_testing: z.array(z.string().trim().min(1).max(400)).max(8).default([]),
+  content_to_repeat: z.array(z.string().trim().min(1).max(400)).max(8).default([]),
+  content_to_stop: z.array(z.string().trim().min(1).max(400)).max(8).default([]),
+  next_experiment: z.string().trim().min(1).max(700),
+  proposed_learnings: z.array(ProposedSocialLearningSchema).max(10).default([]),
+})
+export type GenerateSocialPerformanceReviewOutput = z.infer<typeof GenerateSocialPerformanceReviewOutputSchema>
+
 export const GenerateFacebookPostInputSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(180),
   post_type: FacebookPostTypeSchema,
@@ -403,6 +527,7 @@ export const GenerateFacebookPostInputSchema = z.object({
   content_pillar: z.string().trim().max(180).optional(),
   tone_note: z.string().trim().max(500).optional(),
   aspect_ratio: SocialAspectRatioSchema.optional().default('1:1'),
+  approved_learnings: z.array(ApprovedSocialLearningContextSchema).max(8).optional().default([]),
 })
 export type GenerateFacebookPostInput = z.infer<typeof GenerateFacebookPostInputSchema>
 

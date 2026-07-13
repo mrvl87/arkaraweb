@@ -49,6 +49,8 @@ import {
   GenerateFacebookCarouselOutputSchema,
   GenerateFacebookVisualPromptInputSchema,
   GenerateFacebookVisualPromptOutputSchema,
+  GenerateSocialPerformanceReviewInputSchema,
+  GenerateSocialPerformanceReviewOutputSchema,
   RewriteSectionInputSchema,
   RewriteSectionOutputSchema,
   ExpandSectionInputSchema,
@@ -89,6 +91,8 @@ import {
   type GenerateFacebookCarouselOutput,
   type GenerateFacebookVisualPromptInput,
   type GenerateFacebookVisualPromptOutput,
+  type GenerateSocialPerformanceReviewInput,
+  type GenerateSocialPerformanceReviewOutput,
   type RewriteSectionInput,
   type RewriteSectionOutput,
   type ExpandSectionInput,
@@ -511,6 +515,40 @@ function normalizeFacebookVariantsOutput(output: GenerateFacebookVariantsOutput)
   return { variants }
 }
 
+function normalizeLearningConfidence(confidence: 'low' | 'medium' | 'high', evidenceCount: number): 'low' | 'medium' | 'high' {
+  if (evidenceCount <= 1) return 'low'
+  if (evidenceCount < 5 && confidence === 'high') return 'medium'
+  return confidence
+}
+
+function normalizeSocialPerformanceReviewOutput(output: GenerateSocialPerformanceReviewOutput): GenerateSocialPerformanceReviewOutput {
+  const normalizeObservation = (item: GenerateSocialPerformanceReviewOutput['strongest_observations'][number]) => ({
+    ...item,
+    title: limitSingleLine(item.title, 180),
+    observation: limitSingleLine(item.observation, 700),
+    confidence: normalizeLearningConfidence(item.confidence, item.evidence_count),
+    evidence_post_ids: (item.evidence_post_ids ?? []).filter(Boolean).slice(0, 20),
+  })
+
+  return {
+    campaign_summary: limitSingleLine(output.campaign_summary, 900),
+    strongest_observations: (output.strongest_observations ?? []).map(normalizeObservation).slice(0, 6),
+    weak_observations: (output.weak_observations ?? []).map(normalizeObservation).slice(0, 6),
+    patterns_worth_testing: (output.patterns_worth_testing ?? []).map((item) => limitSingleLine(item, 400)).filter(Boolean).slice(0, 8),
+    content_to_repeat: (output.content_to_repeat ?? []).map((item) => limitSingleLine(item, 400)).filter(Boolean).slice(0, 8),
+    content_to_stop: (output.content_to_stop ?? []).map((item) => limitSingleLine(item, 400)).filter(Boolean).slice(0, 8),
+    next_experiment: limitSingleLine(output.next_experiment, 700),
+    proposed_learnings: (output.proposed_learnings ?? []).map((learning) => ({
+      ...learning,
+      title: limitSingleLine(learning.title, 180),
+      observation: limitSingleLine(learning.observation, 900),
+      recommendation: limitSingleLine(learning.recommendation, 900),
+      confidence: normalizeLearningConfidence(learning.confidence, learning.evidence_count),
+      evidence_count: Math.max(1, Math.trunc(learning.evidence_count)),
+    })).slice(0, 10),
+  }
+}
+
 function normalizeFacebookPostOutput(output: GenerateFacebookPostOutput): GenerateFacebookPostOutput {
   return withLegacyVisualPrompt(output)
 }
@@ -798,6 +836,22 @@ export async function generateFacebookVariants(
     normalizeFacebookVariantsOutput,
     ctx,
     { maxTokens: 2600 }
+  )
+}
+
+export async function generateSocialPerformanceReview(
+  rawInput: GenerateSocialPerformanceReviewInput,
+  ctx?: OperationContext
+): Promise<OperationResponse<GenerateSocialPerformanceReviewOutput>> {
+  return runOperation(
+    'generate_social_performance_review',
+    rawInput,
+    GenerateSocialPerformanceReviewInputSchema,
+    GenerateSocialPerformanceReviewOutputSchema,
+    (input) => prompts.buildSocialPerformanceReviewPrompt(input),
+    normalizeSocialPerformanceReviewOutput,
+    ctx,
+    { maxTokens: 4200 }
   )
 }
 

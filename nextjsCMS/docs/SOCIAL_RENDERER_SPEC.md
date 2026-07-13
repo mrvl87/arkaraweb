@@ -359,3 +359,14 @@ Renderer-related dimensions used by analytics:
 - Post `selected_template_id` or `visual_spec.template_id` is used as a template filter.
 - Post `aspect_ratio` is used as an aspect-ratio filter.
 - Renderer output is evaluated indirectly through manual performance metrics, not through automatic image analysis.
+
+## Phase 10 - Learning Relationship to Renderer
+
+Performance Learning Engine does not change deterministic rendering behavior.
+
+Renderer-related learning can be scoped to `template` or `publishing_time`, but it remains editorial context only:
+
+- AI may suggest templates worth testing again based on approved learnings.
+- AI must not claim a template caused performance unless evidence supports that claim.
+- The renderer still owns text placement, safe zones, overflow validation, and Arkara footer rendering.
+- Approved template learnings are capped and passed as prompt context, not as renderer rules.

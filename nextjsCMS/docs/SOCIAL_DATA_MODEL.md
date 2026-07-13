@@ -675,3 +675,60 @@ Backward compatibility:
 - Existing metric rows remain valid because new numeric fields are nullable.
 - Existing rows receive `source = 'manual'` through the defaulted non-null column.
 - Existing RLS ownership policy on `social_post_metrics.user_id` remains the access boundary.
+
+## Phase 10 - Performance Learning Data Model
+
+Migration:
+
+- `supabase/migrations/20260713150000_create_social_learnings.sql`
+
+### `social_learnings`
+
+Purpose:
+
+- Store evidence-based editorial learnings generated from owned manual metrics and approved by the user before reuse in future AI prompts.
+
+Columns:
+
+- `id uuid primary key default gen_random_uuid()`
+- `user_id uuid not null references auth.users(id) on delete cascade`
+- `scope_type text not null`
+- `scope_id uuid null`
+- `title text not null`
+- `observation text not null`
+- `evidence jsonb default '{}'`
+- `evidence_count int default 0`
+- `confidence text default 'low'`
+- `recommendation text not null`
+- `status text default 'proposed'`
+- `created_at timestamptz default now()`
+- `updated_at timestamptz default now()`
+
+Supported `scope_type` values:
+
+- `global`
+- `campaign`
+- `content_pillar`
+- `post_type`
+- `template`
+- `publishing_time`
+
+Supported `confidence` values:
+
+- `low`
+- `medium`
+- `high`
+
+Supported `status` values:
+
+- `proposed`
+- `approved`
+- `rejected`
+- `archived`
+
+Rules:
+
+- `evidence_count` must be non-negative.
+- RLS is enabled and authenticated users can manage only rows where `user_id = auth.uid()`.
+- Only rows with `status = approved` may be injected into future AI prompts.
+- Prompt context is capped to the 8 most relevant approved learnings and includes evidence count plus confidence.

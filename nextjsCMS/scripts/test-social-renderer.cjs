@@ -109,7 +109,11 @@ const { createStoredZip } = require('../src/lib/social/zip.ts')
 const { calculateTitleSimilarity, findClosestTitleMatch } = require('../src/lib/social/content-map.ts')
 const { SOCIAL_STRATEGY_PRESETS, CONTENT_DERIVATIVE_POST_TYPES } = require('../src/lib/social/strategy-presets.ts')
 const { getVariantReadabilityStats, normalizeHeuristicScores, getVariantScoreAverage } = require('../src/lib/social/variants.ts')
-const { GenerateFacebookVariantsOutputSchema } = require('../src/lib/ai/schemas.ts')
+const {
+  GenerateFacebookVariantsOutputSchema,
+  GenerateSocialPerformanceReviewOutputSchema,
+  GenerateFacebookPostInputSchema,
+} = require('../src/lib/ai/schemas.ts')
 
 test('publish pack target URL preserves query and adds UTM parameters', () => {
   const url = buildSocialTargetUrl({
@@ -232,4 +236,66 @@ test('manual analytics rates protect zero denominator and calculate totals', () 
   assert.equal(totals.total_link_clicks, 7)
   assert.equal(totals.average_reach, 75)
   assert.equal(totals.interaction_rate, 0.2)
+})
+test('performance review schema accepts evidence-based proposed learnings', () => {
+  const parsed = GenerateSocialPerformanceReviewOutputSchema.parse({
+    campaign_summary: 'Berdasarkan sampel saat ini, konten checklist terlihat lebih mudah dievaluasi.',
+    strongest_observations: [
+      {
+        title: 'Checklist memiliki interaksi lebih stabil',
+        observation: 'Berdasarkan sampel saat ini terlihat checklist mendapat share lebih konsisten dan perlu diuji kembali.',
+        evidence_count: 3,
+        confidence: 'medium',
+        evidence_post_ids: ['11111111-1111-1111-1111-111111111111'],
+      },
+    ],
+    weak_observations: [
+      {
+        title: 'Poster opini anecdotal',
+        observation: 'Berdasarkan satu post, ini anecdotal dan perlu diuji kembali.',
+        evidence_count: 1,
+        confidence: 'low',
+        evidence_post_ids: ['22222222-2222-2222-2222-222222222222'],
+      },
+    ],
+    patterns_worth_testing: ['Uji checklist pada jam malam dengan CTA save.'],
+    content_to_repeat: ['Checklist rumah tangga dengan langkah kecil.'],
+    content_to_stop: ['Klaim kuat dari sampel tunggal.'],
+    next_experiment: 'Bandingkan checklist dan scenario pada jam publikasi yang sama.',
+    proposed_learnings: [
+      {
+        scope_type: 'post_type',
+        scope_id: null,
+        title: 'Checklist layak diuji ulang',
+        observation: 'Berdasarkan sampel saat ini terlihat checklist punya share rate lebih stabil.',
+        evidence: { post_ids: ['11111111-1111-1111-1111-111111111111'], metric: 'share_rate' },
+        evidence_count: 3,
+        confidence: 'medium',
+        recommendation: 'Gunakan sebagai hipotesis editorial dan perlu diuji kembali.',
+      },
+    ],
+  })
+
+  assert.equal(parsed.proposed_learnings[0].confidence, 'medium')
+  assert.equal(parsed.proposed_learnings[0].evidence_count, 3)
+})
+
+test('facebook post input accepts bounded approved learnings context', () => {
+  const parsed = GenerateFacebookPostInputSchema.parse({
+    title: 'Audit air rumah saat listrik padam',
+    post_type: 'checklist',
+    approved_learnings: [
+      {
+        scope_type: 'post_type',
+        title: 'Checklist terlihat stabil',
+        observation: 'Berdasarkan sampel saat ini terlihat checklist lebih sering disimpan.',
+        recommendation: 'Uji kembali checklist dengan CTA save.',
+        evidence_count: 4,
+        confidence: 'medium',
+      },
+    ],
+  })
+
+  assert.equal(parsed.approved_learnings.length, 1)
+  assert.equal(parsed.approved_learnings[0].scope_type, 'post_type')
 })

@@ -20,6 +20,7 @@ import {
   generateFacebookCarousel,
   generateFacebookContentMap,
   generateFacebookVariants,
+  generateSocialPerformanceReview,
   generateFacebookPost,
   generateFacebookVisualPrompt,
   generateFacebookWeeklyPlan,
@@ -39,6 +40,7 @@ import type {
   SocialChecklistKey,
   SocialDashboardData,
   SocialPost,
+  SocialLearning,
   SocialPostMetric,
   SocialPostType,
   SocialPostVariant,
@@ -155,6 +157,18 @@ const metricsSchema = z.object({
   source: z.enum(['manual', 'csv', 'screenshot']).default('manual'),
   notes: z.string().trim().optional().default(''),
   next_action: z.string().trim().optional().default(''),
+})
+
+const learningStatusSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(['approved', 'rejected', 'archived']),
+})
+
+const performanceReviewSchema = z.object({
+  campaign_id: z.string().uuid(),
+  start_date: optionalTextSchema,
+  end_date: optionalTextSchema,
+  save_to_notes: z.boolean().optional().default(false),
 })
 
 const strategyPresetSchema = z.string().trim().refine(isSocialStrategyPresetId, 'Strategy preset tidak valid.')
@@ -718,6 +732,65 @@ async function getPlanSourcesByKeys(
   return sources
 }
 
+function learningContextRow(learning: SocialLearning) {
+  return {
+    scope_type: learning.scope_type,
+    title: learning.title,
+    observation: learning.observation,
+    recommendation: learning.recommendation,
+    evidence_count: learning.evidence_count,
+    confidence: learning.confidence,
+  }
+}
+
+function learningRelevanceScore(learning: SocialLearning, context: {
+  campaignId?: string | null
+  campaignGoal?: string | null
+  contentPillar?: string | null
+  postType?: string | null
+  templateId?: string | null
+  publishingTime?: string | null
+}) {
+  let score = learning.confidence === 'high' ? 30 : learning.confidence === 'medium' ? 20 : 10
+  score += Math.min(learning.evidence_count, 20)
+  if (learning.scope_type === 'global') score += 4
+  if (learning.scope_type === 'campaign' && context.campaignId && learning.scope_id === context.campaignId) score += 40
+  if (learning.scope_type === 'content_pillar' && context.contentPillar && learning.title.toLowerCase().includes(context.contentPillar.toLowerCase())) score += 25
+  if (learning.scope_type === 'post_type' && context.postType && learning.title.toLowerCase().includes(context.postType.replace(/_/g, ' ').toLowerCase())) score += 25
+  if (learning.scope_type === 'template' && context.templateId && learning.title.toLowerCase().includes(context.templateId.toLowerCase())) score += 25
+  if (learning.scope_type === 'publishing_time' && context.publishingTime && learning.title.toLowerCase().includes(context.publishingTime.toLowerCase())) score += 25
+  if (context.campaignGoal && `${learning.title} ${learning.observation} ${learning.recommendation}`.toLowerCase().includes(context.campaignGoal.toLowerCase())) score += 8
+  return score
+}
+
+async function getRelevantApprovedSocialLearnings(
+  supabase: Awaited<ReturnType<typeof requireUser>>['supabase'],
+  userId: string,
+  context: {
+    campaignId?: string | null
+    campaignGoal?: string | null
+    contentPillar?: string | null
+    postType?: string | null
+    templateId?: string | null
+    publishingTime?: string | null
+  },
+) {
+  const { data, error } = await supabase
+    .from('social_learnings')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false })
+    .limit(80)
+
+  if (error) throw new Error(error.message)
+
+  return ((data ?? []) as SocialLearning[])
+    .sort((left, right) => learningRelevanceScore(right, context) - learningRelevanceScore(left, context))
+    .slice(0, 8)
+    .map(learningContextRow)
+}
+
 function buildStrategyBrief(strategyId: SocialStrategyPresetId) {
   const preset = getSocialStrategyPreset(strategyId)
   return [
@@ -846,6 +919,7 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
     { data: assets, error: assetError },
     { data: publications, error: publicationError },
     { data: variants, error: variantError },
+    { data: learnings, error: learningError },
   ] = activeCampaign
     ? await Promise.all([
         supabase
@@ -886,8 +960,14 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('social_learnings')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
       ])
     : [
+        { data: [], error: null },
         { data: [], error: null },
         { data: [], error: null },
         { data: [], error: null },
@@ -904,6 +984,7 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
   if (assetError) throw new Error(assetError.message)
   if (publicationError) throw new Error(publicationError.message)
   if (variantError) throw new Error(variantError.message)
+  if (learningError) throw new Error(learningError.message)
 
   const campaignPostIds = new Set(((socialPosts ?? []) as SocialPost[]).map((post) => post.id))
   const campaignSlideIds = new Set(
@@ -945,6 +1026,7 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
     ),
     publications: ((publications ?? []) as SocialPublication[]).filter((publication) => campaignPostIds.has(publication.post_id)),
     variants: ((variants ?? []) as SocialPostVariant[]).filter((variant) => campaignPostIds.has(variant.post_id)),
+    learnings: (learnings ?? []) as SocialLearning[],
     analyticsPosts: (analyticsPosts ?? []) as SocialPost[],
     analyticsMetrics: (metrics ?? []) as SocialPostMetric[],
     analyticsAssets: (assets ?? []) as SocialAsset[],
@@ -1315,6 +1397,190 @@ export async function recordPostMetrics(rawInput: z.infer<typeof metricsSchema>)
   return { success: true }
 }
 
+export async function updateSocialLearningStatus(rawInput: z.infer<typeof learningStatusSchema>) {
+  const { supabase, user } = await requireUser()
+  const input = learningStatusSchema.parse(rawInput)
+
+  const { error } = await supabase
+    .from('social_learnings')
+    .update({ status: input.status })
+    .eq('id', input.id)
+    .eq('user_id', user.id)
+
+  if (error) return { error: error.message }
+  revalidatePath(SOCIAL_PATH)
+  return { success: true, summary: `Learning ${input.status}.` }
+}
+
+function metricNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+export async function generateSocialPerformanceReviewForCampaign(rawInput: z.infer<typeof performanceReviewSchema>) {
+  const { supabase, user } = await requireUser()
+  const input = performanceReviewSchema.parse(rawInput)
+
+  const { data: campaign, error: campaignError } = await supabase
+    .from('social_campaigns')
+    .select('*')
+    .eq('id', input.campaign_id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (campaignError || !campaign) return { error: campaignError?.message || 'Campaign tidak ditemukan.' }
+
+  const [{ data: posts, error: postsError }, { data: metrics, error: metricsError }, { data: publications, error: publicationsError }, { data: variants, error: variantsError }] = await Promise.all([
+    supabase
+      .from('social_posts')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('campaign_id', input.campaign_id)
+      .order('scheduled_date', { ascending: true, nullsFirst: false }),
+    supabase
+      .from('social_post_metrics')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('recorded_at', { ascending: false }),
+    supabase
+      .from('social_publications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('published_at', { ascending: false }),
+    supabase
+      .from('social_post_variants')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
+  ])
+
+  if (postsError) return { error: postsError.message }
+  if (metricsError) return { error: metricsError.message }
+  if (publicationsError) return { error: publicationsError.message }
+  if (variantsError) return { error: variantsError.message }
+
+  const campaignPosts = (posts ?? []) as SocialPost[]
+  const postIds = new Set(campaignPosts.map((post) => post.id))
+  const campaignMetrics = ((metrics ?? []) as SocialPostMetric[])
+    .filter((metric) => postIds.has(metric.post_id))
+    .filter((metric) => !input.start_date || metric.recorded_at.slice(0, 10) >= input.start_date)
+    .filter((metric) => !input.end_date || metric.recorded_at.slice(0, 10) <= input.end_date)
+  const campaignPublications = ((publications ?? []) as SocialPublication[]).filter((publication) => postIds.has(publication.post_id))
+  const publishedPostIds = new Set([
+    ...campaignPublications.map((publication) => publication.post_id),
+    ...campaignMetrics.map((metric) => metric.post_id),
+  ])
+  const publishedPosts = campaignPosts.filter((post) => publishedPostIds.has(post.id) || post.posted_done || post.status === 'posted' || post.status === 'reviewed')
+
+  if (publishedPosts.length === 0) return { error: 'Belum ada post published atau metrics untuk retrospective.' }
+  if (campaignMetrics.length === 0) return { error: 'Belum ada metrics nyata untuk retrospective.' }
+
+  const templates = [...new Set(publishedPosts.map((post) => post.selected_template_id || post.visual_spec?.template_id).filter(Boolean) as string[])]
+  const result = await generateSocialPerformanceReview(
+    {
+      campaign: {
+        id: campaign.id,
+        title: campaign.title,
+        theme: campaign.theme || undefined,
+        primary_goal: campaign.primary_goal || undefined,
+        content_pillar: campaign.content_pillar || undefined,
+        start_date: campaign.start_date,
+        end_date: campaign.end_date,
+      },
+      published_posts: publishedPosts.map((post) => ({
+        id: post.id,
+        title: post.title,
+        post_type: post.post_type,
+        objective: post.objective || undefined,
+        content_pillar: post.content_pillar || undefined,
+        template_id: post.selected_template_id || post.visual_spec?.template_id || undefined,
+        aspect_ratio: post.aspect_ratio,
+        scheduled_date: post.scheduled_date || undefined,
+        scheduled_time: post.scheduled_time || undefined,
+        status: post.status,
+      })),
+      publication_snapshots: campaignPublications.map((publication) => ({
+        post_id: publication.post_id,
+        published_at: publication.published_at,
+        caption_snapshot: publication.caption_snapshot || undefined,
+        facebook_url: publication.facebook_url || undefined,
+      })),
+      metrics: campaignMetrics.map((metric) => ({
+        post_id: metric.post_id,
+        recorded_at: metric.recorded_at,
+        reach: metricNumber(metric.reach),
+        reactions: metricNumber(metric.reactions),
+        comments: metricNumber(metric.comments),
+        shares: metricNumber(metric.shares),
+        link_clicks: metricNumber(metric.link_clicks),
+        video_views: metricNumber(metric.video_views),
+        average_watch_time_seconds: metricNumber(metric.average_watch_time_seconds),
+        followers_gained: metricNumber(metric.followers_gained),
+        metric_window_hours: metricNumber(metric.metric_window_hours),
+        source: metric.source,
+        next_action: metric.next_action || undefined,
+      })),
+      variants: ((variants ?? []) as SocialPostVariant[])
+        .filter((variant) => postIds.has(variant.post_id))
+        .map((variant) => ({
+          post_id: variant.post_id,
+          variant_type: variant.variant_type,
+          label: variant.label || undefined,
+          content: variant.content,
+          is_selected: variant.is_selected,
+        })),
+      templates,
+      date_range: {
+        start_date: input.start_date || campaign.start_date,
+        end_date: input.end_date || campaign.end_date,
+      },
+    },
+    { userId: user.id, targetType: 'social', targetId: input.campaign_id },
+  )
+
+  if (!result.success) return { error: result.error }
+
+  const rows = result.data.proposed_learnings.map((learning) => ({
+    user_id: user.id,
+    scope_type: learning.scope_type,
+    scope_id: learning.scope_type === 'campaign' ? input.campaign_id : null,
+    title: learning.title,
+    observation: learning.observation,
+    evidence: {
+      ...learning.evidence,
+      campaign_id: input.campaign_id,
+      campaign_title: campaign.title,
+      generated_at: new Date().toISOString(),
+    },
+    evidence_count: learning.evidence_count,
+    confidence: learning.confidence,
+    recommendation: learning.recommendation,
+    status: 'proposed',
+  }))
+
+  if (rows.length > 0) {
+    const { error: insertError } = await supabase.from('social_learnings').insert(rows)
+    if (insertError) return { error: insertError.message }
+  }
+
+  if (input.save_to_notes) {
+    const summaryNote = `Performance retrospective ${new Date().toISOString().slice(0, 10)}: ${result.data.campaign_summary}`
+    await supabase
+      .from('social_campaigns')
+      .update({ tone_note: compactContent([campaign.tone_note, summaryNote].filter(Boolean).join('\n\n'), 1000) })
+      .eq('id', input.campaign_id)
+      .eq('user_id', user.id)
+  }
+
+  revalidatePath(SOCIAL_PATH)
+  return {
+    success: true,
+    summary: `Retrospective selesai. ${rows.length} proposed learning dibuat.`,
+    review: result.data,
+  }
+}
+
 export async function generateFacebookVariantsForPost(rawInput: z.infer<typeof generateVariantsSchema>) {
   const { supabase, user } = await requireUser()
   const input = generateVariantsSchema.parse(rawInput)
@@ -1330,6 +1596,14 @@ export async function generateFacebookVariantsForPost(rawInput: z.infer<typeof g
 
   const typedPost = post as SocialPost
   const source = await getSourceByPost(supabase, typedPost)
+  const approvedLearnings = await getRelevantApprovedSocialLearnings(supabase, user.id, {
+    campaignId: typedPost.campaign_id,
+    campaignGoal: typedPost.objective,
+    contentPillar: typedPost.content_pillar,
+    postType: typedPost.post_type,
+    templateId: typedPost.selected_template_id || typedPost.visual_spec?.template_id,
+    publishingTime: typedPost.scheduled_time,
+  })
   const result = await generateFacebookVariants(
     {
       post_title: typedPost.title,
@@ -1347,6 +1621,7 @@ export async function generateFacebookVariantsForPost(rawInput: z.infer<typeof g
       tone: nullIfEmpty(input.tone) ?? undefined,
       campaign_objective: typedPost.objective || undefined,
       historical_learnings: nullIfEmpty(input.historical_learnings) ?? undefined,
+      approved_learnings: approvedLearnings,
     },
     { userId: user.id, targetType: 'social', targetId: input.post_id }
   )
@@ -1485,6 +1760,12 @@ export async function generateFacebookContentMapForCampaign(rawInput: z.infer<ty
 
   if (recentError) return { error: recentError.message }
 
+  const approvedLearnings = await getRelevantApprovedSocialLearnings(supabase, user.id, {
+    campaignId: campaign.id,
+    campaignGoal: campaign.primary_goal,
+    contentPillar: campaign.content_pillar,
+  })
+
   const result = await generateFacebookContentMap(
     {
       campaign_title: campaign.title,
@@ -1504,6 +1785,7 @@ export async function generateFacebookContentMapForCampaign(rawInput: z.infer<ty
       end_date: nullIfEmpty(input.end_date) ?? undefined,
       editor_notes: nullIfEmpty(input.editor_notes) ?? undefined,
       previous_campaign_summary: nullIfEmpty(input.previous_campaign_summary) ?? undefined,
+      approved_learnings: approvedLearnings,
     },
     { userId: user.id, targetType: 'social', targetId: input.campaign_id }
   )
@@ -1635,6 +1917,12 @@ export async function generateWeeklyFacebookPlan(campaignId: string, sourceKey?:
         ? `${SITE_URL}${getPanduanPath(source.slug)}`
         : undefined
 
+  const approvedLearnings = await getRelevantApprovedSocialLearnings(supabase, user.id, {
+    campaignId: campaign.id,
+    campaignGoal: campaign.primary_goal,
+    contentPillar: campaign.content_pillar,
+  })
+
   const result = await generateFacebookWeeklyPlan(
     {
       campaign_title: campaign.title,
@@ -1647,6 +1935,7 @@ export async function generateWeeklyFacebookPlan(campaignId: string, sourceKey?:
       source_title: source?.title,
       source_summary: buildSourceSummary([source?.description, source?.content]),
       source_url: sourceUrl,
+      approved_learnings: approvedLearnings,
     },
     { userId: user.id, targetType: 'social', targetId: campaignId }
   )
@@ -1731,6 +2020,15 @@ export async function generateFacebookPostDraft(postId: string) {
   if (error || !post) return { error: error?.message || 'Post tidak ditemukan.' }
 
   const source = await getSourceByPost(supabase, post as SocialPost)
+  const typedPost = post as SocialPost
+  const approvedLearnings = await getRelevantApprovedSocialLearnings(supabase, user.id, {
+    campaignId: typedPost.campaign_id,
+    campaignGoal: typedPost.objective,
+    contentPillar: typedPost.content_pillar,
+    postType: typedPost.post_type,
+    templateId: typedPost.selected_template_id || typedPost.visual_spec?.template_id,
+    publishingTime: typedPost.scheduled_time,
+  })
   const result = await generateFacebookPost(
     {
       title: post.title,
@@ -1742,6 +2040,7 @@ export async function generateFacebookPostDraft(postId: string) {
       content_pillar: post.content_pillar || undefined,
       tone_note: post.notes || undefined,
       aspect_ratio: post.aspect_ratio || '1:1',
+      approved_learnings: approvedLearnings,
     },
     { userId: user.id, targetType: 'social', targetId: postId }
   )
@@ -1781,7 +2080,15 @@ export async function generateFacebookCarouselSlides(postId: string) {
 
   if (error || !post) return { error: error?.message || 'Post tidak ditemukan.' }
 
-  const source = await getSourceByPost(supabase, post as SocialPost)
+  const typedPost = post as SocialPost
+  const source = await getSourceByPost(supabase, typedPost)
+  const approvedLearnings = await getRelevantApprovedSocialLearnings(supabase, user.id, {
+    campaignId: typedPost.campaign_id,
+    contentPillar: typedPost.content_pillar,
+    postType: typedPost.post_type,
+    templateId: typedPost.selected_template_id,
+    publishingTime: typedPost.scheduled_time,
+  })
   const result = await generateFacebookCarousel(
     {
       title: post.title,
@@ -1794,6 +2101,7 @@ export async function generateFacebookCarouselSlides(postId: string) {
       tone_note: post.notes || undefined,
       aspect_ratio: post.aspect_ratio || '1:1',
       slide_count: 7,
+      approved_learnings: approvedLearnings,
     },
     { userId: user.id, targetType: 'social', targetId: postId }
   )

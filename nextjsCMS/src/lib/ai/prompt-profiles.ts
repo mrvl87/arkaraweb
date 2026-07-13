@@ -15,6 +15,7 @@ import type {
   GenerateFacebookWeeklyPlanInput,
   GenerateFacebookContentMapInput,
   GenerateFacebookVariantsInput,
+  GenerateSocialPerformanceReviewInput,
   GenerateFacebookPostInput,
   GenerateFacebookCarouselInput,
   GenerateFacebookVisualPromptInput,
@@ -27,7 +28,7 @@ import type {
   GenerateGapDraftInput,
 } from './schemas'
 
-export const PROMPT_VERSION = 'v18'
+export const PROMPT_VERSION = 'v19'
 
 export type AIContentProfile = 'post' | 'panduan' | 'workspace'
 
@@ -800,6 +801,13 @@ Aturan:
   ]
 }
 
+function formatApprovedLearningContext(learnings?: Array<{ scope_type: string; title: string; observation: string; recommendation: string; evidence_count: number; confidence: string }>): string {
+  const selected = (learnings ?? []).slice(0, 8)
+  if (selected.length === 0) return ''
+
+  return `\n\nApproved learnings yang boleh dipakai sebagai konteks editorial (bukan hukum pasti):\n${selected.map((learning, index) => `${index + 1}. [${learning.scope_type} | confidence ${learning.confidence} | evidence ${learning.evidence_count}] ${learning.title}: ${learning.observation} Rekomendasi: ${learning.recommendation}`).join('\n')}`
+}
+
 function buildFacebookSystemPrompt(): string {
   return `${buildSystemPrompt('workspace')}
 
@@ -886,6 +894,7 @@ Judul: ${input.source_title}
 Ringkasan: ${input.source_summary || '-'}
 URL: ${input.source_url || '-'}`
     : ''
+  const learningContext = formatApprovedLearningContext(input.approved_learnings)
 
   return [
     { role: 'system', content: buildFacebookSystemPrompt() },
@@ -899,7 +908,7 @@ Start date: ${input.start_date}
 End date: ${input.end_date || '-'}
 Primary goal: ${input.primary_goal || 'Trust-building dan edukasi'}
 Content pillar: ${input.content_pillar || 'Krisis Rumah Tangga'}
-Tone note: ${input.tone_note || 'Dekat, praktis, serius, tidak panik'}${sourceContext}
+Tone note: ${input.tone_note || 'Dekat, praktis, serius, tidak panik'}${sourceContext}${learningContext}
 
 Gunakan urutan post type:
 Monday: narrative
@@ -956,6 +965,7 @@ export function buildFacebookContentMapPrompt(input: GenerateFacebookContentMapI
   const editorNotes = input.editor_notes
     ? `\n\nEditor notes:\n${input.editor_notes}`
     : ''
+  const learningContext = formatApprovedLearningContext(input.approved_learnings)
 
   return [
     { role: 'system', content: buildFacebookSystemPrompt() },
@@ -973,7 +983,7 @@ Date range: ${input.start_date} sampai ${input.end_date || '-'}
 Desired content count: ${input.desired_count}
 
 Source articles:
-${sources}${editorNotes}${previousContext}
+${sources}${editorNotes}${previousContext}${learningContext}
 
 Balas JSON valid persis seperti struktur ini:
 {
@@ -1009,6 +1019,7 @@ Aturan:
 - visual_direction hanya menjelaskan arah visual CMS/background; jangan meminta teks, logo, headline, footer, panel teks, atau typography di image model.
 - estimated_production_complexity hanya: low, medium, high.
 - Bahasa Indonesia, tajam, grounded, dan relevan dengan rumah tangga urban Indonesia.
+- Jika ada approved learnings, gunakan sebagai konteks terbatas; jangan memperlakukan korelasi sebagai sebab-akibat.
 - Output hanya JSON sesuai struktur di atas.`,
     },
   ]
@@ -1025,6 +1036,7 @@ export function buildFacebookVariantsPrompt(input: GenerateFacebookVariantsInput
   const hookDirectionRule = input.variant_type === 'hook'
     ? `\n- Untuk hook, hasilkan variasi yang mewakili arah ini: direct_consequence, question, scenario, concrete_number, contrarian_statement. Isi field direction dengan salah satu nilai itu.`
     : ''
+  const learningContext = formatApprovedLearningContext(input.approved_learnings)
 
   return [
     { role: 'system', content: buildFacebookSystemPrompt() },
@@ -1045,7 +1057,7 @@ Body/caption: ${input.body || '-'}
 CTA: ${input.cta || '-'}
 First comment: ${input.first_comment || '-'}
 Visual headline: ${input.visual_headline || '-'}
-Visual direction: ${input.visual_direction || '-'}${sourceContext}${historicalContext}
+Visual direction: ${input.visual_direction || '-'}${sourceContext}${historicalContext}${learningContext}
 
 Balas JSON valid persis seperti struktur ini:
 {
@@ -1078,6 +1090,83 @@ Aturan:
 - Untuk caption, tulis body caption yang bisa menggantikan field body, bukan gabungan hook+CTA.
 - Untuk first_comment, buat komentar lanjutan yang relevan dan tidak mengulang caption.
 - Untuk visual_direction, jelaskan arah visual background/presenter, tanpa meminta image model menulis teks, logo, footer, headline, panel teks, typography, watermark, atau signage.${hookDirectionRule}
+- Jika ada approved learnings, gunakan sebagai konteks terbatas; jangan memperlakukan korelasi sebagai sebab-akibat.
+- Output hanya JSON sesuai struktur di atas.`,
+    },
+  ]
+}
+
+export function buildSocialPerformanceReviewPrompt(input: GenerateSocialPerformanceReviewInput): AIMessage[] {
+  return [
+    { role: 'system', content: buildFacebookSystemPrompt() },
+    {
+      role: 'user',
+      content: `Buat retrospective performa Facebook Arkara berdasarkan metrics manual nyata. Jangan menganggap korelasi sebagai kausalitas.
+
+Campaign:
+${JSON.stringify(input.campaign, null, 2)}
+
+Date range:
+${JSON.stringify(input.date_range, null, 2)}
+
+Published posts:
+${JSON.stringify(input.published_posts, null, 2)}
+
+Publication snapshots:
+${JSON.stringify(input.publication_snapshots, null, 2)}
+
+Metrics tersedia:
+${JSON.stringify(input.metrics, null, 2)}
+
+Variants:
+${JSON.stringify(input.variants, null, 2)}
+
+Templates:
+${JSON.stringify(input.templates, null, 2)}
+
+Balas JSON valid:
+{
+  "campaign_summary": "ringkasan kampanye berbasis sample",
+  "strongest_observations": [
+    {
+      "title": "judul observasi",
+      "observation": "terlihat pola... berdasarkan sampel saat ini...",
+      "evidence_count": 5,
+      "confidence": "medium",
+      "evidence_post_ids": ["uuid"]
+    }
+  ],
+  "weak_observations": [],
+  "patterns_worth_testing": ["pola yang perlu diuji kembali"],
+  "content_to_repeat": ["konten yang layak diulang"],
+  "content_to_stop": ["konten yang sementara perlu dikurangi atau diperbaiki"],
+  "next_experiment": "eksperimen berikutnya yang realistis",
+  "proposed_learnings": [
+    {
+      "scope_type": "post_type",
+      "scope_id": null,
+      "title": "learning singkat",
+      "observation": "berdasarkan sampel saat ini terlihat...",
+      "evidence": { "post_ids": ["uuid"], "metric": "reach" },
+      "evidence_count": 4,
+      "confidence": "medium",
+      "recommendation": "rekomendasi yang perlu diuji kembali"
+    }
+  ]
+}
+
+Aturan:
+- Semua observasi harus menyebut jumlah evidence.
+- Gunakan bahasa: "terlihat", "berdasarkan sampel saat ini", dan "perlu diuji kembali".
+- Jangan menyebut sebab-akibat tanpa bukti kuat.
+- Jika evidence_count 1, beri confidence low dan labeli sebagai anecdotal dalam observation atau recommendation.
+- Sample kecil harus menurunkan confidence.
+- Jangan membuat rekomendasi dari satu post kecuali jelas anecdotal.
+- Jangan mengarang metric yang tidak tersedia dalam input.
+- proposed_learnings maksimal 10.
+- scope_type hanya: global, campaign, content_pillar, post_type, template, publishing_time.
+- confidence hanya: low, medium, high.
+- Jika ada approved learnings, gunakan sebagai konteks terbatas; jangan memperlakukan korelasi sebagai sebab-akibat.
 - Output hanya JSON sesuai struktur di atas.`,
     },
   ]
@@ -1090,6 +1179,7 @@ Judul: ${input.source_title}
 Ringkasan: ${input.source_summary || '-'}
 URL: ${input.source_url || '-'}`
     : ''
+  const learningContext = formatApprovedLearningContext(input.approved_learnings)
 
   return [
     { role: 'system', content: buildFacebookSystemPrompt() },
@@ -1103,7 +1193,7 @@ Hook awal jika ada: ${input.hook || '-'}
 Primary goal: ${input.primary_goal || '-'}
 Content pillar: ${input.content_pillar || '-'}
 Aspect ratio: ${input.aspect_ratio || '1:1'}
-Tone note: ${input.tone_note || 'Praktis, tenang, serius, tidak panik'}${sourceContext}
+Tone note: ${input.tone_note || 'Praktis, tenang, serius, tidak panik'}${sourceContext}${learningContext}
 
 Balas JSON valid:
 {
@@ -1132,6 +1222,7 @@ Judul: ${input.source_title}
 Ringkasan: ${input.source_summary || '-'}
 URL: ${input.source_url || '-'}`
     : ''
+  const learningContext = formatApprovedLearningContext(input.approved_learnings)
 
   return [
     { role: 'system', content: buildFacebookSystemPrompt() },
@@ -1145,7 +1236,7 @@ Jumlah slide: ${input.slide_count || 7}
 Primary goal: ${input.primary_goal || 'share/save'}
 Content pillar: ${input.content_pillar || '-'}
 Aspect ratio: ${input.aspect_ratio || '1:1'}
-Tone note: ${input.tone_note || 'Praktis, tenang, serius, tidak panik'}${sourceContext}
+Tone note: ${input.tone_note || 'Praktis, tenang, serius, tidak panik'}${sourceContext}${learningContext}
 
 Balas JSON valid:
 {
