@@ -20,7 +20,7 @@ import type {
   SocialPost,
   SocialPostMetric,
 } from "@/types/social";
-import { SocialAIPlanPanel } from "./social-ai-plan-panel";
+import { SocialStrategyEnginePanel } from "./social-strategy-engine-panel";
 import { SocialCampaignList } from "./social-campaign-list";
 import { SocialCampaignSettings } from "./social-campaign-settings";
 import { SocialCampaignHeader } from "./social-campaign-header";
@@ -81,7 +81,6 @@ export function SocialTrackerDashboard({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selectedPost, setSelectedPost] = useState<PostDraft | null>(null);
-  const [selectedSourceForPlan, setSelectedSourceForPlan] = useState("");
   const [campaignDraft, setCampaignDraft] = useState(() => ({
     title: initialData.activeCampaign?.title ?? "",
     theme: initialData.activeCampaign?.theme ?? "",
@@ -292,10 +291,8 @@ export function SocialTrackerDashboard({
           onAddPost={() => setSelectedPost(makeEmptyPost(activeCampaign?.id))}
         />
 
-        <SocialAIPlanPanel
+        <SocialStrategyEnginePanel
           sources={initialData.sources}
-          selectedSourceForPlan={selectedSourceForPlan}
-          onSelectedSourceForPlanChange={setSelectedSourceForPlan}
           activeCampaign={activeCampaign}
           isPending={isPending}
           runAction={runAction}

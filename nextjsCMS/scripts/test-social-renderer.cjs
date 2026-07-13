@@ -105,6 +105,8 @@ test('storage path starts with user id and preserves ownership folder', () => {
 })
 const { buildSocialTargetUrl, buildSocialCaptionWithUtm } = require('../src/lib/social/publish-pack.ts')
 const { createStoredZip } = require('../src/lib/social/zip.ts')
+const { calculateTitleSimilarity, findClosestTitleMatch } = require('../src/lib/social/content-map.ts')
+const { SOCIAL_STRATEGY_PRESETS, CONTENT_DERIVATIVE_POST_TYPES } = require('../src/lib/social/strategy-presets.ts')
 
 test('publish pack target URL preserves query and adds UTM parameters', () => {
   const url = buildSocialTargetUrl({
@@ -142,4 +144,31 @@ test('stored zip contains local and central directory signatures', () => {
   assert.equal(zip.includes(Buffer.from('01-cover.png')), true)
   assert.equal(zip.includes(Buffer.from('publish-notes.txt')), true)
   assert.equal(zip.readUInt32LE(zip.length - 22), 0x06054b50)
+})
+
+test('strategy presets expose classic weekly and differentiated mixes', () => {
+  assert.equal(SOCIAL_STRATEGY_PRESETS.classic_weekly.label, 'Classic Weekly Plan')
+  assert.equal(SOCIAL_STRATEGY_PRESETS.classic_weekly.recommendedPostTypeMix[0], 'narrative')
+  assert.equal(SOCIAL_STRATEGY_PRESETS.traffic_sprint.primaryGoal.includes('klik'), true)
+  assert.notDeepEqual(
+    SOCIAL_STRATEGY_PRESETS.traffic_sprint.recommendedPostTypeMix,
+    SOCIAL_STRATEGY_PRESETS.engagement_week.recommendedPostTypeMix
+  )
+  assert.equal(CONTENT_DERIVATIVE_POST_TYPES.includes('myth_vs_fact'), true)
+  assert.equal(CONTENT_DERIVATIVE_POST_TYPES.includes('quote_statement'), true)
+})
+
+test('content map title similarity produces similarity warning data', () => {
+  const similarity = calculateTitleSimilarity(
+    'Audit Air Rumah Saat Listrik Padam',
+    'Audit Air Rumah Ketika Listrik Padam'
+  )
+  assert.equal(similarity > 0.42, true)
+
+  const warning = findClosestTitleMatch('Audit Air Rumah Saat Listrik Padam', [
+    { id: 'post-1', title: 'Audit Air Rumah Ketika Listrik Padam' },
+    { id: 'post-2', title: 'Cara Menyusun Rak Dapur Kecil' },
+  ])
+
+  assert.equal(warning.matchedPostId, 'post-1')
 })

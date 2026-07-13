@@ -39,6 +39,8 @@ import {
   GenerateClusterIdeasOutputSchema,
   GenerateFacebookWeeklyPlanInputSchema,
   GenerateFacebookWeeklyPlanOutputSchema,
+  GenerateFacebookContentMapInputSchema,
+  GenerateFacebookContentMapOutputSchema,
   GenerateFacebookPostInputSchema,
   GenerateFacebookPostOutputSchema,
   GenerateFacebookCarouselInputSchema,
@@ -75,6 +77,8 @@ import {
   type GenerateClusterIdeasOutput,
   type GenerateFacebookWeeklyPlanInput,
   type GenerateFacebookWeeklyPlanOutput,
+  type GenerateFacebookContentMapInput,
+  type GenerateFacebookContentMapOutput,
   type GenerateFacebookPostInput,
   type GenerateFacebookPostOutput,
   type GenerateFacebookCarouselInput,
@@ -438,6 +442,40 @@ function normalizeFacebookWeeklyPlanOutput(output: GenerateFacebookWeeklyPlanOut
   }
 }
 
+function normalizeFacebookContentMapOutput(output: GenerateFacebookContentMapOutput): GenerateFacebookContentMapOutput {
+  const seenTitles = new Set<string>()
+  const items = output.proposed_content_items
+    .map((item) => ({
+      ...item,
+      title: limitSingleLine(item.title, 180),
+      angle: limitSingleLine(item.angle, 500),
+      objective: limitSingleLine(item.objective, 180),
+      audience_action: limitSingleLine(item.audience_action, 240),
+      source_reference: limitSingleLine(item.source_reference, 240),
+      hook_direction: limitSingleLine(item.hook_direction, 240),
+      visual_direction: limitSingleLine(item.visual_direction, 320),
+    }))
+    .filter((item) => {
+      const key = item.title.toLowerCase()
+      if (!item.title || seenTitles.has(key)) return false
+      seenTitles.add(key)
+      return true
+    })
+    .sort((left, right) => left.suggested_publishing_order - right.suggested_publishing_order)
+
+  if (items.length < 3) {
+    throw new Error('AI menghasilkan kurang dari 3 content molecule unik. Silakan generate ulang.')
+  }
+
+  return {
+    strategy_summary: limitSingleLine(output.strategy_summary, 700),
+    audience_hypothesis: limitSingleLine(output.audience_hypothesis, 700),
+    central_narrative: limitSingleLine(output.central_narrative, 700),
+    proposed_content_items: items,
+    relationship_between_items: limitSingleLine(output.relationship_between_items, 900),
+  }
+}
+
 function normalizeFacebookPostOutput(output: GenerateFacebookPostOutput): GenerateFacebookPostOutput {
   return withLegacyVisualPrompt(output)
 }
@@ -693,6 +731,22 @@ export async function generateFacebookWeeklyPlan(
     normalizeFacebookWeeklyPlanOutput,
     ctx,
     { maxTokens: 5000 }
+  )
+}
+
+export async function generateFacebookContentMap(
+  rawInput: GenerateFacebookContentMapInput,
+  ctx?: OperationContext
+): Promise<OperationResponse<GenerateFacebookContentMapOutput>> {
+  return runOperation(
+    'generate_facebook_content_map',
+    rawInput,
+    GenerateFacebookContentMapInputSchema,
+    GenerateFacebookContentMapOutputSchema,
+    (input) => prompts.buildFacebookContentMapPrompt(input),
+    normalizeFacebookContentMapOutput,
+    ctx,
+    { maxTokens: 4200 }
   )
 }
 

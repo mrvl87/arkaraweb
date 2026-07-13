@@ -3,14 +3,18 @@ export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number]
 
 export const SOCIAL_POST_TYPES = [
   'narrative',
+  'editorial_poster',
   'checklist',
   'carousel',
+  'myth_vs_fact',
+  'scenario',
   'opinion',
   'article_link',
   'question',
   'poll',
   'recap',
   'short_video',
+  'quote_statement',
 ] as const
 export type SocialPostType = (typeof SOCIAL_POST_TYPES)[number]
 

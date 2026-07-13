@@ -472,3 +472,45 @@ Known risks:
 
 - Carousel ZIP is returned through a Server Action as base64; very large carousels may need a streamed route handler later.
 - Live Supabase Storage download and publication insert were not executed against a live browser session in this pass.
+
+## 2026-07-13 - Phase 7 Strategy Engine and Content Molecule
+
+Scope executed:
+
+- Added Strategy Engine presets and shared derivative post type definitions.
+- Added Content Molecule helper for title similarity warnings and notes snapshots.
+- Added AI schema, operation, and prompt builder for `generateFacebookContentMap`.
+- Added server action to generate a content map without creating posts.
+- Added server action to create only selected content map items as `social_posts`.
+- Added UI panel for preset selection, multi-source selection, desired count, date range, editor notes, content map review, item selection, item editing, similarity warnings, and selected-post creation.
+- Kept Classic Weekly Plan as the existing Generate 7-Day Plan workflow.
+- Added additive migration to widen `social_posts.post_type` check constraint for derivative types.
+- Added unit coverage for strategy presets and content map title similarity.
+
+Files changed:
+
+- `src/app/cms/social/actions.ts`
+- `src/components/social/social-strategy-engine-panel.tsx`
+- `src/components/social/social-tracker-dashboard.tsx`
+- `src/lib/ai/schemas.ts`
+- `src/lib/ai/operations.ts`
+- `src/lib/ai/prompt-profiles.ts`
+- `src/lib/social/content-map.ts`
+- `src/lib/social/strategy-presets.ts`
+- `src/types/social.ts`
+- `scripts/test-social-renderer.cjs`
+- Social documentation files
+
+Migration created:
+
+- `supabase/migrations/20260713120000_extend_social_post_derivative_types.sql`
+
+Validation:
+
+- `npx tsc --noEmit --pretty false` passed during implementation.
+
+Known risks:
+
+- Content maps are transient UI state by design; closing or refreshing before Create Selected Posts discards the generated map.
+- Similarity uses token overlap, not semantic embeddings, so warnings are conservative and editorial review remains required.
+- Selected content molecules create planned posts with molecule notes, but full post draft and visual spec generation remain separate downstream steps.

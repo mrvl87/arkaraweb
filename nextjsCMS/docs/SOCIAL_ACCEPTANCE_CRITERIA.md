@@ -199,3 +199,19 @@ Acceptance criteria:
 - Carousel Mark as Posted is blocked if any slide lacks an approved asset.
 - Facebook URL may be empty, but the UI warns before save.
 - Publish Queue shows only ready posts for the active campaign and displays missing requirements.
+
+## Phase 7 - Strategy Engine and Content Molecule
+
+Acceptance criteria:
+
+- Strategy presets exist for balanced week, traffic sprint, engagement week, evergreen education, breaking issue response, campaign launch, article amplification, community discussion, and classic weekly.
+- Classic Weekly Plan keeps the existing Generate 7-Day Plan workflow.
+- Non-classic strategy generation produces a content map before any post is created.
+- Content map output includes strategy summary, audience hypothesis, central narrative, proposed content items, and relationships between items.
+- User can select or unselect proposed content items before creation.
+- User can edit proposed title, angle, post type, and publishing order before creation.
+- Create Selected Posts inserts only selected items into `social_posts`.
+- Content derivative post types include editorial poster, checklist, carousel, myth vs fact, scenario, question, poll, opinion, article link, short video, recap, and quote statement.
+- Similar proposed titles from the last 90 days show warnings without blocking creation.
+- Weekly planning does not force day-based post types except for Classic Weekly Plan.
+- Documentation and implementation log are updated.

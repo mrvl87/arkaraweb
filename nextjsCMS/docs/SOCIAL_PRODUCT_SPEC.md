@@ -318,3 +318,38 @@ Manual publishing remains human-operated:
 No Meta API, access token, or fake autopost behavior is implemented.
 
 A Publish Queue section now shows ready posts for the active campaign, with filters for campaign, post type, and date. Queue rows show missing requirements such as caption, target URL, approved poster, or approved carousel slide assets.
+
+## Phase 7 Product Behavior
+
+Social Strategy Engine adds a pre-production Content Molecule workflow before posts are created.
+
+Strategy presets:
+
+- Balanced Week
+- Traffic Sprint
+- Engagement Week
+- Evergreen Education
+- Breaking Issue Response
+- Campaign Launch
+- Article Amplification
+- Community Discussion
+- Classic Weekly Plan
+
+Classic Weekly Plan keeps the existing Generate 7-Day Plan behavior. Other presets generate a content map first and do not force a Monday-Sunday post type sequence.
+
+Content Molecule workflow:
+
+1. User selects an active campaign.
+2. User selects a strategy preset.
+3. User selects one or more source articles or panduan.
+4. User chooses 3 to 12 content ideas.
+5. AI generates a content map with strategy summary, audience hypothesis, central narrative, proposed content items, and item relationships.
+6. Generated ideas are held in UI state only.
+7. User selects/unselects items and edits title, angle, type, and order.
+8. Create Selected Posts inserts only selected items into `social_posts`.
+
+Deduplication:
+
+- Proposed titles are compared with the user's social posts from the last 90 days.
+- Similar titles show warnings in the content map UI.
+- Warnings do not block creation because a similar title can still have a different editorial angle.

@@ -22,6 +22,7 @@ export const AI_OPERATIONS = [
   'generate_seo_repair_plan',
   'generate_gap_draft',
   'generate_facebook_weekly_plan',
+  'generate_facebook_content_map',
   'generate_facebook_post',
   'generate_facebook_carousel',
   'generate_facebook_visual_prompt',
@@ -176,14 +177,30 @@ export type GenerateClusterIdeasOutput = z.infer<typeof GenerateClusterIdeasOutp
 // --- Facebook Social Tracker ---
 export const FacebookPostTypeSchema = z.enum([
   'narrative',
+  'editorial_poster',
   'checklist',
   'carousel',
+  'myth_vs_fact',
+  'scenario',
   'opinion',
   'article_link',
   'question',
   'poll',
   'recap',
   'short_video',
+  'quote_statement',
+])
+
+export const FacebookStrategyPresetSchema = z.enum([
+  'balanced_week',
+  'traffic_sprint',
+  'engagement_week',
+  'evergreen_education',
+  'breaking_issue_response',
+  'campaign_launch',
+  'article_amplification',
+  'community_discussion',
+  'classic_weekly',
 ])
 
 export const FacebookObjectiveSchema = z.enum([
@@ -271,6 +288,51 @@ export const GenerateFacebookWeeklyPlanOutputSchema = z.object({
   posts: z.array(FacebookSocialPostDraftSchema).min(7).max(7),
 })
 export type GenerateFacebookWeeklyPlanOutput = z.infer<typeof GenerateFacebookWeeklyPlanOutputSchema>
+
+export const FacebookContentMapSourceSchema = z.object({
+  type: z.enum(['post', 'panduan']),
+  id: z.string().trim().min(1).max(80),
+  title: z.string().trim().min(1).max(180),
+  summary: z.string().trim().max(2200).optional(),
+  url: z.string().trim().max(500).optional(),
+})
+
+export const GenerateFacebookContentMapInputSchema = z.object({
+  campaign_title: z.string().trim().min(1).max(180),
+  campaign_theme: z.string().trim().max(1200).optional(),
+  strategy_id: FacebookStrategyPresetSchema,
+  strategy_label: z.string().trim().min(1).max(80),
+  strategy_brief: z.string().trim().min(1).max(1400),
+  sources: z.array(FacebookContentMapSourceSchema).min(1).max(6),
+  desired_count: z.number().int().min(3).max(12),
+  start_date: z.string().trim().min(1).max(20),
+  end_date: z.string().trim().max(20).optional(),
+  editor_notes: z.string().trim().max(1200).optional(),
+  previous_campaign_summary: z.string().trim().max(1600).optional(),
+})
+export type GenerateFacebookContentMapInput = z.infer<typeof GenerateFacebookContentMapInputSchema>
+
+export const FacebookContentMapItemSchema = z.object({
+  title: z.string().trim().min(1).max(180),
+  angle: z.string().trim().min(1).max(500),
+  post_type: FacebookPostTypeSchema,
+  objective: z.string().trim().min(1).max(180),
+  audience_action: z.string().trim().min(1).max(240),
+  source_reference: z.string().trim().min(1).max(240),
+  suggested_publishing_order: z.number().int().min(1).max(12),
+  hook_direction: z.string().trim().min(1).max(240),
+  visual_direction: z.string().trim().min(1).max(320),
+  estimated_production_complexity: z.enum(['low', 'medium', 'high']),
+})
+
+export const GenerateFacebookContentMapOutputSchema = z.object({
+  strategy_summary: z.string().trim().min(1).max(700),
+  audience_hypothesis: z.string().trim().min(1).max(700),
+  central_narrative: z.string().trim().min(1).max(700),
+  proposed_content_items: z.array(FacebookContentMapItemSchema).min(3).max(12),
+  relationship_between_items: z.string().trim().min(1).max(900),
+})
+export type GenerateFacebookContentMapOutput = z.infer<typeof GenerateFacebookContentMapOutputSchema>
 
 export const GenerateFacebookPostInputSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(180),

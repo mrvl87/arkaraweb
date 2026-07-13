@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import sharp from 'sharp'
 import { z } from 'zod'
+import { findClosestTitleMatch, buildContentMapNotes } from '@/lib/social/content-map'
 import { buildSocialCaptionWithUtm, buildSocialTargetUrl } from '@/lib/social/publish-pack'
 import { createStoredZip } from '@/lib/social/zip'
 import { createClient } from '@/lib/supabase/server'
@@ -16,10 +17,18 @@ import {
 } from '@/lib/social/render/render-social-asset'
 import {
   generateFacebookCarousel,
+  generateFacebookContentMap,
   generateFacebookPost,
   generateFacebookVisualPrompt,
   generateFacebookWeeklyPlan,
 } from '@/lib/ai/operations'
+import {
+  CONTENT_DERIVATIVE_POST_TYPES,
+  SOCIAL_STRATEGY_PRESETS,
+  getSocialStrategyPreset,
+  isSocialStrategyPresetId,
+  type SocialStrategyPresetId,
+} from '@/lib/social/strategy-presets'
 import type {
   SocialAsset,
   SocialAssetStatus,
@@ -29,6 +38,7 @@ import type {
   SocialDashboardData,
   SocialPost,
   SocialPostMetric,
+  SocialPostType,
   SocialPublication,
   SocialSourceOption,
 } from '@/types/social'
@@ -65,14 +75,18 @@ const socialPostSchema = z.object({
   platform: z.literal('facebook').default('facebook'),
   post_type: z.enum([
     'narrative',
+    'editorial_poster',
     'checklist',
     'carousel',
+    'myth_vs_fact',
+    'scenario',
     'opinion',
     'article_link',
     'question',
     'poll',
     'recap',
     'short_video',
+    'quote_statement',
   ]),
   title: z.string().trim().min(1, 'Judul post wajib diisi.'),
   hook: optionalTextSchema,
@@ -132,6 +146,57 @@ const metricsSchema = z.object({
   link_clicks: z.coerce.number().int().min(0).nullable().optional(),
   notes: z.string().trim().optional().default(''),
   next_action: z.string().trim().optional().default(''),
+})
+
+const strategyPresetSchema = z.string().trim().refine(isSocialStrategyPresetId, 'Strategy preset tidak valid.')
+const contentDerivativePostTypeSchema = z.enum([
+  'narrative',
+  'editorial_poster',
+  'checklist',
+  'carousel',
+  'myth_vs_fact',
+  'scenario',
+  'opinion',
+  'article_link',
+  'question',
+  'poll',
+  'recap',
+  'short_video',
+  'quote_statement',
+])
+
+const generateContentMapSchema = z.object({
+  campaign_id: z.string().uuid(),
+  strategy_id: strategyPresetSchema,
+  source_keys: z.array(z.string().trim().min(1)).min(1, 'Pilih minimal satu source.').max(6),
+  desired_count: z.coerce.number().int().min(3).max(12),
+  start_date: z.string().trim().min(1, 'Tanggal mulai wajib diisi.'),
+  end_date: optionalTextSchema,
+  editor_notes: optionalTextSchema,
+  previous_campaign_summary: optionalTextSchema,
+})
+
+const selectedContentMapItemSchema = z.object({
+  selected: z.boolean().default(true),
+  title: z.string().trim().min(1).max(180),
+  angle: z.string().trim().min(1).max(500),
+  post_type: contentDerivativePostTypeSchema,
+  objective: z.string().trim().min(1).max(180),
+  audience_action: z.string().trim().min(1).max(240),
+  source_reference: z.string().trim().min(1).max(240),
+  suggested_publishing_order: z.coerce.number().int().min(1).max(12),
+  hook_direction: z.string().trim().min(1).max(240),
+  visual_direction: z.string().trim().min(1).max(320),
+  estimated_production_complexity: z.enum(['low', 'medium', 'high']),
+})
+
+const createSelectedContentMapPostsSchema = z.object({
+  campaign_id: z.string().uuid(),
+  strategy_id: strategyPresetSchema,
+  start_date: z.string().trim().min(1, 'Tanggal mulai wajib diisi.'),
+  end_date: optionalTextSchema,
+  source_keys: z.array(z.string().trim().min(1)).max(6).default([]),
+  items: z.array(selectedContentMapItemSchema).min(1).max(12),
 })
 
 async function requireUser() {
@@ -547,6 +612,69 @@ async function getPlanSourceByKey(
     description: compactContent(data.meta_desc as string | null, SOURCE_LIST_EXCERPT_LIMIT) || null,
     content: compactContent(data.content as string | null),
   }
+}
+
+function buildSocialSourceUrl(source: SocialSourceOption) {
+  return source.type === 'post'
+    ? `${SITE_URL}${getPostPath(source.slug)}`
+    : `${SITE_URL}${getPanduanPath(source.slug)}`
+}
+
+async function getPlanSourcesByKeys(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  sourceKeys: string[]
+): Promise<SocialSourceOption[]> {
+  const uniqueKeys = [...new Set(sourceKeys.map((key) => key.trim()).filter(Boolean))]
+  const sources: SocialSourceOption[] = []
+
+  for (const key of uniqueKeys) {
+    const source = await getPlanSourceByKey(supabase, key)
+    if (source) sources.push(source)
+  }
+
+  return sources
+}
+
+function buildStrategyBrief(strategyId: SocialStrategyPresetId) {
+  const preset = getSocialStrategyPreset(strategyId)
+  return [
+    `Primary goal: ${preset.primaryGoal}`,
+    `Recommended post type mix: ${preset.recommendedPostTypeMix.join(', ')}`,
+    `Recommended count: ${preset.recommendedCount}`,
+    `Suggested CTA style: ${preset.suggestedCtaStyle}`,
+    `Suggested content depth: ${preset.suggestedContentDepth}`,
+    `Suggested visual style: ${preset.suggestedVisualStyle}`,
+    `Expected audience action: ${preset.expectedAudienceAction}`,
+    `Allowed derivative types: ${CONTENT_DERIVATIVE_POST_TYPES.join(', ')}`,
+  ].join('\n')
+}
+
+function getScheduledDateForOrder(startDate: string, endDate: string | null, order: number) {
+  const start = new Date(`${startDate}T00:00:00Z`)
+  if (Number.isNaN(start.getTime())) return startDate
+
+  const target = new Date(start)
+  target.setUTCDate(start.getUTCDate() + Math.max(0, order - 1))
+
+  if (endDate) {
+    const end = new Date(`${endDate}T00:00:00Z`)
+    if (!Number.isNaN(end.getTime()) && target > end) {
+      return end.toISOString().slice(0, 10)
+    }
+  }
+
+  return target.toISOString().slice(0, 10)
+}
+
+function resolveContentMapSourceForItem(
+  item: z.infer<typeof selectedContentMapItemSchema>,
+  sources: SocialSourceOption[]
+) {
+  if (sources.length === 0) return null
+  if (sources.length === 1) return sources[0]
+
+  const reference = item.source_reference.toLowerCase()
+  return sources.find((source) => reference.includes(source.title.toLowerCase())) ?? null
 }
 
 async function validateReadyState(params: {
@@ -1074,6 +1202,163 @@ export async function recordPostMetrics(rawInput: z.infer<typeof metricsSchema>)
 
   revalidatePath(SOCIAL_PATH)
   return { success: true }
+}
+
+export async function generateFacebookContentMapForCampaign(rawInput: z.infer<typeof generateContentMapSchema>) {
+  const { supabase, user } = await requireUser()
+  const input = generateContentMapSchema.parse(rawInput)
+  const strategyId = input.strategy_id as SocialStrategyPresetId
+  const preset = getSocialStrategyPreset(strategyId)
+
+  const { data: campaign, error } = await supabase
+    .from('social_campaigns')
+    .select('*')
+    .eq('id', input.campaign_id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (error || !campaign) return { error: error?.message || 'Campaign tidak ditemukan.' }
+
+  let sources: SocialSourceOption[] = []
+  try {
+    sources = await getPlanSourcesByKeys(supabase, input.source_keys)
+  } catch (sourceError) {
+    return {
+      error: sourceError instanceof Error ? sourceError.message : 'Gagal memuat sumber konten.',
+    }
+  }
+
+  if (sources.length === 0) return { error: 'Pilih minimal satu source yang valid.' }
+
+  const ninetyDaysAgo = new Date()
+  ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90)
+  const { data: recentPosts, error: recentError } = await supabase
+    .from('social_posts')
+    .select('id, title')
+    .eq('user_id', user.id)
+    .gte('created_at', ninetyDaysAgo.toISOString())
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (recentError) return { error: recentError.message }
+
+  const result = await generateFacebookContentMap(
+    {
+      campaign_title: campaign.title,
+      campaign_theme: campaign.theme || undefined,
+      strategy_id: strategyId,
+      strategy_label: preset.label,
+      strategy_brief: buildStrategyBrief(strategyId),
+      sources: sources.map((source) => ({
+        type: source.type,
+        id: source.id,
+        title: source.title,
+        summary: buildSourceSummary([source.description, source.content]),
+        url: buildSocialSourceUrl(source),
+      })),
+      desired_count: input.desired_count,
+      start_date: input.start_date,
+      end_date: nullIfEmpty(input.end_date) ?? undefined,
+      editor_notes: nullIfEmpty(input.editor_notes) ?? undefined,
+      previous_campaign_summary: nullIfEmpty(input.previous_campaign_summary) ?? undefined,
+    },
+    { userId: user.id, targetType: 'social', targetId: input.campaign_id }
+  )
+
+  if (!result.success) return { error: result.error }
+
+  const existingPosts = ((recentPosts ?? []) as Array<{ id: string; title: string }>).filter((post) => post.title)
+  const similarityWarnings = result.data.proposed_content_items
+    .map((item) => findClosestTitleMatch(item.title, existingPosts))
+    .filter((warning): warning is NonNullable<typeof warning> => Boolean(warning))
+
+  return {
+    success: true,
+    contentMap: result.data,
+    similarityWarnings,
+    strategy: SOCIAL_STRATEGY_PRESETS[strategyId],
+  }
+}
+
+export async function createSelectedContentMapPosts(rawInput: z.infer<typeof createSelectedContentMapPostsSchema>) {
+  const { supabase, user } = await requireUser()
+  const input = createSelectedContentMapPostsSchema.parse(rawInput)
+  const strategyId = input.strategy_id as SocialStrategyPresetId
+  const preset = getSocialStrategyPreset(strategyId)
+
+  const { data: campaign, error } = await supabase
+    .from('social_campaigns')
+    .select('id, title')
+    .eq('id', input.campaign_id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (error || !campaign) return { error: error?.message || 'Campaign tidak ditemukan.' }
+
+  let sources: SocialSourceOption[] = []
+  try {
+    sources = await getPlanSourcesByKeys(supabase, input.source_keys)
+  } catch (sourceError) {
+    return {
+      error: sourceError instanceof Error ? sourceError.message : 'Gagal memuat sumber konten.',
+    }
+  }
+
+  const selectedItems = input.items
+    .filter((item) => item.selected)
+    .sort((left, right) => left.suggested_publishing_order - right.suggested_publishing_order)
+
+  if (selectedItems.length === 0) return { error: 'Pilih minimal satu content item.' }
+
+  const rows = selectedItems.map((item, index) => {
+    const source = resolveContentMapSourceForItem(item, sources)
+    const sourceUrl = source ? buildSocialSourceUrl(source) : null
+    const postType = item.post_type as SocialPostType
+
+    return {
+      user_id: user.id,
+      campaign_id: input.campaign_id,
+      platform: 'facebook',
+      post_type: postType,
+      title: item.title,
+      hook: item.hook_direction,
+      body: item.angle,
+      cta: item.audience_action,
+      target_url: postType === 'article_link' ? sourceUrl : null,
+      source_type: source?.type ?? 'none',
+      source_id: source?.id ?? null,
+      scheduled_date: getScheduledDateForOrder(input.start_date, nullIfEmpty(input.end_date), index + 1),
+      scheduled_time: '18:30',
+      timezone: 'Asia/Jayapura',
+      status: 'planned',
+      objective: item.objective,
+      content_pillar: preset.label,
+      caption_done: true,
+      cta_done: true,
+      visual_prompt_done: false,
+      notes: buildContentMapNotes({
+        strategyLabel: preset.label,
+        angle: item.angle,
+        audienceAction: item.audience_action,
+        hookDirection: item.hook_direction,
+        visualDirection: item.visual_direction,
+        estimatedProductionComplexity: item.estimated_production_complexity,
+        sourceReference: item.source_reference,
+      }),
+    }
+  })
+
+  const { error: insertError } = await supabase.from('social_posts').insert(rows)
+  if (insertError) return { error: insertError.message }
+
+  await supabase
+    .from('social_campaigns')
+    .update({ status: 'in_progress' })
+    .eq('id', input.campaign_id)
+    .eq('user_id', user.id)
+
+  revalidatePath(SOCIAL_PATH)
+  return { success: true, summary: `${rows.length} content molecule dibuat sebagai post.` }
 }
 
 export async function generateWeeklyFacebookPlan(campaignId: string, sourceKey?: string) {

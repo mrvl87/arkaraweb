@@ -555,3 +555,38 @@ Post update after publication:
 - `status = posted`
 - `copied_done = true`
 - `posted_done = true`
+
+## Phase 7 Strategy Engine Data Usage
+
+Migration:
+
+- `supabase/migrations/20260713120000_extend_social_post_derivative_types.sql`
+
+### `social_posts.post_type` Constraint Update
+
+The post type check constraint is widened to support content derivative types used by the Strategy Engine:
+
+- `editorial_poster`
+- `myth_vs_fact`
+- `scenario`
+- `quote_statement`
+
+Existing values remain valid:
+
+- `narrative`
+- `checklist`
+- `carousel`
+- `opinion`
+- `article_link`
+- `question`
+- `poll`
+- `recap`
+- `short_video`
+
+No new table is created in Phase 7. Generated content maps are not persisted until the user clicks Create Selected Posts. Selected items are stored as normal `social_posts` rows owned by `user_id` with strategy and molecule context saved in `notes`.
+
+Ownership rules remain unchanged:
+
+- All inserted posts include `user_id`.
+- Campaign loading and insertion are filtered by `user_id`.
+- RLS on `social_posts` continues to enforce row ownership.

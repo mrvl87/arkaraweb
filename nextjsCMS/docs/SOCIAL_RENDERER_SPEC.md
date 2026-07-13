@@ -322,3 +322,18 @@ Asset export behavior:
 - Carousel ZIP filenames use ordered names: `01-cover.png`, `02-slide.png`, etc.
 - `publish-notes.txt` is included in the ZIP and contains caption, first comment, alt text, target URL, and slide order.
 - ZIP generation uses an internal stored ZIP writer and does not add a new runtime dependency.
+
+## Phase 7 Strategy Visual Direction
+
+Strategy Engine does not render assets directly.
+
+Content map items include `visual_direction` as editorial planning input only. It is not a background image prompt and it is not allowed to request text, logo, headline, footer, typography, or panel text inside the image model output.
+
+When a selected content molecule becomes a post, deterministic rendering still depends on later draft and visual specification steps:
+
+- Generate or edit post draft.
+- Generate or edit structured visual spec.
+- Upload or generate background image.
+- Render final poster through CMS templates.
+
+Renderer rules from Phase 4 remain unchanged.

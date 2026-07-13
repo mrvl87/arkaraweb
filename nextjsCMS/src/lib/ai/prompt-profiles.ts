@@ -13,6 +13,7 @@ import type {
   GenerateImagePromptsInput,
   GenerateClusterIdeasInput,
   GenerateFacebookWeeklyPlanInput,
+  GenerateFacebookContentMapInput,
   GenerateFacebookPostInput,
   GenerateFacebookCarouselInput,
   GenerateFacebookVisualPromptInput,
@@ -25,7 +26,7 @@ import type {
   GenerateGapDraftInput,
 } from './schemas'
 
-export const PROMPT_VERSION = 'v16'
+export const PROMPT_VERSION = 'v17'
 
 export type AIContentProfile = 'post' | 'panduan' | 'workspace'
 
@@ -940,6 +941,74 @@ Aturan:
 - visual_prompt adalah legacy fallback dan wajib sama atau setara dengan visual_spec.scene_prompt.
 - Friday article_link harus mengarahkan pembaca ke source URL jika URL tersedia.
 - ${getFacebookVisualSpecRules()}`,
+    },
+  ]
+}
+
+export function buildFacebookContentMapPrompt(input: GenerateFacebookContentMapInput): AIMessage[] {
+  const sources = input.sources
+    .map((source, index) => `${index + 1}. [${source.type}] ${source.title}\nURL: ${source.url || '-'}\nRingkasan: ${source.summary || '-'}`)
+    .join('\n\n')
+  const previousContext = input.previous_campaign_summary
+    ? `\n\nPrevious campaign summary:\n${input.previous_campaign_summary}`
+    : ''
+  const editorNotes = input.editor_notes
+    ? `\n\nEditor notes:\n${input.editor_notes}`
+    : ''
+
+  return [
+    { role: 'system', content: buildFacebookSystemPrompt() },
+    {
+      role: 'user',
+      content: `Buat Social Content Map untuk campaign Facebook Arkara. Ini tahap strategi dan content molecule, belum membuat post final.
+
+Campaign title: ${input.campaign_title}
+Campaign theme: ${input.campaign_theme || '-'}
+Strategy preset: ${input.strategy_label} (${input.strategy_id})
+Strategy brief:
+${input.strategy_brief}
+
+Date range: ${input.start_date} sampai ${input.end_date || '-'}
+Desired content count: ${input.desired_count}
+
+Source articles:
+${sources}${editorNotes}${previousContext}
+
+Balas JSON valid persis seperti struktur ini:
+{
+  "strategy_summary": "ringkasan strategi yang menjelaskan kenapa komposisi ini cocok",
+  "audience_hypothesis": "dugaan kebutuhan, ketakutan, atau motivasi audiens",
+  "central_narrative": "benang merah narasi campaign",
+  "proposed_content_items": [
+    {
+      "title": "judul ide konten sosial",
+      "angle": "sudut editorial yang berbeda dari item lain",
+      "post_type": "editorial_poster",
+      "objective": "tujuan spesifik item",
+      "audience_action": "aksi pembaca yang diharapkan",
+      "source_reference": "artikel/panduan sumber atau alasan tanpa sumber langsung",
+      "suggested_publishing_order": 1,
+      "hook_direction": "arah hook, bukan hook final",
+      "visual_direction": "arah visual background/poster, tanpa instruksi teks-in-image",
+      "estimated_production_complexity": "low"
+    }
+  ],
+  "relationship_between_items": "jelaskan hubungan antar item dan urutan produksinya"
+}
+
+Aturan:
+- proposed_content_items wajib tepat ${input.desired_count} item.
+- Gunakan komposisi sesuai strategy preset, bukan pola Senin-Minggu kecuali strategy_id adalah classic_weekly.
+- classic_weekly boleh memakai ritme narrative, checklist, carousel, opinion, article_link, question, recap.
+- Untuk strategy lain, jangan memaksakan jenis post berdasarkan hari.
+- post_type hanya boleh salah satu: editorial_poster, checklist, carousel, myth_vs_fact, scenario, question, poll, opinion, article_link, short_video, recap, quote_statement, narrative.
+- Setiap item harus punya angle yang berbeda dan tidak menjadi rewrite judul artikel sumber.
+- Jika menggunakan lebih dari satu sumber, sebar referensi secara masuk akal.
+- source_reference harus jelas menyebut sumber yang dipakai.
+- visual_direction hanya menjelaskan arah visual CMS/background; jangan meminta teks, logo, headline, footer, panel teks, atau typography di image model.
+- estimated_production_complexity hanya: low, medium, high.
+- Bahasa Indonesia, tajam, grounded, dan relevan dengan rumah tangga urban Indonesia.
+- Output hanya JSON sesuai struktur di atas.`,
     },
   ]
 }
