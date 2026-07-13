@@ -643,3 +643,35 @@ Compatibility:
 
 - No existing post fields are removed.
 - Selected variant content is copied into existing main fields, so old UI and publish pack workflows remain compatible.
+
+## Phase 9 - Analytics Metrics Extension
+
+Migration:
+
+- `supabase/migrations/20260713140000_extend_social_post_metrics_analytics.sql`
+
+Adds nullable fields to `social_post_metrics`:
+
+- `reactions int`
+- `video_views int`
+- `average_watch_time_seconds numeric`
+- `followers_gained int`
+- `metric_window_hours int`
+- `source text not null default 'manual'`
+
+Validation constraints:
+
+- `reactions`, `video_views`, `average_watch_time_seconds`, and `followers_gained` must be non-negative when filled.
+- `metric_window_hours` must be greater than zero when filled.
+- `source` must be one of `manual`, `csv`, or `screenshot`.
+
+Indexes:
+
+- `idx_social_post_metrics_user_recorded` on `(user_id, recorded_at desc)`.
+- `idx_social_post_metrics_source` on `source`.
+
+Backward compatibility:
+
+- Existing metric rows remain valid because new numeric fields are nullable.
+- Existing rows receive `source = 'manual'` through the defaulted non-null column.
+- Existing RLS ownership policy on `social_post_metrics.user_id` remains the access boundary.

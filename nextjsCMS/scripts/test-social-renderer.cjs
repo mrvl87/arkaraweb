@@ -25,6 +25,7 @@ registerTsExtension('.ts')
 registerTsExtension('.tsx')
 
 const { SOCIAL_RENDER_DIMENSIONS, getSocialRenderDimensions } = require('../src/lib/social/render/dimensions.ts')
+const { calculateSocialMetricRates, calculateSocialMetricTotals, formatSocialRate } = require('../src/lib/social/analytics.ts')
 const { getSocialRenderTemplate, resolveSocialRenderTemplateId } = require('../src/lib/social/render/template-registry.ts')
 const {
   buildSocialAssetStoragePath,
@@ -208,4 +209,27 @@ test('facebook variants schema accepts heuristic editorial scores', () => {
 
   assert.equal(parsed.variants[0].direction, 'direct_consequence')
   assert.equal(parsed.variants[0].heuristic_scores.clickbait_risk, 2)
+})
+test('manual analytics rates protect zero denominator and calculate totals', () => {
+  const zeroRates = calculateSocialMetricRates({ reach: 0, reactions: 1, comments: 1, shares: 1, link_clicks: 1 })
+  assert.equal(zeroRates.share_rate, null)
+  assert.equal(formatSocialRate(zeroRates.interaction_rate), 'N/A')
+
+  const rates = calculateSocialMetricRates({ reach: 100, reactions: 10, comments: 5, shares: 3, link_clicks: 2 })
+  assert.equal(rates.share_rate, 0.03)
+  assert.equal(rates.comment_rate, 0.05)
+  assert.equal(rates.click_rate, 0.02)
+  assert.equal(rates.interaction_rate, 0.2)
+
+  const totals = calculateSocialMetricTotals([
+    { reach: 100, reactions: 10, comments: 5, shares: 3, link_clicks: 2 },
+    { reach: 50, reactions: 4, comments: 1, shares: 0, link_clicks: 5 },
+  ])
+  assert.equal(totals.total_reach, 150)
+  assert.equal(totals.total_reactions, 14)
+  assert.equal(totals.total_comments, 6)
+  assert.equal(totals.total_shares, 3)
+  assert.equal(totals.total_link_clicks, 7)
+  assert.equal(totals.average_reach, 75)
+  assert.equal(totals.interaction_rate, 0.2)
 })

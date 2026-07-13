@@ -385,3 +385,27 @@ Selection behavior:
 - First comment updates `social_posts.first_comment`.
 - Headline updates `social_posts.visual_spec.headline`.
 - Visual direction updates `social_posts.visual_prompt`.
+
+## Phase 9 - Analytics Dashboard
+
+Phase 9 turns manual Facebook metrics into an analytics workspace inside Social Tracker.
+
+Workflow:
+
+1. Editor records manual metrics after publishing.
+2. Metrics can include reach, reactions, comments, shares, link clicks, video views, average watch time, followers gained, metric window, source, notes, and next action.
+3. Dashboard filters data by campaign, date range, post type, content pillar, template, aspect ratio, publishing time, and objective.
+4. KPI cards show totals, average reach, and calculated rates.
+5. Performance tables compare post type, pillar, template, day, hour, and link posts.
+6. Top posts can be opened back into the post editor.
+7. Per-post metrics tab shows latest metrics, rate calculations, publication snapshot, notes, next action, and history.
+8. Filtered analytics can be exported to CSV with stable headers.
+
+Rate formulas:
+
+- `share_rate = shares / reach`
+- `comment_rate = comments / reach`
+- `click_rate = link_clicks / reach`
+- `interaction_rate = (reactions + comments + shares + link_clicks) / reach`
+
+If reach is missing or zero, rate displays as `N/A`. Small samples show a caution message and must not be treated as a strong conclusion.

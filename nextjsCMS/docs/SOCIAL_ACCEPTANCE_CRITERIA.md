@@ -236,3 +236,15 @@ Acceptance criteria:
 - Visual comparison displays headline/content length and readability density.
 - Analytics data is not connected to heuristic scores in this phase.
 - Documentation and implementation log are updated.
+
+## Phase 9 - Analytics Dashboard
+
+- Metrics entry supports reactions, video views, average watch time, followers gained, metric window hours, and source.
+- Analytics can be filtered by campaign, date range, post type, content pillar, template, aspect ratio, publishing time, and objective.
+- KPI formulas match the roadmap definitions.
+- Division by zero displays `N/A` instead of throwing or showing misleading rates.
+- Dashboard displays post count as sample context and warns when sample size is small.
+- Top posts can be opened in the post editor.
+- Per-post metrics tab displays latest metrics, history, rates, publication snapshot, next action, and notes.
+- CSV export uses stable column headers and includes post title, campaign, publish date, raw metrics, and calculated rates.
+- No CSV import or screenshot extraction is included in this phase.

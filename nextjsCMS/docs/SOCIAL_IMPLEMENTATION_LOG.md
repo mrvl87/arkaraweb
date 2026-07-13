@@ -560,3 +560,27 @@ Known risks:
 - Headline variants create a minimal visual spec if a post has no `visual_spec` yet.
 - Visual direction variants update `visual_prompt`; deeper structured visual spec regeneration remains a separate workflow.
 - Heuristic scores are editorial guidance only and intentionally disconnected from analytics.
+
+## Phase 9 - Analytics Dashboard
+
+Date: 2026-07-13
+
+Scope completed:
+
+- Added migration `20260713140000_extend_social_post_metrics_analytics.sql` for additional manual analytics fields.
+- Extended `SocialPostMetric` TypeScript type and dashboard payload with analytics-specific datasets.
+- Updated `recordPostMetrics()` validation and insert payload for reactions, video views, average watch time, followers gained, metric window hours, and metric source.
+- Added `src/lib/social/analytics.ts` for safe rate calculations, total KPI aggregation, and rate formatting.
+- Added `SocialAnalyticsDashboard` with filters, KPI cards, top posts, grouped performance tables, recent unreviewed metrics, small-sample warning, and CSV export.
+- Extended `SocialMetricsPanel` with additional inputs, metrics history, per-post rates, publication snapshot, notes, and next action.
+- Added analytics unit coverage to `scripts/test-social-renderer.cjs`.
+
+Validation:
+
+- `npx tsc --noEmit --pretty false` passed.
+- `npm run test:social-renderer` passed with 16 tests.
+
+Risks:
+
+- Supabase CLI is not installed in this workspace, so the migration was written as a committed SQL file and not applied locally.
+- Dashboard charts use responsive HTML tables and CSS bars because no chart library exists in the project dependencies.

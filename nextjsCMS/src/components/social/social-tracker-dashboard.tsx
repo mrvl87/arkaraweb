@@ -22,6 +22,7 @@ import type {
   SocialPostVariant,
 } from "@/types/social";
 import { SocialStrategyEnginePanel } from "./social-strategy-engine-panel";
+import { SocialAnalyticsDashboard } from "./social-analytics-dashboard";
 import { SocialCampaignList } from "./social-campaign-list";
 import { SocialCampaignSettings } from "./social-campaign-settings";
 import { SocialCampaignHeader } from "./social-campaign-header";
@@ -233,9 +234,10 @@ export function SocialTrackerDashboard({
   const selectedSlides = selectedPost?.id
     ? (slidesByPost.get(selectedPost.id) ?? [])
     : [];
-  const selectedMetric = selectedPost?.id
-    ? (latestMetricsByPost.get(selectedPost.id) ?? null)
-    : null;
+  const selectedMetrics = selectedPost?.id
+    ? initialData.analyticsMetrics.filter((metric) => metric.post_id === selectedPost.id)
+    : [];
+  const selectedMetric = selectedMetrics[0] ?? null;
   const selectedAssets = selectedPost?.id
     ? initialData.assets.filter((asset) => asset.post_id === selectedPost.id || selectedSlides.some((slide) => slide.id === asset.slide_id))
     : [];
@@ -376,6 +378,13 @@ export function SocialTrackerDashboard({
             onSelectCampaign={(campaignId) => router.push(`/cms/social?campaign=${campaignId}`)}
             onEditPost={(post) => setSelectedPost(post)}
           />
+          <SocialAnalyticsDashboard
+            campaigns={initialData.campaigns}
+            posts={initialData.analyticsPosts}
+            metrics={initialData.analyticsMetrics}
+            publications={initialData.analyticsPublications}
+            onEditPost={(post) => setSelectedPost(post)}
+          />
           <SocialWeeklyBoard
             weekPosts={weekPosts}
             metricsByPost={latestMetricsByPost}
@@ -394,6 +403,7 @@ export function SocialTrackerDashboard({
         publications={selectedPublications}
         variants={selectedVariants}
         latestMetric={selectedMetric}
+        metricsHistory={selectedMetrics}
         isPending={isPending}
         runAction={runAction}
         savePost={savePost}

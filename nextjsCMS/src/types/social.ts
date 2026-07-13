@@ -63,6 +63,9 @@ export const SOCIAL_POST_VARIANT_TYPES = [
 ] as const
 export type SocialPostVariantType = (typeof SOCIAL_POST_VARIANT_TYPES)[number]
 
+export const SOCIAL_METRIC_SOURCES = ['manual', 'csv', 'screenshot'] as const
+export type SocialMetricSource = (typeof SOCIAL_METRIC_SOURCES)[number]
+
 export interface SocialVariantHeuristicScores {
   clarity?: number
   curiosity?: number
@@ -194,9 +197,15 @@ export interface SocialPostMetric {
   user_id: string
   recorded_at: string
   reach: number | null
+  reactions: number | null
   comments: number | null
   shares: number | null
   link_clicks: number | null
+  video_views: number | null
+  average_watch_time_seconds: number | null
+  followers_gained: number | null
+  metric_window_hours: number | null
+  source: SocialMetricSource
   notes: string | null
   next_action: string | null
   created_at: string
@@ -270,5 +279,9 @@ export interface SocialDashboardData {
   assets: SocialAsset[]
   publications: SocialPublication[]
   variants: SocialPostVariant[]
+  analyticsPosts: SocialPost[]
+  analyticsMetrics: SocialPostMetric[]
+  analyticsAssets: SocialAsset[]
+  analyticsPublications: SocialPublication[]
   sources: SocialSourceOption[]
 }

@@ -144,9 +144,15 @@ const manualPublicationSchema = z.object({
 const metricsSchema = z.object({
   post_id: z.string().uuid(),
   reach: z.coerce.number().int().min(0).nullable().optional(),
+  reactions: z.coerce.number().int().min(0).nullable().optional(),
   comments: z.coerce.number().int().min(0).nullable().optional(),
   shares: z.coerce.number().int().min(0).nullable().optional(),
   link_clicks: z.coerce.number().int().min(0).nullable().optional(),
+  video_views: z.coerce.number().int().min(0).nullable().optional(),
+  average_watch_time_seconds: z.coerce.number().min(0).nullable().optional(),
+  followers_gained: z.coerce.number().int().min(0).nullable().optional(),
+  metric_window_hours: z.coerce.number().int().positive().nullable().optional(),
+  source: z.enum(['manual', 'csv', 'screenshot']).default('manual'),
   notes: z.string().trim().optional().default(''),
   next_action: z.string().trim().optional().default(''),
 })
@@ -834,6 +840,7 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
 
   const [
     { data: socialPosts, error: postError },
+    { data: analyticsPosts, error: analyticsPostError },
     { data: slides, error: slideError },
     { data: metrics, error: metricsError },
     { data: assets, error: assetError },
@@ -848,6 +855,12 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
           .eq('campaign_id', activeCampaign.id)
           .order('scheduled_date', { ascending: true, nullsFirst: false })
           .order('scheduled_time', { ascending: true, nullsFirst: false }),
+        supabase
+          .from('social_posts')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('scheduled_date', { ascending: false, nullsFirst: false })
+          .order('scheduled_time', { ascending: false, nullsFirst: false }),
         supabase
           .from('social_carousel_slides')
           .select('*')
@@ -881,9 +894,11 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
         { data: [], error: null },
         { data: [], error: null },
         { data: [], error: null },
+        { data: [], error: null },
       ]
 
   if (postError) throw new Error(postError.message)
+  if (analyticsPostError) throw new Error(analyticsPostError.message)
   if (slideError) throw new Error(slideError.message)
   if (metricsError) throw new Error(metricsError.message)
   if (assetError) throw new Error(assetError.message)
@@ -930,6 +945,10 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
     ),
     publications: ((publications ?? []) as SocialPublication[]).filter((publication) => campaignPostIds.has(publication.post_id)),
     variants: ((variants ?? []) as SocialPostVariant[]).filter((variant) => campaignPostIds.has(variant.post_id)),
+    analyticsPosts: (analyticsPosts ?? []) as SocialPost[],
+    analyticsMetrics: (metrics ?? []) as SocialPostMetric[],
+    analyticsAssets: (assets ?? []) as SocialAsset[],
+    analyticsPublications: (publications ?? []) as SocialPublication[],
     sources,
   }
 }
@@ -1269,9 +1288,15 @@ export async function recordPostMetrics(rawInput: z.infer<typeof metricsSchema>)
     ...input,
     user_id: user.id,
     reach: input.reach ?? null,
+    reactions: input.reactions ?? null,
     comments: input.comments ?? null,
     shares: input.shares ?? null,
     link_clicks: input.link_clicks ?? null,
+    video_views: input.video_views ?? null,
+    average_watch_time_seconds: input.average_watch_time_seconds ?? null,
+    followers_gained: input.followers_gained ?? null,
+    metric_window_hours: input.metric_window_hours ?? null,
+    source: input.source,
     notes: nullIfEmpty(input.notes),
     next_action: nullIfEmpty(input.next_action),
   })

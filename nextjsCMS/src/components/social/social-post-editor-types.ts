@@ -46,6 +46,7 @@ export interface PostEditorProps {
   publications: SocialPublication[];
   variants: SocialPostVariant[];
   latestMetric: SocialPostMetric | null;
+  metricsHistory: SocialPostMetric[];
   isPending: boolean;
   runAction: SocialActionRunner;
   savePost: (options?: { closeOnSuccess?: boolean }) => Promise<SocialActionResult>;

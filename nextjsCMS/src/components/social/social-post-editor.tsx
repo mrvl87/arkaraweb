@@ -40,6 +40,7 @@ export function SocialPostEditor({
   publications,
   variants,
   latestMetric,
+  metricsHistory,
   isPending,
   runAction,
   savePost,
@@ -184,6 +185,8 @@ export function SocialPostEditor({
               post={post}
               setPost={setPost}
               latestMetric={latestMetric}
+              metricsHistory={metricsHistory}
+              publications={publications}
               isPending={isPending}
               runAction={runAction}
             />

@@ -349,3 +349,13 @@ Headline variants can update `visual_spec.headline`, which is later consumed by 
 - AI variant generation does not place text into background images.
 
 Visual direction variants update `visual_prompt` as editorial direction. A later visual specification regeneration or manual Visual Studio edit can convert that direction into a structured background scene and poster layout.
+
+## Phase 9 - Analytics Relationship
+
+Analytics does not change deterministic rendering behavior.
+
+Renderer-related dimensions used by analytics:
+
+- Post `selected_template_id` or `visual_spec.template_id` is used as a template filter.
+- Post `aspect_ratio` is used as an aspect-ratio filter.
+- Renderer output is evaluated indirectly through manual performance metrics, not through automatic image analysis.
