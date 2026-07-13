@@ -45,18 +45,21 @@ Acceptance criteria:
 - Documentation and implementation log are updated.
 - Typecheck passes.
 
-## Phase 2: Idea and Strategy
+## Phase 2: Asset and Publication Data Model
 
 Acceptance criteria:
 
-- User can capture an idea from manual input.
-- User can link an idea to existing `posts` or `panduan`.
-- User can convert an idea into strategy.
-- Strategy records objective, pillar, angle, format, CTA direction, and risk notes.
-- Existing campaign and post flows still work.
-- All writes are scoped by `user_id`.
-- Documentation product spec is updated.
-
+- New migration is additive and does not edit old migrations.
+- `social_posts` has first comment, alt text, visual spec, template, aspect ratio, and UTM fields.
+- Existing posts remain compatible through nullable fields and defaults.
+- `social_assets` stores background, poster, carousel slide, reel cover, and thumbnail assets.
+- `social_publications` records manual publication events.
+- `social-assets` storage bucket exists and is public-read.
+- Storage object writes are limited to the authenticated user's own `user_id` folder.
+- RLS limits social assets and publications to rows owned by the authenticated user.
+- TypeScript social types match the new schema.
+- `getSocialDashboardData()` returns assets and publications for the active campaign.
+- Dashboard still typechecks.
 ## Phase 3: Draft and Publish Copy
 
 Acceptance criteria:

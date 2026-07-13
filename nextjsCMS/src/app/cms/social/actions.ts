@@ -11,12 +11,14 @@ import {
   generateFacebookWeeklyPlan,
 } from '@/lib/ai/operations'
 import type {
+  SocialAsset,
   SocialCampaign,
   SocialCarouselSlide,
   SocialChecklistKey,
   SocialDashboardData,
   SocialPost,
   SocialPostMetric,
+  SocialPublication,
   SocialSourceOption,
 } from '@/types/social'
 
@@ -71,6 +73,14 @@ const socialPostSchema = z.object({
   timezone: z.string().trim().optional().default('Asia/Jayapura'),
   status: z.enum(['planned', 'drafting', 'ready', 'posted', 'reviewed', 'archived']).default('planned'),
   visual_prompt: optionalTextSchema,
+  first_comment: optionalTextSchema,
+  alt_text: optionalTextSchema,
+  visual_spec: z.record(z.string(), z.unknown()).nullable().optional().default(null),
+  selected_template_id: optionalTextSchema,
+  aspect_ratio: z.enum(['1:1', '4:5', '9:16']).default('1:1'),
+  utm_source: z.string().trim().optional().default('facebook'),
+  utm_medium: z.string().trim().optional().default('social'),
+  utm_campaign: optionalTextSchema,
   objective: optionalTextSchema,
   content_pillar: optionalTextSchema,
   caption_done: z.boolean().default(false),
@@ -339,34 +349,62 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
     campaignRows[0] ??
     null
 
-  const [{ data: socialPosts, error: postError }, { data: slides, error: slideError }, { data: metrics, error: metricsError }] =
-    activeCampaign
-      ? await Promise.all([
-          supabase
-            .from('social_posts')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('campaign_id', activeCampaign.id)
-            .order('scheduled_date', { ascending: true, nullsFirst: false })
-            .order('scheduled_time', { ascending: true, nullsFirst: false }),
-          supabase
-            .from('social_carousel_slides')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('slide_number', { ascending: true }),
-          supabase
-            .from('social_post_metrics')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('recorded_at', { ascending: false }),
-        ])
-      : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }]
+  const [
+    { data: socialPosts, error: postError },
+    { data: slides, error: slideError },
+    { data: metrics, error: metricsError },
+    { data: assets, error: assetError },
+    { data: publications, error: publicationError },
+  ] = activeCampaign
+    ? await Promise.all([
+        supabase
+          .from('social_posts')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('campaign_id', activeCampaign.id)
+          .order('scheduled_date', { ascending: true, nullsFirst: false })
+          .order('scheduled_time', { ascending: true, nullsFirst: false }),
+        supabase
+          .from('social_carousel_slides')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('slide_number', { ascending: true }),
+        supabase
+          .from('social_post_metrics')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('recorded_at', { ascending: false }),
+        supabase
+          .from('social_assets')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('social_publications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('published_at', { ascending: false }),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+      ]
 
   if (postError) throw new Error(postError.message)
   if (slideError) throw new Error(slideError.message)
   if (metricsError) throw new Error(metricsError.message)
+  if (assetError) throw new Error(assetError.message)
+  if (publicationError) throw new Error(publicationError.message)
 
   const campaignPostIds = new Set(((socialPosts ?? []) as SocialPost[]).map((post) => post.id))
+  const campaignSlideIds = new Set(
+    ((slides ?? []) as SocialCarouselSlide[])
+      .filter((slide) => campaignPostIds.has(slide.post_id))
+      .map((slide) => slide.id)
+  )
 
   const sources: SocialSourceOption[] = [
     ...((posts ?? []) as Array<any>).map((post) => ({
@@ -395,6 +433,11 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
     posts: (socialPosts ?? []) as SocialPost[],
     slides: ((slides ?? []) as SocialCarouselSlide[]).filter((slide) => campaignPostIds.has(slide.post_id)),
     metrics: ((metrics ?? []) as SocialPostMetric[]).filter((metric) => campaignPostIds.has(metric.post_id)),
+    assets: ((assets ?? []) as SocialAsset[]).filter((asset) =>
+      (asset.post_id ? campaignPostIds.has(asset.post_id) : false) ||
+      (asset.slide_id ? campaignSlideIds.has(asset.slide_id) : false)
+    ),
+    publications: ((publications ?? []) as SocialPublication[]).filter((publication) => campaignPostIds.has(publication.post_id)),
     sources,
   }
 }
@@ -538,6 +581,14 @@ export async function createSocialPost(rawInput: z.infer<typeof socialPostSchema
     scheduled_date: nullIfEmpty(data.scheduled_date),
     scheduled_time: nullIfEmpty(data.scheduled_time),
     visual_prompt: nullIfEmpty(data.visual_prompt),
+    first_comment: nullIfEmpty(data.first_comment),
+    alt_text: nullIfEmpty(data.alt_text),
+    visual_spec: data.visual_spec ?? null,
+    selected_template_id: nullIfEmpty(data.selected_template_id),
+    aspect_ratio: data.aspect_ratio,
+    utm_source: nullIfEmpty(data.utm_source) ?? 'facebook',
+    utm_medium: nullIfEmpty(data.utm_medium) ?? 'social',
+    utm_campaign: nullIfEmpty(data.utm_campaign),
     objective: nullIfEmpty(data.objective),
     content_pillar: nullIfEmpty(data.content_pillar),
     notes: nullIfEmpty(data.notes),
@@ -570,6 +621,14 @@ export async function updateSocialPost(rawInput: z.infer<typeof socialPostSchema
       scheduled_date: nullIfEmpty(data.scheduled_date),
       scheduled_time: nullIfEmpty(data.scheduled_time),
       visual_prompt: nullIfEmpty(data.visual_prompt),
+      first_comment: nullIfEmpty(data.first_comment),
+      alt_text: nullIfEmpty(data.alt_text),
+      visual_spec: data.visual_spec ?? null,
+      selected_template_id: nullIfEmpty(data.selected_template_id),
+      aspect_ratio: data.aspect_ratio,
+      utm_source: nullIfEmpty(data.utm_source) ?? 'facebook',
+      utm_medium: nullIfEmpty(data.utm_medium) ?? 'social',
+      utm_campaign: nullIfEmpty(data.utm_campaign),
       objective: nullIfEmpty(data.objective),
       content_pillar: nullIfEmpty(data.content_pillar),
       notes: nullIfEmpty(data.notes),

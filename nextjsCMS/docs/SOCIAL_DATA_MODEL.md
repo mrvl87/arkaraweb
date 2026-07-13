@@ -343,3 +343,114 @@ Future migrations should be additive:
 - The live `media` table may differ from `supabase/schema.sql`; verify before linking social assets to `media.id`.
 - Existing carousel regeneration deletes slides. Versioning is needed before users can safely preserve previous visual work.
 - Metrics model is minimal and lacks reactions, saves, impressions, spend, published URL, and exact publish timestamp.
+
+## Phase 2 Asset and Publication Foundation
+
+Migration:
+
+- `supabase/migrations/20260713090000_add_social_assets_and_publications.sql`
+
+### Additive `social_posts` Columns
+
+New nullable/default columns:
+
+- `first_comment text`
+- `alt_text text`
+- `visual_spec jsonb`
+- `selected_template_id text`
+- `aspect_ratio text not null default '1:1'`
+- `utm_source text not null default 'facebook'`
+- `utm_medium text not null default 'social'`
+- `utm_campaign text`
+
+Rules:
+
+- `aspect_ratio` is constrained to `1:1`, `4:5`, or `9:16`.
+- Existing posts are kept compatible by nullable columns and defaults.
+
+### `social_assets`
+
+Purpose:
+
+- Store generated or uploaded visual assets for social content: backgrounds, final posters, carousel slides, reel covers, and thumbnails.
+
+Columns:
+
+- `id uuid primary key`
+- `user_id uuid not null references auth.users(id) on delete cascade`
+- `post_id uuid null references social_posts(id) on delete cascade`
+- `slide_id uuid null references social_carousel_slides(id) on delete cascade`
+- `asset_type text`
+- `storage_path text`
+- `mime_type text`
+- `width int`
+- `height int`
+- `aspect_ratio text`
+- `template_id text`
+- `version int default 1`
+- `generation_prompt text`
+- `metadata jsonb default '{}'`
+- `status text`
+- `created_at timestamptz`
+- `updated_at timestamptz`
+
+Supported `asset_type` values:
+
+- `background`
+- `poster`
+- `carousel_slide`
+- `reel_cover`
+- `thumbnail`
+
+Supported `status` values:
+
+- `processing`
+- `ready`
+- `approved`
+- `archived`
+- `failed`
+
+Rules:
+
+- Asset must reference either `post_id` or `slide_id`.
+- `version` must be greater than 0.
+- `width` and `height` must be positive when present.
+- `user_id` is required and protected by RLS.
+
+### `social_publications`
+
+Purpose:
+
+- Record manual publication events after a social post is actually published.
+
+Columns:
+
+- `id uuid primary key`
+- `user_id uuid not null references auth.users(id) on delete cascade`
+- `post_id uuid not null references social_posts(id) on delete cascade`
+- `published_at timestamptz default now()`
+- `platform text default 'facebook'`
+- `publication_method text default 'manual'`
+- `facebook_url text`
+- `caption_snapshot text`
+- `first_comment_snapshot text`
+- `asset_ids uuid[] default '{}'`
+- `notes text`
+- `created_at timestamptz`
+
+Rules:
+
+- `publication_method` is currently constrained to `manual`.
+- `user_id` is required and protected by RLS.
+
+### Storage Bucket
+
+Bucket:
+
+- `social-assets`
+
+Rules:
+
+- Public read is enabled because assets are social publishing materials.
+- Authenticated users can insert, update, and delete only object paths whose first folder is their own `user_id`.
+- Expected folder convention: `user_id/post_id/filename`.

@@ -193,3 +193,74 @@ Acceptance criteria status:
 - Metrics dapat dimasukkan dari UI: done.
 - Post reviewed menampilkan metrics terakhir: done.
 - Existing campaign dan post lama tetap dapat dibuka: preserved; no schema change.
+
+## 2026-07-13: Phase 2 Asset and Publication Data Model
+
+Scope:
+
+- Database/data model foundation for social assets and manual publications.
+- No renderer implementation.
+- No AI prompt changes.
+- No old migration edits.
+
+Files inspected:
+
+- `package.json`
+- `src/types/social.ts`
+- `src/app/cms/social/actions.ts`
+- `src/components/social/social-tracker-dashboard.tsx`
+- `supabase/migrations/20260510120000_create_social_tracker.sql`
+- Existing Supabase migrations and storage policy usage.
+- `docs/SOCIAL_DATA_MODEL.md`
+- `docs/SOCIAL_ACCEPTANCE_CRITERIA.md`
+- `docs/SOCIAL_IMPLEMENTATION_LOG.md`
+
+Files changed:
+
+- `supabase/migrations/20260713090000_add_social_assets_and_publications.sql`
+- `src/types/social.ts`
+- `src/app/cms/social/actions.ts`
+- `src/components/social/social-tracker-dashboard.tsx`
+- `docs/SOCIAL_DATA_MODEL.md`
+- `docs/SOCIAL_ACCEPTANCE_CRITERIA.md`
+- `docs/SOCIAL_IMPLEMENTATION_LOG.md`
+
+Migrations created:
+
+- `20260713090000_add_social_assets_and_publications.sql`
+
+Feature work completed:
+
+- Added additive `social_posts` columns for first comment, alt text, visual spec, selected template, aspect ratio, and UTM fields.
+- Added aspect ratio constraint for `1:1`, `4:5`, and `9:16`.
+- Added `social_assets` table with ownership, post/slide relation, dimensions, prompt metadata, status, and version checks.
+- Added `social_publications` table for manual publication events and asset snapshots.
+- Added indexes for asset and publication lookup.
+- Added `updated_at` trigger on `social_assets`.
+- Enabled RLS for both new tables and owner-only policies.
+- Added public Supabase Storage bucket `social-assets`.
+- Added storage policies for public reads and authenticated writes scoped to the user's first path folder.
+- Updated social TypeScript types for assets, publications, aspect ratios, and new post fields.
+- Updated social post validation schema and create/update payload normalization.
+- Updated dashboard data loader to return active-campaign assets and publications.
+
+Tests run:
+
+- `npx tsc --noEmit --pretty false`: passed.
+- `npm run lint`: failed before linting. Existing script runs `next lint`, and the installed Next CLI reports `Invalid project directory provided, no such directory: ...\nextjsCMS\lint`.
+- `npm run build`: compiled successfully, then failed with `Error: spawn EPERM` during the post-compile build phase.
+- No `test` script exists in `package.json`.
+
+Remaining risks:
+
+- Storage policy enforces the first folder as `user_id`; UI/upload code in a later phase must enforce the full `user_id/post_id/filename` convention.
+- RLS ensures users manage only their own asset/publication rows; later write actions should also validate that referenced post or slide belongs to the same user.
+- No renderer or upload UI exists in this phase by design.
+
+Acceptance criteria status:
+
+- Migration can run additively on existing database: designed with `ADD COLUMN IF NOT EXISTS` and `CREATE TABLE IF NOT EXISTS`.
+- Existing posts are preserved through nullable/default fields: done.
+- RLS owner policies added: done.
+- TypeScript types updated: done.
+- Dashboard data model updated: done.

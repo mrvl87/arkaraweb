@@ -46,6 +46,27 @@ export const SOCIAL_CHECKLIST_KEYS = [
 ] as const
 export type SocialChecklistKey = (typeof SOCIAL_CHECKLIST_KEYS)[number]
 
+export const SOCIAL_ASPECT_RATIOS = ['1:1', '4:5', '9:16'] as const
+export type SocialAspectRatio = (typeof SOCIAL_ASPECT_RATIOS)[number]
+
+export const SOCIAL_ASSET_TYPES = [
+  'background',
+  'poster',
+  'carousel_slide',
+  'reel_cover',
+  'thumbnail',
+] as const
+export type SocialAssetType = (typeof SOCIAL_ASSET_TYPES)[number]
+
+export const SOCIAL_ASSET_STATUSES = [
+  'processing',
+  'ready',
+  'approved',
+  'archived',
+  'failed',
+] as const
+export type SocialAssetStatus = (typeof SOCIAL_ASSET_STATUSES)[number]
+
 export const CAROUSEL_IMAGE_STATUSES = [
   'needed',
   'prompt_ready',
@@ -89,6 +110,14 @@ export interface SocialPost {
   timezone: string
   status: SocialPostStatus
   visual_prompt: string | null
+  first_comment: string | null
+  alt_text: string | null
+  visual_spec: Record<string, unknown> | null
+  selected_template_id: string | null
+  aspect_ratio: SocialAspectRatio
+  utm_source: string
+  utm_medium: string
+  utm_campaign: string | null
   objective: string | null
   content_pillar: string | null
   caption_done: boolean
@@ -130,6 +159,41 @@ export interface SocialPostMetric {
   created_at: string
 }
 
+export interface SocialAsset {
+  id: string
+  user_id: string
+  post_id: string | null
+  slide_id: string | null
+  asset_type: SocialAssetType
+  storage_path: string
+  mime_type: string | null
+  width: number | null
+  height: number | null
+  aspect_ratio: SocialAspectRatio | null
+  template_id: string | null
+  version: number
+  generation_prompt: string | null
+  metadata: Record<string, unknown>
+  status: SocialAssetStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface SocialPublication {
+  id: string
+  user_id: string
+  post_id: string
+  published_at: string
+  platform: SocialPlatform
+  publication_method: 'manual'
+  facebook_url: string | null
+  caption_snapshot: string | null
+  first_comment_snapshot: string | null
+  asset_ids: string[]
+  notes: string | null
+  created_at: string
+}
+
 export interface SocialSourceOption {
   id: string
   type: Extract<SocialSourceType, 'post' | 'panduan'>
@@ -146,5 +210,7 @@ export interface SocialDashboardData {
   posts: SocialPost[]
   slides: SocialCarouselSlide[]
   metrics: SocialPostMetric[]
+  assets: SocialAsset[]
+  publications: SocialPublication[]
   sources: SocialSourceOption[]
 }
