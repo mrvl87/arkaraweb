@@ -23,6 +23,7 @@ import type {
 } from "@/types/social";
 import { SocialStrategyEnginePanel } from "./social-strategy-engine-panel";
 import { SocialAnalyticsDashboard } from "./social-analytics-dashboard";
+import { SocialMetricIngestionPanel } from "./social-metric-ingestion-panel";
 import { SocialLearningEngine } from "./social-learning-engine";
 import { SocialCampaignList } from "./social-campaign-list";
 import { SocialCampaignSettings } from "./social-campaign-settings";
@@ -378,6 +379,14 @@ export function SocialTrackerDashboard({
             assets={initialData.assets}
             onSelectCampaign={(campaignId) => router.push(`/cms/social?campaign=${campaignId}`)}
             onEditPost={(post) => setSelectedPost(post)}
+          />
+          <SocialMetricIngestionPanel
+            activeCampaign={activeCampaign}
+            posts={initialData.analyticsPosts}
+            publications={initialData.analyticsPublications}
+            metricImports={initialData.metricImports}
+            isPending={isPending}
+            runAction={runAction}
           />
           <SocialAnalyticsDashboard
             campaigns={initialData.campaigns}

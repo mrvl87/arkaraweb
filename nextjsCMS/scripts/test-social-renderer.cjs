@@ -109,6 +109,7 @@ const { createStoredZip } = require('../src/lib/social/zip.ts')
 const { calculateTitleSimilarity, findClosestTitleMatch } = require('../src/lib/social/content-map.ts')
 const { SOCIAL_STRATEGY_PRESETS, CONTENT_DERIVATIVE_POST_TYPES } = require('../src/lib/social/strategy-presets.ts')
 const { getVariantReadabilityStats, normalizeHeuristicScores, getVariantScoreAverage } = require('../src/lib/social/variants.ts')
+const { parseSocialMetricsCsv, buildCsvMetricImportPreview, normalizeMetricNumber } = require('../src/lib/social/metric-ingestion.ts')
 const {
   GenerateFacebookVariantsOutputSchema,
   GenerateSocialPerformanceReviewOutputSchema,
@@ -298,4 +299,43 @@ test('facebook post input accepts bounded approved learnings context', () => {
 
   assert.equal(parsed.approved_learnings.length, 1)
   assert.equal(parsed.approved_learnings[0].scope_type, 'post_type')
+})
+test('social metric CSV parser handles quoted cells and numeric normalization', () => {
+  const parsed = parseSocialMetricsCsv('Title,Reach,Comments\n"Audit, Air",1.234,5\nChecklist,"2,345",7')
+
+  assert.deepEqual(parsed.columns, ['Title', 'Reach', 'Comments'])
+  assert.equal(parsed.rows[0].Title, 'Audit, Air')
+  assert.equal(normalizeMetricNumber(parsed.rows[0].Reach), 1234)
+  assert.equal(normalizeMetricNumber(parsed.rows[1].Reach), 2345)
+})
+
+test('social metric CSV matching flags ambiguous normalized title and date', () => {
+  const rows = [{ Title: 'Audit Air Rumah', Date: '2026-07-13', Reach: '100' }]
+  const preview = buildCsvMetricImportPreview({
+    rows,
+    mapping: { title: 'Title', published_date: 'Date', reach: 'Reach' },
+    publications: [],
+    posts: [
+      { id: 'post-1', title: 'Audit Air Rumah', scheduled_date: '2026-07-13' },
+      { id: 'post-2', title: 'Audit Air Rumah!', scheduled_date: '2026-07-13' },
+    ],
+  })
+
+  assert.equal(preview[0].match_status, 'ambiguous')
+  assert.deepEqual(preview[0].candidate_post_ids, ['post-1', 'post-2'])
+})
+
+test('social metric CSV matching prefers exact Facebook URL', () => {
+  const preview = buildCsvMetricImportPreview({
+    rows: [{ Url: 'https://www.facebook.com/arkara/posts/123?utm=1', Reach: '50' }],
+    mapping: { post_url: 'Url', reach: 'Reach' },
+    publications: [
+      { id: 'pub-1', post_id: 'post-1', facebook_url: 'https://facebook.com/arkara/posts/123?utm=1', published_at: '2026-07-13T10:00:00Z' },
+    ],
+    posts: [{ id: 'post-1', title: 'Different title', scheduled_date: '2026-07-13' }],
+  })
+
+  assert.equal(preview[0].match_status, 'matched')
+  assert.equal(preview[0].matched_post_id, 'post-1')
+  assert.equal(preview[0].match_reason, 'exact_facebook_url')
 })

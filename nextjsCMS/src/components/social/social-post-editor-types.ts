@@ -15,11 +15,12 @@ export interface SocialActionResult {
   version?: number;
   width?: number;
   height?: number;
-  warnings?: string[];
   fileName?: string;
   mimeType?: string;
   base64?: string;
   slides?: Array<SocialActionResult & { slideId?: string; slideNumber?: number }>;
+  draft?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export type SocialActionRunner = (

@@ -437,3 +437,34 @@ Context reuse:
 - Approved learning context is limited to 8 relevant items.
 - Relevance considers campaign goal, content pillar, post type, template, publishing time, confidence, and evidence count.
 - Rejected and archived learnings are never sent back into AI prompts.
+
+## Phase 11 - CSV Import and Screenshot Metrics
+
+Phase 11 adds alternative metrics ingestion without Meta API.
+
+CSV workflow:
+
+1. User uploads a CSV file in Metrics Ingestion.
+2. Browser parses CSV with a flexible delimiter-aware parser.
+3. User maps columns for reach, reactions, comments, shares, clicks, video views, published date, post URL, and title.
+4. UI previews at most 20 rows.
+5. Rows are matched first by exact normalized Facebook URL from `social_publications.facebook_url`.
+6. Fallback matching uses normalized title and date.
+7. User must explicitly check/confirm rows before import.
+8. Ambiguous and unmatched rows are skipped unless the user manually chooses a post.
+9. Confirmed rows are saved as manual metrics with `source = 'csv'`.
+10. Import summary is recorded in `social_metric_imports`.
+
+Screenshot workflow:
+
+1. User chooses a post and uploads a PNG/JPG/WebP insight screenshot.
+2. Server validates MIME type and file size.
+3. Server uploads the file temporarily to the user-owned `social-assets` folder.
+4. Vision extraction runs through an optional OpenRouter abstraction when `OPENROUTER_VISION_MODEL` is configured.
+5. If vision is not configured, the workflow still returns an editable empty draft.
+6. Temporary file is removed after extraction.
+7. Extracted metrics are shown as a draft with confidence.
+8. User must confirm or correct values before saving.
+9. Confirmed values are saved with `source = 'screenshot'` and extraction metadata.
+
+No Meta API, browser automation, or autoposting is introduced.

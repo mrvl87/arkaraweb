@@ -1,5 +1,6 @@
 "use server"
 
+import { randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import sharp from 'sharp'
 import { z } from 'zod'
@@ -9,6 +10,7 @@ import { normalizeHeuristicScores } from '@/lib/social/variants'
 import { createStoredZip } from '@/lib/social/zip'
 import { createClient } from '@/lib/supabase/server'
 import { SocialVisualSpecSchema } from '@/lib/ai/schemas'
+import { extractSocialMetricsFromScreenshot } from '@/lib/ai/social-metrics-vision'
 import { getPanduanPath, getPostPath } from '@/lib/slugs'
 import {
   buildSocialAssetStoragePath,
@@ -41,6 +43,7 @@ import type {
   SocialDashboardData,
   SocialPost,
   SocialLearning,
+  SocialMetricImport,
   SocialPostMetric,
   SocialPostType,
   SocialPostVariant,
@@ -55,6 +58,8 @@ const SOURCE_LIST_EXCERPT_LIMIT = 360
 const TRUNCATION_SUFFIX = '\n\n[Konten dipotong untuk efisiensi token.]'
 const SOCIAL_BACKGROUND_MAX_BYTES = 8 * 1024 * 1024
 const SOCIAL_BACKGROUND_MIME_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'] as const
+const SOCIAL_SCREENSHOT_MAX_BYTES = 6 * 1024 * 1024
+const SOCIAL_SCREENSHOT_MIME_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'] as const
 
 const campaignSchema = z.object({
   id: z.string().uuid().optional(),
@@ -157,6 +162,38 @@ const metricsSchema = z.object({
   source: z.enum(['manual', 'csv', 'screenshot']).default('manual'),
   notes: z.string().trim().optional().default(''),
   next_action: z.string().trim().optional().default(''),
+})
+
+const csvMetricImportRowSchema = z.object({
+  post_id: z.string().uuid(),
+  row_index: z.coerce.number().int().min(0),
+  reach: z.coerce.number().int().min(0).nullable().optional(),
+  reactions: z.coerce.number().int().min(0).nullable().optional(),
+  comments: z.coerce.number().int().min(0).nullable().optional(),
+  shares: z.coerce.number().int().min(0).nullable().optional(),
+  link_clicks: z.coerce.number().int().min(0).nullable().optional(),
+  video_views: z.coerce.number().int().min(0).nullable().optional(),
+  published_date: optionalTextSchema,
+  post_url: optionalTextSchema,
+  title: optionalTextSchema,
+  match_reason: optionalTextSchema,
+})
+
+const confirmCsvMetricImportSchema = z.object({
+  campaign_id: z.string().uuid().nullable().optional(),
+  file_name: optionalTextSchema,
+  row_count: z.coerce.number().int().min(0),
+  skipped_count: z.coerce.number().int().min(0).default(0),
+  error_summary: z.record(z.string(), z.unknown()).optional().default({}),
+  rows: z.array(csvMetricImportRowSchema).min(1).max(500),
+})
+
+const confirmScreenshotMetricsSchema = metricsSchema.extend({
+  post_id: z.string().uuid(),
+  source: z.literal('screenshot').default('screenshot'),
+  captured_date: optionalTextSchema,
+  confidence: z.coerce.number().min(0).max(1).optional().default(0),
+  extraction_metadata: z.record(z.string(), z.unknown()).optional().default({}),
 })
 
 const learningStatusSchema = z.object({
@@ -920,6 +957,7 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
     { data: publications, error: publicationError },
     { data: variants, error: variantError },
     { data: learnings, error: learningError },
+    { data: metricImports, error: metricImportError },
   ] = activeCampaign
     ? await Promise.all([
         supabase
@@ -965,8 +1003,15 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('social_metric_imports')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(30),
       ])
     : [
+        { data: [], error: null },
         { data: [], error: null },
         { data: [], error: null },
         { data: [], error: null },
@@ -985,6 +1030,7 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
   if (publicationError) throw new Error(publicationError.message)
   if (variantError) throw new Error(variantError.message)
   if (learningError) throw new Error(learningError.message)
+  if (metricImportError) throw new Error(metricImportError.message)
 
   const campaignPostIds = new Set(((socialPosts ?? []) as SocialPost[]).map((post) => post.id))
   const campaignSlideIds = new Set(
@@ -1027,6 +1073,7 @@ export async function getSocialDashboardData(campaignId?: string): Promise<Socia
     publications: ((publications ?? []) as SocialPublication[]).filter((publication) => campaignPostIds.has(publication.post_id)),
     variants: ((variants ?? []) as SocialPostVariant[]).filter((variant) => campaignPostIds.has(variant.post_id)),
     learnings: (learnings ?? []) as SocialLearning[],
+    metricImports: (metricImports ?? []) as SocialMetricImport[],
     analyticsPosts: (analyticsPosts ?? []) as SocialPost[],
     analyticsMetrics: (metrics ?? []) as SocialPostMetric[],
     analyticsAssets: (assets ?? []) as SocialAsset[],
@@ -1379,6 +1426,7 @@ export async function recordPostMetrics(rawInput: z.infer<typeof metricsSchema>)
     followers_gained: input.followers_gained ?? null,
     metric_window_hours: input.metric_window_hours ?? null,
     source: input.source,
+    metadata: {},
     notes: nullIfEmpty(input.notes),
     next_action: nullIfEmpty(input.next_action),
   })
@@ -1397,6 +1445,250 @@ export async function recordPostMetrics(rawInput: z.infer<typeof metricsSchema>)
   return { success: true }
 }
 
+async function assertOwnedSocialPost(supabase: Awaited<ReturnType<typeof requireUser>>['supabase'], userId: string, postId: string) {
+  const { data: post, error } = await supabase
+    .from('social_posts')
+    .select('id, campaign_id, title')
+    .eq('id', postId)
+    .eq('user_id', userId)
+    .single()
+
+  if (error || !post) throw new Error('Post tidak ditemukan atau bukan milik user.')
+  return post as { id: string; campaign_id: string | null; title: string }
+}
+
+async function markPostsReviewed(supabase: Awaited<ReturnType<typeof requireUser>>['supabase'], userId: string, postIds: string[]) {
+  const uniquePostIds = [...new Set(postIds)]
+  if (uniquePostIds.length === 0) return null
+  const { error } = await supabase
+    .from('social_posts')
+    .update({ metrics_done: true, status: 'reviewed' })
+    .eq('user_id', userId)
+    .in('id', uniquePostIds)
+  return error
+}
+
+export async function confirmSocialCsvMetricImport(rawInput: z.infer<typeof confirmCsvMetricImportSchema>) {
+  const { supabase, user } = await requireUser()
+  const input = confirmCsvMetricImportSchema.parse(rawInput)
+  const postIds = [...new Set(input.rows.map((row) => row.post_id))]
+
+  const { data: posts, error: postError } = await supabase
+    .from('social_posts')
+    .select('id, campaign_id')
+    .eq('user_id', user.id)
+    .in('id', postIds)
+
+  if (postError) return { error: postError.message }
+  const ownedPostIds = new Set((posts ?? []).map((post) => post.id as string))
+  const invalidRows = input.rows.filter((row) => !ownedPostIds.has(row.post_id))
+  if (invalidRows.length > 0) return { error: 'Ada row yang mengarah ke post yang tidak valid atau bukan milik user.' }
+
+  const metricRows = input.rows.map((row) => ({
+    post_id: row.post_id,
+    user_id: user.id,
+    reach: row.reach ?? null,
+    reactions: row.reactions ?? null,
+    comments: row.comments ?? null,
+    shares: row.shares ?? null,
+    link_clicks: row.link_clicks ?? null,
+    video_views: row.video_views ?? null,
+    average_watch_time_seconds: null,
+    followers_gained: null,
+    metric_window_hours: null,
+    source: 'csv',
+    notes: `Imported from CSV${row.title ? `: ${row.title}` : ''}`,
+    next_action: null,
+    metadata: {
+      file_name: nullIfEmpty(input.file_name),
+      csv_row_index: row.row_index,
+      published_date: nullIfEmpty(row.published_date),
+      post_url: nullIfEmpty(row.post_url),
+      title: nullIfEmpty(row.title),
+      match_reason: nullIfEmpty(row.match_reason),
+    },
+  }))
+
+  const { error: insertError } = await supabase.from('social_post_metrics').insert(metricRows)
+  if (insertError) return { error: insertError.message }
+
+  const postUpdateError = await markPostsReviewed(supabase, user.id, postIds)
+  if (postUpdateError) return { error: postUpdateError.message }
+
+  const { error: logError } = await supabase.from('social_metric_imports').insert({
+    user_id: user.id,
+    campaign_id: input.campaign_id ?? null,
+    source: 'csv',
+    file_name: nullIfEmpty(input.file_name),
+    file_mime_type: 'text/csv',
+    row_count: input.row_count,
+    imported_count: metricRows.length,
+    skipped_count: input.skipped_count,
+    error_summary: input.error_summary,
+    metadata: { confirmed_post_ids: postIds },
+    status: 'completed',
+  })
+
+  if (logError) return { error: logError.message }
+
+  revalidatePath(SOCIAL_PATH)
+  return { success: true, summary: `${metricRows.length} metrics CSV tersimpan.` }
+}
+
+function screenshotExtension(mimeType: string) {
+  switch (mimeType) {
+    case 'image/png':
+      return 'png'
+    case 'image/jpeg':
+    case 'image/jpg':
+      return 'jpg'
+    case 'image/webp':
+      return 'webp'
+    default:
+      return 'bin'
+  }
+}
+
+export async function extractSocialScreenshotMetrics(formData: FormData) {
+  const { supabase, user } = await requireUser()
+  const postId = String(formData.get('post_id') ?? '').trim()
+  const file = formData.get('file') as File | null
+
+  if (!postId) return { error: 'Post id wajib ada.' }
+  if (!file) return { error: 'Screenshot wajib dipilih.' }
+  if (!SOCIAL_SCREENSHOT_MIME_TYPES.includes(file.type as (typeof SOCIAL_SCREENSHOT_MIME_TYPES)[number])) {
+    return { error: 'Screenshot harus PNG, JPG, atau WebP.' }
+  }
+  if (file.size > SOCIAL_SCREENSHOT_MAX_BYTES) {
+    return { error: 'Ukuran screenshot maksimal 6 MB.' }
+  }
+
+  let storagePath: string | null = null
+
+  try {
+    const post = await assertOwnedSocialPost(supabase, user.id, postId)
+    const buffer = Buffer.from(await file.arrayBuffer())
+    storagePath = `${user.id}/${postId}/metrics-screenshots/tmp-${randomUUID()}.${screenshotExtension(file.type)}`
+
+    const { error: uploadError } = await supabase.storage
+      .from(getSocialAssetsBucket())
+      .upload(storagePath, buffer, {
+        contentType: file.type,
+        cacheControl: '300',
+        upsert: false,
+      })
+
+    if (uploadError) return { error: uploadError.message }
+
+    const extraction = await extractSocialMetricsFromScreenshot({
+      imageBase64: buffer.toString('base64'),
+      mimeType: file.type,
+    })
+
+    const { error: previewLogError } = await supabase.from('social_metric_imports').insert({
+      user_id: user.id,
+      campaign_id: post.campaign_id,
+      source: 'screenshot',
+      file_name: file.name,
+      file_mime_type: file.type,
+      row_count: 1,
+      imported_count: 0,
+      skipped_count: 0,
+      error_summary: extraction.configured ? {} : { vision: 'not_configured' },
+      metadata: {
+        post_id: postId,
+        temp_storage_path: storagePath,
+        file_size: file.size,
+        model: extraction.model,
+        configured: extraction.configured,
+        confidence: extraction.data.confidence,
+      },
+      status: 'previewed',
+    })
+
+    if (previewLogError) return { error: previewLogError.message }
+
+    return {
+      success: true,
+      summary: extraction.configured ? 'Screenshot diekstrak. Periksa angka sebelum confirm.' : 'Vision belum dikonfigurasi. Isi angka manual lalu confirm.',
+      draft: extraction.data,
+      metadata: {
+        file_name: file.name,
+        file_size: file.size,
+        mime_type: file.type,
+        model: extraction.model,
+        configured: extraction.configured,
+      },
+    }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Ekstraksi screenshot gagal.' }
+  } finally {
+    if (storagePath) {
+      await supabase.storage.from(getSocialAssetsBucket()).remove([storagePath]).catch(() => undefined)
+    }
+  }
+}
+
+export async function confirmSocialScreenshotMetrics(rawInput: z.infer<typeof confirmScreenshotMetricsSchema>) {
+  const { supabase, user } = await requireUser()
+  const input = confirmScreenshotMetricsSchema.parse(rawInput)
+
+  try {
+    const post = await assertOwnedSocialPost(supabase, user.id, input.post_id)
+    const { error: insertError } = await supabase.from('social_post_metrics').insert({
+      post_id: input.post_id,
+      user_id: user.id,
+      reach: input.reach ?? null,
+      reactions: input.reactions ?? null,
+      comments: input.comments ?? null,
+      shares: input.shares ?? null,
+      link_clicks: input.link_clicks ?? null,
+      video_views: input.video_views ?? null,
+      average_watch_time_seconds: input.average_watch_time_seconds ?? null,
+      followers_gained: input.followers_gained ?? null,
+      metric_window_hours: input.metric_window_hours ?? null,
+      source: 'screenshot',
+      notes: nullIfEmpty(input.notes),
+      next_action: nullIfEmpty(input.next_action),
+      metadata: {
+        ...input.extraction_metadata,
+        captured_date: nullIfEmpty(input.captured_date),
+        extraction_confidence: input.confidence,
+      },
+    })
+
+    if (insertError) return { error: insertError.message }
+
+    const postUpdateError = await markPostsReviewed(supabase, user.id, [input.post_id])
+    if (postUpdateError) return { error: postUpdateError.message }
+
+    const { error: logError } = await supabase.from('social_metric_imports').insert({
+      user_id: user.id,
+      campaign_id: post.campaign_id,
+      source: 'screenshot',
+      file_name: typeof input.extraction_metadata.file_name === 'string' ? input.extraction_metadata.file_name : null,
+      file_mime_type: typeof input.extraction_metadata.mime_type === 'string' ? input.extraction_metadata.mime_type : null,
+      row_count: 1,
+      imported_count: 1,
+      skipped_count: 0,
+      error_summary: {},
+      metadata: {
+        post_id: input.post_id,
+        captured_date: nullIfEmpty(input.captured_date),
+        confidence: input.confidence,
+        extraction_metadata: input.extraction_metadata,
+      },
+      status: 'completed',
+    })
+
+    if (logError) return { error: logError.message }
+
+    revalidatePath(SOCIAL_PATH)
+    return { success: true, summary: 'Metrics screenshot tersimpan.' }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Simpan metrics screenshot gagal.' }
+  }
+}
 export async function updateSocialLearningStatus(rawInput: z.infer<typeof learningStatusSchema>) {
   const { supabase, user } = await requireUser()
   const input = learningStatusSchema.parse(rawInput)

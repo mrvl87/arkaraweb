@@ -732,3 +732,51 @@ Rules:
 - RLS is enabled and authenticated users can manage only rows where `user_id = auth.uid()`.
 - Only rows with `status = approved` may be injected into future AI prompts.
 - Prompt context is capped to the 8 most relevant approved learnings and includes evidence count plus confidence.
+
+## Phase 11 - Alternative Metrics Ingestion
+
+Migration:
+
+- `supabase/migrations/20260713160000_add_social_metric_ingestion.sql`
+
+Additive `social_post_metrics` column:
+
+- `metadata jsonb not null default '{}'`
+
+### `social_metric_imports`
+
+Purpose:
+
+- Store CSV import logs and screenshot extraction logs without requiring Meta API.
+
+Columns:
+
+- `id uuid primary key default gen_random_uuid()`
+- `user_id uuid not null references auth.users(id) on delete cascade`
+- `campaign_id uuid references social_campaigns(id) on delete set null`
+- `source text check in ('csv', 'screenshot')`
+- `file_name text`
+- `file_mime_type text`
+- `row_count int default 0`
+- `imported_count int default 0`
+- `skipped_count int default 0`
+- `error_summary jsonb default '{}'`
+- `metadata jsonb default '{}'`
+- `status text check in ('previewed', 'completed', 'failed')`
+- `created_at timestamptz default now()`
+
+RLS:
+
+- Enabled.
+- Authenticated users can manage only rows where `auth.uid() = user_id`.
+
+CSV behavior:
+
+- Metrics imported from CSV set `social_post_metrics.source = 'csv'`.
+- Original row index, matching reason, source title, source URL, and published date are stored in `social_post_metrics.metadata`.
+- Ambiguous rows are not inserted unless the user manually chooses the matching post and confirms the row.
+
+Screenshot behavior:
+
+- Screenshot confirmation writes `source = 'screenshot'` and stores extraction metadata plus confidence in `social_post_metrics.metadata`.
+- Temporary screenshot files use the `social-assets` bucket under `user_id/post_id/metrics-screenshots/...` and are removed after extraction.

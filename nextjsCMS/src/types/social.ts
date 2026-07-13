@@ -66,6 +66,12 @@ export type SocialPostVariantType = (typeof SOCIAL_POST_VARIANT_TYPES)[number]
 export const SOCIAL_METRIC_SOURCES = ['manual', 'csv', 'screenshot'] as const
 export type SocialMetricSource = (typeof SOCIAL_METRIC_SOURCES)[number]
 
+export const SOCIAL_METRIC_IMPORT_SOURCES = ['csv', 'screenshot'] as const
+export type SocialMetricImportSource = (typeof SOCIAL_METRIC_IMPORT_SOURCES)[number]
+
+export const SOCIAL_METRIC_IMPORT_STATUSES = ['previewed', 'completed', 'failed'] as const
+export type SocialMetricImportStatus = (typeof SOCIAL_METRIC_IMPORT_STATUSES)[number]
+
 export const SOCIAL_LEARNING_SCOPE_TYPES = ['global', 'campaign', 'content_pillar', 'post_type', 'template', 'publishing_time'] as const
 export type SocialLearningScopeType = (typeof SOCIAL_LEARNING_SCOPE_TYPES)[number]
 
@@ -215,6 +221,7 @@ export interface SocialPostMetric {
   followers_gained: number | null
   metric_window_hours: number | null
   source: SocialMetricSource
+  metadata: Record<string, unknown>
   notes: string | null
   next_action: string | null
   created_at: string
@@ -270,6 +277,22 @@ export interface SocialLearning {
   updated_at: string
 }
 
+export interface SocialMetricImport {
+  id: string
+  user_id: string
+  campaign_id: string | null
+  source: SocialMetricImportSource
+  file_name: string | null
+  file_mime_type: string | null
+  row_count: number
+  imported_count: number
+  skipped_count: number
+  error_summary: Record<string, unknown>
+  metadata: Record<string, unknown>
+  status: SocialMetricImportStatus
+  created_at: string
+}
+
 export interface SocialPublication {
   id: string
   user_id: string
@@ -305,6 +328,7 @@ export interface SocialDashboardData {
   publications: SocialPublication[]
   variants: SocialPostVariant[]
   learnings: SocialLearning[]
+  metricImports: SocialMetricImport[]
   analyticsPosts: SocialPost[]
   analyticsMetrics: SocialPostMetric[]
   analyticsAssets: SocialAsset[]

@@ -628,3 +628,50 @@ Known risks:
 - Retrospective quality depends on manual metrics completeness.
 - `scope_id` is only populated for campaign-scoped learnings; text-scoped categories use title/observation matching for relevance.
 - Campaign retrospective summary is appended to `social_campaigns.tone_note` because no dedicated campaign notes column exists yet.
+
+## 2026-07-13 - Phase 11 CSV Import and Screenshot Metrics
+
+Scope executed:
+
+- Added additive migration `20260713160000_add_social_metric_ingestion.sql`.
+- Added `metadata` to `social_post_metrics`.
+- Added `social_metric_imports` with owner-only RLS, source/status constraints, indexes, row counts, error summary, and metadata.
+- Added CSV parser and matching helper in `src/lib/social/metric-ingestion.ts`.
+- Added CSV mapping UI with flexible column mapping and max 20-row preview.
+- Added exact Facebook URL matching and normalized title/date fallback matching.
+- Required explicit row confirmation before saving CSV metrics.
+- Prevented ambiguous rows from saving automatically.
+- Added screenshot extraction UI with draft review and confirmation.
+- Added optional OpenRouter vision abstraction using `OPENROUTER_VISION_MODEL`.
+- Validated screenshot MIME type and size, used temporary user-owned storage path, and removed temporary file after extraction.
+- Saved confirmed screenshot metrics with `source = 'screenshot'`, extraction metadata, and confidence.
+- Added tests for CSV parsing, exact URL matching, and ambiguous matching.
+
+Files changed:
+
+- `supabase/migrations/20260713160000_add_social_metric_ingestion.sql`
+- `src/app/cms/social/actions.ts`
+- `src/components/social/social-metric-ingestion-panel.tsx`
+- `src/components/social/social-tracker-dashboard.tsx`
+- `src/components/social/social-post-editor-types.ts`
+- `src/lib/ai/social-metrics-vision.ts`
+- `src/lib/social/metric-ingestion.ts`
+- `src/types/social.ts`
+- `scripts/test-social-renderer.cjs`
+- Social documentation files
+
+Validation:
+
+- `npx tsc --noEmit --pretty false` passed.
+- `npm run test:social-renderer` passed with 21 tests.
+- `git diff --check` passed; only CRLF conversion warnings were reported.
+- `npm run lint` failed before linting because the existing `next lint` script is not supported by the installed Next 16 CLI and is interpreted as project path `lint`.
+- `npx eslint ...` failed because the repo has no `eslint.config.(js|mjs|cjs)` for ESLint 9.
+- `npm run build` compiled successfully, then failed with the existing Windows `spawn EPERM` environment error.
+- `supabase --version` failed because Supabase CLI is not installed in this environment.
+
+Known risks:
+
+- Vision extraction is inactive until `OPENROUTER_VISION_MODEL` is configured.
+- Screenshot AI extraction quality depends on screenshot clarity and provider capability; user confirmation remains mandatory.
+- Supabase CLI is not installed in this workspace, so the migration was written as SQL and not applied locally.

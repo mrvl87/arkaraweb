@@ -262,3 +262,20 @@ Acceptance criteria:
 - Approved learning context is integrated into weekly plan, content map, post draft, and variant generation.
 - No Meta API or autoposting is added.
 - Documentation and implementation log are updated.
+
+## Phase 11 - CSV Import and Screenshot Metrics
+
+- CSV file can be uploaded and parsed without assuming a fixed vendor format.
+- User can map columns for reach, reactions, comments, shares, clicks, published date, post URL, and title.
+- CSV preview shows a maximum of 20 rows.
+- Matching prefers exact normalized Facebook URL from publication history.
+- Fallback matching uses normalized title and date.
+- Ambiguous rows are not saved automatically.
+- User must explicitly confirm CSV rows before metrics are inserted.
+- CSV metrics are saved with `source = 'csv'`.
+- CSV import log stores row count, imported count, skipped count, and error summary.
+- Screenshot upload validates MIME type and file size.
+- Screenshot extraction is stored as a draft and requires user confirmation.
+- Screenshot metrics are saved with `source = 'screenshot'` plus extraction metadata and confidence.
+- Temporary screenshot storage uses user-owned paths and is removed after extraction.
+- Tests cover CSV parsing and ambiguous matching.

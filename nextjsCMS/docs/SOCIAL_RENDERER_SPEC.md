@@ -370,3 +370,14 @@ Renderer-related learning can be scoped to `template` or `publishing_time`, but 
 - AI must not claim a template caused performance unless evidence supports that claim.
 - The renderer still owns text placement, safe zones, overflow validation, and Arkara footer rendering.
 - Approved template learnings are capped and passed as prompt context, not as renderer rules.
+
+## Phase 11 - Metrics Ingestion Relationship
+
+CSV and screenshot metrics ingestion does not change deterministic rendering.
+
+Screenshot uploads for metrics are temporary evidence inputs only:
+
+- They are not poster backgrounds.
+- They are not renderer assets.
+- They are stored briefly under user-owned `social-assets` paths and removed after extraction.
+- Confirmed metrics can later influence analytics and approved learning, but never alter renderer layout rules directly.
