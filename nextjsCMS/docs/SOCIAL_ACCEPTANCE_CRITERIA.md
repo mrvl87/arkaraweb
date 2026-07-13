@@ -279,3 +279,29 @@ Acceptance criteria:
 - Screenshot metrics are saved with `source = 'screenshot'` plus extraction metadata and confidence.
 - Temporary screenshot storage uses user-owned paths and is removed after extraction.
 - Tests cover CSV parsing and ambiguous matching.
+
+## Phase 12 - Hardening, QA, and Final Refactor
+
+Acceptance criteria:
+
+- Social Content OS lint script runs successfully on the Social scope.
+- TypeScript typecheck passes.
+- Social renderer/unit test suite passes.
+- Production build passes.
+- Server/client boundary is checked so Node-only renderer dependencies stay server-side.
+- No `localStorage` remains as social state source of truth.
+- Storage paths and ZIP entries are checked against traversal risk.
+- Server actions assert user ownership for user-owned writes.
+- Supabase RLS and storage policies are statically verified from migrations.
+- Backward compatibility fields such as `visual_prompt` remain available.
+- Additive migration sequence is preserved.
+- Documentation and implementation log reflect the actual implementation.
+- Final gap report documents remaining risks and intentional exclusions.
+
+Phase 12 validation result:
+
+- `npm run lint`: passed for Social Content OS scope with 2 non-blocking `<img>` warnings.
+- `npx tsc --noEmit --pretty false`: passed.
+- `npm run test:social-renderer`: passed, 24 tests.
+- `npm run build`: passed when rerun outside the Windows sandbox after sandbox-only `spawn EPERM`.
+- Supabase CLI was unavailable, so live migration reset/integration tests were not run locally.

@@ -468,3 +468,33 @@ Screenshot workflow:
 9. Confirmed values are saved with `source = 'screenshot'` and extraction metadata.
 
 No Meta API, browser automation, or autoposting is introduced.
+
+## Phase 12 - Final Hardened Product State
+
+Phase 12 does not add new product features. It validates and hardens the Social Content OS implementation delivered through Phase 11.
+
+Current end-to-end workflow now implemented:
+
+1. Strategy and content map generation through Strategy Engine, with Classic Weekly Plan retained.
+2. Post draft editing with separated hook, body, CTA, first comment, alt text, and UTM fields.
+3. Structured visual specification where AI provides scene/layout data and CMS renders text.
+4. Optional background upload, deterministic poster/carousel render, and versioned asset history.
+5. Publish Pack for manual Facebook publishing with caption, URL, alt text, first comment, assets, and publication snapshot.
+6. Manual metrics entry, CSV metrics import, and screenshot metrics confirmation.
+7. Analytics dashboard for owned manual metrics.
+8. Performance retrospective and approved learning context for future AI generation.
+
+Final scope boundaries remain unchanged:
+
+- Meta API integration is not implemented.
+- Autoposting is not implemented.
+- Screenshot extraction is provider-optional and still requires user confirmation.
+- Manual publishing remains the production workflow.
+
+Hardening decisions:
+
+- `visual_prompt` remains for legacy compatibility.
+- `copied_done`, `posted_done`, and `metrics_done` remain database-backed checklist fields.
+- Server actions continue to filter or assert `user_id` ownership before mutating user-owned social data.
+- Social asset paths stay under `user_id/post_id/...` ownership folders.
+- Final lint script is scoped to Social Content OS files to avoid broad refactors in unrelated CMS modules during this phase.

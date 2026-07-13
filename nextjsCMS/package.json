@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src/app/cms/social src/components/social src/lib/social src/lib/ai/schemas.ts src/lib/ai/operations.ts src/lib/ai/prompt-profiles.ts src/types/social.ts scripts/test-social-renderer.cjs",
     "test:social-renderer": "node scripts/test-social-renderer.cjs",
     "bulk-index": "node --env-file=.env.local --experimental-vm-modules scripts/bulk-index.js",
     "bulk-index:dry": "node --env-file=.env.local --experimental-vm-modules scripts/bulk-index.js --dry-run"

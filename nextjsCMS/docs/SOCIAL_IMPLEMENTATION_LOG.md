@@ -675,3 +675,101 @@ Known risks:
 - Vision extraction is inactive until `OPENROUTER_VISION_MODEL` is configured.
 - Screenshot AI extraction quality depends on screenshot clarity and provider capability; user confirmation remains mandatory.
 - Supabase CLI is not installed in this workspace, so the migration was written as SQL and not applied locally.
+
+## 2026-07-13 - Phase 12 Hardening, QA, and Final Refactor
+
+Scope executed:
+
+- No new product feature was added.
+- Reviewed Social Content OS scope: social page/actions, social components, social renderer helpers, social AI schemas/operations/prompts, migrations, storage policies, and docs.
+- Fixed lint tooling for Next 16/ESLint 9 by adding flat config and scoping `npm run lint` to Social Content OS files.
+- Added ownership hardening before carousel slide creation and metrics insertion.
+- Added ZIP entry name sanitization to avoid traversal-style names in generated publish packs.
+- Added minimal additional tests for campaign AI input bounds, post AI input defaults, and ZIP entry sanitization.
+- Preserved `visual_prompt` and all legacy checklist fields.
+
+Files inspected:
+
+- `package.json`
+- `.eslintrc.json`
+- `next.config.ts`
+- `src/app/cms/social/page.tsx`
+- `src/app/cms/social/actions.ts`
+- `src/components/social/*`
+- `src/lib/social/*`
+- `src/lib/social/render/*`
+- `src/lib/ai/schemas.ts`
+- `src/lib/ai/operations.ts`
+- `src/lib/ai/prompt-profiles.ts`
+- `src/types/social.ts`
+- `scripts/test-social-renderer.cjs`
+- `supabase/migrations/*social*.sql`
+- `docs/SOCIAL_PRODUCT_SPEC.md`
+- `docs/SOCIAL_DATA_MODEL.md`
+- `docs/SOCIAL_RENDERER_SPEC.md`
+- `docs/SOCIAL_ACCEPTANCE_CRITERIA.md`
+- `docs/SOCIAL_IMPLEMENTATION_LOG.md`
+
+Files changed:
+
+- `package.json`
+- `eslint.config.mjs`
+- `src/app/cms/social/actions.ts`
+- `src/components/social/social-strategy-engine-panel.tsx`
+- `src/lib/social/zip.ts`
+- `scripts/test-social-renderer.cjs`
+- `docs/SOCIAL_PRODUCT_SPEC.md`
+- `docs/SOCIAL_DATA_MODEL.md`
+- `docs/SOCIAL_RENDERER_SPEC.md`
+- `docs/SOCIAL_ACCEPTANCE_CRITERIA.md`
+- `docs/SOCIAL_IMPLEMENTATION_LOG.md`
+- `docs/SOCIAL_FINAL_GAP_REPORT.md`
+
+Migration created:
+
+- None.
+
+Technical decisions:
+
+- Kept final lint scope to Social Content OS files to avoid unrelated legacy CMS lint refactors.
+- Disabled React Compiler lint rules `react-hooks/error-boundaries` and `react-hooks/set-state-in-effect` in flat config because they were newly surfaced by ESLint 9/Next 16 and would require broad UI refactors outside this phase.
+- Kept public social asset preview `<img>` usage for storage URLs as non-blocking debt rather than changing image loading behavior.
+- Kept deterministic renderer on existing `sharp`; no browser automation or new render dependency added.
+
+Dependency changes:
+
+- No new dependency added in Phase 12.
+- Existing `sharp` remains the renderer rasterization dependency.
+
+Validation:
+
+- `npm run lint`: passed for Social Content OS scope, with 2 non-blocking `<img>` warnings.
+- `npx tsc --noEmit --pretty false`: passed.
+- `npm run test:social-renderer`: passed, 24 tests.
+- `npm run build`: first sandbox run compiled then failed with Windows `spawn EPERM`; escalated rerun passed.
+- `supabase --version`: failed because Supabase CLI is not installed.
+- Static checks found no `localStorage` in social scope.
+- Static checks found no Node-only renderer dependency imported by social client components.
+- Static migration review confirmed owner RLS and storage policies exist for social tables and `social-assets` bucket.
+
+Technical debt remaining:
+
+- Supabase migrations were not applied/reset locally because the Supabase CLI is missing.
+- Social asset preview components still use `<img>` and produce lint warnings.
+- Large carousel publish ZIPs may need streamed route handling later.
+- SVG text measurement remains approximate and should keep fixture coverage as templates evolve.
+- Vision screenshot extraction remains provider-optional and depends on `OPENROUTER_VISION_MODEL`.
+- Full browser/mobile QA was not run in Phase 12; build and static checks passed.
+
+Features intentionally not built:
+
+- Meta API integration.
+- Facebook autoposting.
+- CSV import auto-save for ambiguous rows.
+- Screenshot metrics auto-confirmation.
+- Live performance prediction from heuristic scores.
+- Automatic causal claims from analytics.
+
+Future integration:
+
+- Meta API/autopost can be added later as a separate integration behind explicit permissions, token storage, retry handling, and publication audit logs. It is intentionally outside the Social Content OS manual-publishing release.

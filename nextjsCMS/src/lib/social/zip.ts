@@ -28,13 +28,23 @@ export interface ZipEntryInput {
   modifiedAt?: Date
 }
 
+export function sanitizeZipEntryName(name: string) {
+  const normalized = name.replace(/\\/g, '/')
+  const parts = normalized
+    .split('/')
+    .map((part) => part.trim())
+    .filter((part) => part && part !== '.' && part !== '..')
+
+  return parts.join('/') || 'asset'
+}
+
 export function createStoredZip(entries: ZipEntryInput[]) {
   const localParts: Buffer[] = []
   const centralParts: Buffer[] = []
   let offset = 0
 
   for (const entry of entries) {
-    const fileName = Buffer.from(entry.name.replace(/^\/+/, ''), 'utf8')
+    const fileName = Buffer.from(sanitizeZipEntryName(entry.name), 'utf8')
     const data = entry.data
     const checksum = crc32(data)
     const { dosTime, dosDate } = dosDateTime(entry.modifiedAt)

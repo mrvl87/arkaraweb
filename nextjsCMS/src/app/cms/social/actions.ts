@@ -1358,6 +1358,12 @@ export async function createCarouselSlide(rawInput: z.infer<typeof carouselSlide
   const { supabase, user } = await requireUser()
   const input = carouselSlideSchema.parse(rawInput)
 
+  try {
+    await assertOwnedSocialPost(supabase, user.id, input.post_id)
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Post tidak ditemukan.' }
+  }
+
   const { error } = await supabase.from('social_carousel_slides').insert({
     ...input,
     user_id: user.id,
@@ -1412,6 +1418,12 @@ export async function deleteCarouselSlide(id: string) {
 export async function recordPostMetrics(rawInput: z.infer<typeof metricsSchema>) {
   const { supabase, user } = await requireUser()
   const input = metricsSchema.parse(rawInput)
+
+  try {
+    await assertOwnedSocialPost(supabase, user.id, input.post_id)
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Post tidak ditemukan.' }
+  }
 
   const { error } = await supabase.from('social_post_metrics').insert({
     ...input,

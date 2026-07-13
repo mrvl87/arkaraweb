@@ -105,7 +105,7 @@ test('storage path starts with user id and preserves ownership folder', () => {
   assert.equal(path, 'user-123/post-456/carousel/slide-id-789-v3.png')
 })
 const { buildSocialTargetUrl, buildSocialCaptionWithUtm } = require('../src/lib/social/publish-pack.ts')
-const { createStoredZip } = require('../src/lib/social/zip.ts')
+const { createStoredZip, sanitizeZipEntryName } = require('../src/lib/social/zip.ts')
 const { calculateTitleSimilarity, findClosestTitleMatch } = require('../src/lib/social/content-map.ts')
 const { SOCIAL_STRATEGY_PRESETS, CONTENT_DERIVATIVE_POST_TYPES } = require('../src/lib/social/strategy-presets.ts')
 const { getVariantReadabilityStats, normalizeHeuristicScores, getVariantScoreAverage } = require('../src/lib/social/variants.ts')
@@ -114,6 +114,7 @@ const {
   GenerateFacebookVariantsOutputSchema,
   GenerateSocialPerformanceReviewOutputSchema,
   GenerateFacebookPostInputSchema,
+  GenerateFacebookWeeklyPlanInputSchema,
 } = require('../src/lib/ai/schemas.ts')
 
 test('publish pack target URL preserves query and adds UTM parameters', () => {
@@ -338,4 +339,53 @@ test('social metric CSV matching prefers exact Facebook URL', () => {
   assert.equal(preview[0].match_status, 'matched')
   assert.equal(preview[0].matched_post_id, 'post-1')
   assert.equal(preview[0].match_reason, 'exact_facebook_url')
+})
+test('campaign creation AI input schema preserves approved learning bounds', () => {
+  const parsed = GenerateFacebookWeeklyPlanInputSchema.parse({
+    campaign_title: 'Rumah Siaga Juli',
+    theme: 'Persiapan rumah tangga Indonesia menghadapi listrik padam.',
+    start_date: '2026-07-13',
+    primary_goal: 'traffic',
+    approved_learnings: Array.from({ length: 8 }, (_, index) => ({
+      scope_type: 'global',
+      title: `Learning ${index + 1}`,
+      observation: 'Berdasarkan sampel saat ini terlihat format checklist perlu diuji kembali.',
+      recommendation: 'Gunakan sebagai hipotesis editorial terbatas.',
+      evidence_count: 3,
+      confidence: 'medium',
+    })),
+  })
+
+  assert.equal(parsed.campaign_title, 'Rumah Siaga Juli')
+  assert.equal(parsed.approved_learnings.length, 8)
+  assert.throws(() => GenerateFacebookWeeklyPlanInputSchema.parse({
+    campaign_title: 'Rumah Siaga Juli',
+    theme: 'Persiapan rumah tangga Indonesia menghadapi listrik padam.',
+    start_date: '2026-07-13',
+    approved_learnings: Array.from({ length: 9 }, (_, index) => ({
+      scope_type: 'global',
+      title: `Learning ${index + 1}`,
+      observation: 'Berdasarkan sampel saat ini terlihat format checklist perlu diuji kembali.',
+      recommendation: 'Gunakan sebagai hipotesis editorial terbatas.',
+      evidence_count: 3,
+      confidence: 'medium',
+    })),
+  }))
+})
+
+test('post creation AI input schema defaults aspect ratio and post type', () => {
+  const parsed = GenerateFacebookPostInputSchema.parse({
+    title: 'Checklist air darurat keluarga',
+    post_type: 'checklist',
+    source_summary: 'Ringkasan artikel sumber.',
+  })
+
+  assert.equal(parsed.post_type, 'checklist')
+  assert.equal(parsed.aspect_ratio, '1:1')
+})
+
+test('zip entry names remove traversal segments', () => {
+  assert.equal(sanitizeZipEntryName('../01-cover.png'), '01-cover.png')
+  assert.equal(sanitizeZipEntryName('carousel\\..\\02-slide.png'), 'carousel/02-slide.png')
+  assert.equal(sanitizeZipEntryName('/'), 'asset')
 })

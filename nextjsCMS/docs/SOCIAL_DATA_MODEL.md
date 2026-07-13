@@ -780,3 +780,34 @@ Screenshot behavior:
 
 - Screenshot confirmation writes `source = 'screenshot'` and stores extraction metadata plus confidence in `social_post_metrics.metadata`.
 - Temporary screenshot files use the `social-assets` bucket under `user_id/post_id/metrics-screenshots/...` and are removed after extraction.
+
+## Phase 12 - Final Data Model Hardening
+
+No migration was created in Phase 12. The existing additive migration sequence remains:
+
+- `20260510120000_create_social_tracker.sql`
+- `20260713090000_add_social_assets_and_publications.sql`
+- `20260713100000_add_social_carousel_slide_visual_spec.sql`
+- `20260713120000_extend_social_post_derivative_types.sql`
+- `20260713130000_create_social_post_variants.sql`
+- `20260713140000_extend_social_post_metrics_analytics.sql`
+- `20260713150000_create_social_learnings.sql`
+- `20260713160000_add_social_metric_ingestion.sql`
+
+Final ownership rules verified statically:
+
+- `social_campaigns`, `social_posts`, `social_carousel_slides`, `social_post_metrics`, `social_assets`, `social_publications`, `social_post_variants`, `social_learnings`, and `social_metric_imports` include `user_id` and RLS owner policies.
+- Social Storage bucket `social-assets` is public-read, while insert/update/delete policies require the first path folder to match `auth.uid()`.
+- Metrics, carousel slide creation, asset, publication, variant, learning, import, and screenshot confirmation actions now validate owned post/campaign context before writes.
+- Phase 12 added explicit ownership checks before `createCarouselSlide()` and `recordPostMetrics()` insert rows.
+
+Backward compatibility preserved:
+
+- No old columns were dropped.
+- `visual_prompt` remains available for old posts and legacy fallbacks.
+- Nullable/default fields keep existing posts readable.
+- Existing checklist booleans remain operational and are not replaced in this release.
+
+Local database validation note:
+
+- Supabase CLI is not installed in this workspace, so Phase 12 RLS verification was static against SQL migrations rather than a live local database reset.

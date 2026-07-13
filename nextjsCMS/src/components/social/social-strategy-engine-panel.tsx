@@ -77,14 +77,17 @@ export function SocialStrategyEnginePanel({
   const preset = SOCIAL_STRATEGY_PRESETS[strategyId];
   const isClassic = strategyId === "classic_weekly";
   const selectedCount = contentMap?.proposed_content_items.filter((item) => item.selected).length ?? 0;
+  const activeCampaignId = activeCampaign?.id ?? "";
+  const activeCampaignStartDate = activeCampaign?.start_date ?? "";
+  const activeCampaignEndDate = activeCampaign?.end_date ?? "";
 
   useEffect(() => {
-    if (!activeCampaign) return;
-    setStartDate(activeCampaign.start_date);
-    setEndDate(activeCampaign.end_date ?? "");
+    if (!activeCampaignId) return;
+    setStartDate(activeCampaignStartDate);
+    setEndDate(activeCampaignEndDate);
     setContentMap(null);
     setWarnings([]);
-  }, [activeCampaign?.id, activeCampaign?.start_date, activeCampaign?.end_date]);
+  }, [activeCampaignId, activeCampaignStartDate, activeCampaignEndDate]);
 
   const warningByTitle = useMemo(() => {
     const map = new Map<string, SimilarityWarning>();

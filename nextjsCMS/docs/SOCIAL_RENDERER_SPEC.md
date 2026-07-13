@@ -381,3 +381,34 @@ Screenshot uploads for metrics are temporary evidence inputs only:
 - They are not renderer assets.
 - They are stored briefly under user-owned `social-assets` paths and removed after extraction.
 - Confirmed metrics can later influence analytics and approved learning, but never alter renderer layout rules directly.
+
+## Phase 12 - Renderer Hardening Notes
+
+No renderer feature was added in Phase 12.
+
+Verified behavior:
+
+- Renderer code remains server-side in `src/lib/social/render` and `src/app/cms/social/actions.ts`.
+- Client social components do not import `sharp`, `Buffer`, `node:*`, or filesystem modules.
+- Renderer still works without a background image through deterministic fallback backgrounds.
+- Poster and carousel assets remain versioned and old versions are not overwritten.
+- Batch carousel render keeps per-slide failure handling and only marks the post asset checklist complete when all slides succeed.
+- ZIP export keeps carousel slide ordering and now sanitizes ZIP entry names to remove traversal segments.
+
+Renderer validation coverage now includes:
+
+- Dimensions for all aspect ratios.
+- Missing visual spec rejection.
+- Long headline rejection.
+- Too many information blocks rejection.
+- Normal fixture PNG output without overflow warnings.
+- Template registry fallback.
+- Asset version increment.
+- Storage ownership path.
+- Carousel ZIP ordering and path sanitization.
+
+Remaining renderer debt:
+
+- SVG text measurement is still approximate.
+- Preview thumbnails use normal `<img>` tags for public storage asset URLs; lint warns about `next/image`, but this was left unchanged to avoid behavior changes in Phase 12.
+- Large carousel ZIPs are still returned as base64 from a Server Action; a streamed route can be considered later if pack size grows.
