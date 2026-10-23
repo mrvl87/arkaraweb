@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { normalizeSlug } from '@/lib/slugs'
+import { normalizeSlug, normalizeSlugInput } from '@/lib/slugs'
 
 interface SlugInputProps {
   titleValue: string
@@ -83,7 +83,8 @@ export function SlugInput({
         <input
           type="text"
           value={value}
-          onChange={(e) => onChange(normalizeSlug(e.target.value))}
+          onChange={(e) => onChange(normalizeSlugInput(e.target.value))}
+          onBlur={(e) => onChange(normalizeSlug(e.target.value))}
           disabled={disabled || isAutoMode}
           className={`w-full px-4 py-2.5 rounded-lg border transition-all ${
             error 
@@ -96,7 +97,7 @@ export function SlugInput({
       <p className="text-[11px] text-gray-500">
         {isAutoMode
           ? 'Slug mengikuti judul sampai Anda pindah ke mode manual.'
-          : 'Mode manual aktif. Slug tidak akan diubah otomatis dari judul.'}
+          : 'Mode manual aktif. Gunakan tanda - atau spasi untuk memisahkan kata. Slug tidak mengikuti perubahan judul.'}
       </p>
       {error && (
         <p className="text-xs text-red-500 mt-1">{error}</p>

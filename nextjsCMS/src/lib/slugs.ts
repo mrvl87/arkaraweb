@@ -1,9 +1,13 @@
-export function normalizeSlug(value: string): string {
+export function normalizeSlugInput(value: string): string {
   return value
     .toLowerCase()
     .replace(/[^\w\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
+}
+
+export function normalizeSlug(value: string): string {
+  return normalizeSlugInput(value)
     .replace(/^-+|-+$/g, '')
     .trim()
 }
