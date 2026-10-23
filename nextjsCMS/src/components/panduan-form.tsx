@@ -11,6 +11,7 @@ import { SlugInput } from './slug-input'
 import { MediaPicker } from './media/media-picker'
 import { AIFieldAssist } from './ai/ai-field-assist'
 import { DraftGeneratorPanel } from './ai/draft-generator-panel'
+import { ExternalDraftPastePanel } from './ai/external-draft-paste-panel'
 import { ContentAdoptionPanel } from './content-adoption-panel'
 import { ImagePromptsPanel } from './ai/image-prompts-panel'
 import { MobileReaderFields } from './mobile-reader-fields'
@@ -531,6 +532,13 @@ export function PanduanForm({ initialData, initialAIState, onSubmit, title }: Pa
                 generateDraft={(input) => panduanAIGenerateFullDraft(input, { panduanId: recordId })}
                 onReplaceContent={(markdown) => applyDraftToEditor('replace', markdown)}
                 onAppendContent={(markdown) => applyDraftToEditor('append', markdown)}
+                onApplyMetadata={applyDraftMetadata}
+                onApplyMobileStructure={applyDraftMobileStructure}
+              />
+
+              <ExternalDraftPastePanel
+                editorReady={isEditorReady}
+                onReplaceContent={(markdown) => applyDraftToEditor('replace', markdown)}
                 onApplyMetadata={applyDraftMetadata}
                 onApplyMobileStructure={applyDraftMobileStructure}
               />
