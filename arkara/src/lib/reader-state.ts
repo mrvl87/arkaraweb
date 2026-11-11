@@ -264,6 +264,9 @@ export function enhanceMobileReadingList() {
     })
     .slice(0, 2);
 
+  const section = list.closest<HTMLElement>('[data-reader-section]');
+  if (section) section.hidden = progressItems.length === 0;
+
   if (progressItems.length > 0) {
     list.innerHTML = progressItems.map(renderProgressItem).join('');
   } else {
@@ -278,3 +281,5 @@ export function enhanceMobileReadingList() {
   bindSaveButtons(list);
   bindSaveButtons(document);
 }
+
+export function initializeReaderBookmarks() { bindSaveButtons(document); }

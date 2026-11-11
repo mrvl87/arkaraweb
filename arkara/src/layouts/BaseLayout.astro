@@ -1,12 +1,12 @@
 ---
-import '../styles/global.css';
-import SeoHead from '../components/layout/SeoHead.astro';
-import DesktopHeader from '../components/layout/DesktopHeader.astro';
-import MobileBottomNav from '../components/layout/MobileBottomNav.astro';
-import SiteFooter from '../components/layout/SiteFooter.astro';
-import BackgroundEffects from '../components/layout/BackgroundEffects.astro';
+import "../styles/global.css";
+import "../styles/theme.css";
+import SeoHead from "../components/layout/SeoHead.astro";
+import DesktopHeader from "../components/layout/DesktopHeader.astro";
+import MobileBottomNav from "../components/layout/MobileBottomNav.astro";
+import SiteFooter from "../components/layout/SiteFooter.astro";
 
-type CachePolicy = 'public' | 'private' | 'none';
+type CachePolicy = "public" | "private" | "none";
 
 interface Props {
   title?: string;
@@ -15,7 +15,7 @@ interface Props {
   imageAlt?: string;
   canonicalHref?: string;
   siteName?: string;
-  type?: 'website' | 'article';
+  type?: "website" | "article";
   robots?: string;
   preloadImage?: string;
   structuredData?: Record<string, unknown> | Array<Record<string, unknown>>;
@@ -33,28 +33,41 @@ const {
   robots,
   preloadImage,
   structuredData,
-  cachePolicy = 'public',
+  cachePolicy = "public",
 } = Astro.props;
 
 const currentPath = Astro.url.pathname;
 
 if ((Astro.response.status ?? 200) < 300) {
-  Astro.response.headers.set('Content-Type', 'text/html; charset=utf-8');
+  Astro.response.headers.set("Content-Type", "text/html; charset=utf-8");
 
-  if (cachePolicy === 'public') {
-    const publicCacheControl = 'public, max-age=0, s-maxage=600, stale-while-revalidate=86400';
-    Astro.response.headers.set('Cache-Control', publicCacheControl);
-    Astro.response.headers.set('CDN-Cache-Control', publicCacheControl);
-  } else if (cachePolicy === 'private') {
-    Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0');
-    Astro.response.headers.set('CDN-Cache-Control', 'no-store');
+  if (cachePolicy === "public") {
+    const publicCacheControl =
+      "public, max-age=0, s-maxage=600, stale-while-revalidate=86400";
+    Astro.response.headers.set("Cache-Control", publicCacheControl);
+    Astro.response.headers.set("CDN-Cache-Control", publicCacheControl);
+  } else if (cachePolicy === "private") {
+    Astro.response.headers.set("Cache-Control", "private, no-store, max-age=0");
+    Astro.response.headers.set("CDN-Cache-Control", "no-store");
   }
 }
 ---
-
 <!doctype html>
-<html lang="id">
+<html lang="id" data-theme="dark">
   <head>
+    <meta name="theme-color" content="#10251a" />
+    <script is:inline>
+      // Apply the saved choice before content paints; dark is the site default.
+      (() => {
+        let theme = 'dark';
+        try {
+          const saved = localStorage.getItem('arkara-theme');
+          if (saved === 'light' || saved === 'dark') theme = saved;
+        } catch { /* The default remains usable when storage is blocked. */ }
+        document.documentElement.dataset.theme = theme;
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#10251a' : '#f8f5ec');
+      })();
+    </script>
     <SeoHead
       title={title}
       description={description}
@@ -69,16 +82,12 @@ if ((Astro.response.status ?? 200) < 300) {
     />
   </head>
   <body>
-    <BackgroundEffects />
+    <a href="#main-content" class="skip-link">Langsung ke konten</a>
     <DesktopHeader />
     <MobileBottomNav currentPath={currentPath} />
-    <main><slot /></main>
+    <main id="main-content" tabindex="-1">
+<slot />
+</main>
     <SiteFooter />
   </body>
 </html>
-
-<style>
-  @media (max-width: 768px) {
-    main { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
-  }
-</style>

@@ -1,161 +1,93 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Icon from "../components/ui/Icon.astro";
 ---
-
-<BaseLayout
-  cachePolicy="private"
-  title="Login"
-  description="Masuk ke profil Arkara."
-  robots="noindex, nofollow"
->
-  <section class="login-screen" aria-labelledby="login-title">
-    <div class="login-shell">
-      <a class="login-brand" href="/">Arkaraweb</a>
-      <div class="login-copy">
-        <p>Profil Arkara</p>
-        <h1 id="login-title">Masuk untuk menyimpan panduan dan progres baca.</h1>
-      </div>
-
-      <form class="login-form" action="#" method="post">
-        <label>
-          <span>Email</span>
-          <input type="email" name="email" placeholder="nama@email.com" autocomplete="email" />
-        </label>
-        <label>
-          <span>Password</span>
-          <input type="password" name="password" placeholder="Password" autocomplete="current-password" />
-        </label>
-        <button type="button">Masuk</button>
-      </form>
-
-      <div class="login-actions">
-        <a href="/panduan">Lanjut tanpa login</a>
-        <a href="/blog">Baca artikel terbaru</a>
-      </div>
-    </div>
-  </section>
+<BaseLayout cachePolicy="private" title="Ruang Baca" description="Ruang baca Arkara." robots="noindex, nofollow">
+ <section class="site-container account-layout">
+<div class="account-copy">
+<div class="eyebrow">RUANG BACA ANDA</div>
+<h1>Langkah kecil.<br/>Pengetahuan yang bertumbuh.</h1>
+<p>Teruskan perjalanan menuju keluarga yang lebih siap. Temukan bacaan baru dan pelajari satu keterampilan praktis hari ini.</p>
+<div class="account-note">
+<Icon name="bookmark" size={25}/>
+<div>
+<h2>Bacaan menemani perjalanan Anda.</h2>
+<p>Simpanan dan progres baca tersimpan di perangkat ini. Fitur akun dan sinkronisasi antarperangkat belum tersedia.</p>
+</div>
+</div>
+<div class="account-actions">
+<a href="/blog" class="button button-primary">Jelajahi jurnal <Icon name="arrow" size={18}/>
+</a>
+<a href="/panduan" class="button button-outline">Buka panduan</a>
+</div>
+</div>
+<img src="/brand/arkara-guide.webp" alt="Pemandu Arkara siap menemani perjalanan pengetahuan." width="250" height="333"/>
+</section>
 </BaseLayout>
-
 <style>
-  .login-screen {
-    min-height: 100dvh;
-    padding: 1rem;
-    background:
-      radial-gradient(circle at 50% -12%, rgba(110,231,183,0.1), transparent 30rem),
-      #070b0c;
-    color: #f8fafc;
+.account-layout {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 70px;
+  align-items: center;
+  padding-block: 75px;
+}
+.account-layout h1 {
+  margin: 20px 0 25px;
+  font-size: clamp(2rem, 3.7vw, 3.3rem);
+}
+.account-copy > p {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  max-width: 530px;
+}
+.account-note {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  background: var(--forest-soft);
+  border: 1px solid var(--line);
+  padding: 24px;
+  border-radius: 9px;
+  margin-top: 28px;
+  color: var(--forest);
+}
+.account-note h2 {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.account-note p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 9px;
+}
+.account-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 28px;
+}
+.account-layout > img {
+  height: 380px;
+  width: auto;
+  object-fit: contain;
+  justify-self: center;
+}
+@media (max-width: 700px) {
+  .account-layout {
+    grid-template-columns: 1fr;
+    padding-block: 45px;
+    gap: 35px;
   }
-
-  .login-shell {
-    display: grid;
-    gap: 1.25rem;
-    width: min(100%, 28rem);
-    margin: 0 auto;
-    padding: 1.2rem 0 6rem;
+  .account-copy > p {
+    font-size: 1rem;
   }
-
-  .login-brand {
-    color: #f3ead9;
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: 1.55rem;
-    font-weight: 800;
-    letter-spacing: 0;
-    text-decoration: none;
+  .account-layout > img {
+    height: 270px;
   }
-
-  .login-copy {
-    display: grid;
-    gap: 0.45rem;
-    margin-top: 1.5rem;
+  .account-note {
+    padding: 20px;
+    gap: 13px;
   }
-
-  .login-copy p,
-  .login-copy h1 {
-    margin: 0;
-  }
-
-  .login-copy p {
-    color: #6ee7b7;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.76rem;
-    font-weight: 900;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  .login-copy h1 {
-    color: #f3ead9;
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: clamp(1.85rem, 1.55rem + 1.25vw, 2.45rem);
-    line-height: 1.08;
-    text-transform: none;
-  }
-
-  .login-form {
-    display: grid;
-    gap: 0.85rem;
-    margin-top: 0.6rem;
-    padding: 0.8rem;
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 12px;
-    background: rgba(255,255,255,0.045);
-  }
-
-  .login-form label {
-    display: grid;
-    gap: 0.38rem;
-  }
-
-  .login-form span {
-    color: #cbd5e1;
-    font-size: 0.82rem;
-    font-weight: 700;
-  }
-
-  .login-form input {
-    width: 100%;
-    min-height: 3.15rem;
-    border: 1px solid rgba(255,255,255,0.13);
-    border-radius: 8px;
-    background: rgba(7,11,12,0.76);
-    color: #f8fafc;
-    font: inherit;
-    padding: 0 0.9rem;
-    outline: none;
-  }
-
-  .login-form input:focus {
-    border-color: rgba(110,231,183,0.52);
-  }
-
-  .login-form button {
-    min-height: 3.15rem;
-    border: 0;
-    border-radius: 8px;
-    background: #63d2b5;
-    color: #06231d;
-    cursor: pointer;
-    font: inherit;
-    font-weight: 900;
-  }
-
-  .login-actions {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .login-actions a {
-    color: #cbd5e1;
-    font-size: 0.84rem;
-    text-decoration: none;
-  }
-
-  @media (max-width: 768px) {
-    :global(html),
-    :global(body),
-    :global(main) {
-      background: #070b0c !important;
-    }
-  }
+}
 </style>

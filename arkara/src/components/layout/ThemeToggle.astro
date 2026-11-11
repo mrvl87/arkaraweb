@@ -1,0 +1,34 @@
+---
+import Icon from '../ui/Icon.astro';
+---
+<button type="button" class="icon-button theme-toggle" data-theme-toggle aria-label="Mode gelap" aria-pressed="true" title="Mode gelap" hidden>
+  <span class="theme-toggle-sun"><Icon name="sun" size={20} /></span>
+  <span class="theme-toggle-moon"><Icon name="moon" size={20} /></span>
+</button>
+
+<script>
+  function syncThemeControls() {
+    const dark = document.documentElement.dataset.theme !== 'light';
+    document.querySelectorAll<HTMLButtonElement>('[data-theme-toggle]').forEach((button) => {
+      button.hidden = false;
+      button.setAttribute('aria-pressed', String(dark));
+      button.title = dark ? 'Gunakan mode terang' : 'Gunakan mode gelap';
+    });
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#10251a' : '#f8f5ec');
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element) || !event.target.closest('[data-theme-toggle]')) return;
+    const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem('arkara-theme', theme); } catch { /* Toggling still works for this page. */ }
+    syncThemeControls();
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key !== 'arkara-theme' && event.key !== null) return;
+    document.documentElement.dataset.theme = event.newValue === 'light' ? 'light' : 'dark';
+    syncThemeControls();
+  });
+  document.addEventListener('astro:page-load', syncThemeControls);
+  syncThemeControls();
+</script>

@@ -4,10 +4,18 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { triggerFrontendRevalidate } from '@/lib/revalidate'
+import { requireAuthenticatedUser } from '@/lib/auth/require-authenticated-user.server'
+import { heroUpdateSchema } from '@/lib/hero-settings'
+
+async function createAuthenticatedClient() {
+  const supabase = await createClient()
+  await requireAuthenticatedUser(supabase)
+  return supabase
+}
 
 // 1. General Settings Action
 export async function updateGeneralSettings(settings: Record<string, string>) {
-  const supabase = await createClient()
+  const supabase = await createAuthenticatedClient()
   
   // Update each key-value pair
   const updates = Object.entries(settings).map(async ([key, value]) => {
@@ -24,7 +32,7 @@ export async function updateGeneralSettings(settings: Record<string, string>) {
 
 // 2. Navigation Actions
 export async function updateNavigationItems(items: any[]) {
-  const supabase = await createClient()
+  const supabase = await createAuthenticatedClient()
   
   // Upsert all items with their sort_order
   const { error } = await supabase
@@ -40,7 +48,7 @@ export async function updateNavigationItems(items: any[]) {
 }
 
 export async function deleteNavigationItem(id: string) {
-  const supabase = await createClient()
+  const supabase = await createAuthenticatedClient()
   const { error } = await supabase.from('navigation').delete().eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/cms/settings')
@@ -49,11 +57,14 @@ export async function deleteNavigationItem(id: string) {
 
 // 3. Hero Section Action
 export async function updateHeroSection(data: any) {
-  const supabase = await createClient()
+  const supabase = await createAuthenticatedClient()
+  const parsed = heroUpdateSchema.parse(data)
   const { error } = await supabase
     .from('hero_section')
-    .update({ ...data, updated_at: new Date().toISOString() })
-    .eq('id', data.id)
+    .update({ ...parsed, updated_at: new Date().toISOString() })
+    .eq('id', parsed.id)
+    .select('id')
+    .single()
 
   if (error) throw new Error(error.message)
   revalidatePath('/cms/settings')
@@ -62,7 +73,7 @@ export async function updateHeroSection(data: any) {
 
 // 4. CTA Section Action
 export async function updateCtaSection(data: any) {
-  const supabase = await createClient()
+  const supabase = await createAuthenticatedClient()
   const { error } = await supabase
     .from('cta_section')
     .update({ ...data, updated_at: new Date().toISOString() })
@@ -75,6 +86,7 @@ export async function updateCtaSection(data: any) {
 
 // 5. Footer Action
 export async function updateFooter(data: any) {
+  const supabase = await createAuthenticatedClient()
   const footerSchema = z.object({
     id: z.string().uuid(),
     tagline: z.string().optional().default(''),
@@ -103,7 +115,6 @@ export async function updateFooter(data: any) {
     social_links: normalizedLinks,
   })
 
-  const supabase = await createClient()
   const { error } = await supabase
     .from('footer')
     .update({ ...parsed, updated_at: new Date().toISOString() })

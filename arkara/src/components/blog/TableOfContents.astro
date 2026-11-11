@@ -1,298 +1,97 @@
 ---
-/**
- * TableOfContents.astro — Retro Survival Manual 2.0
- * Props: unchanged — headings?: any[]
- * Changes:
- *   - Removed: rounded-3xl, shadow, modern styling
- *   - Added: ink border, mono heading label, terminal link style
- */
 interface Props {
   headings?: any[];
+  compact?: boolean;
   class?: string;
 }
-const { headings = [], class: className = '' } = Astro.props;
-
-// Construct an absolute URL using Astro.site for reliable social scraping
-const siteUrl = Astro.site ? Astro.site.origin : 'https://arkaraweb.com';
-const shareUrl = `${siteUrl}${Astro.url.pathname}`;
-
-function buildFacebookShareUrl(url: string) {
-  const shareIntent = new URL('https://www.facebook.com/sharer/sharer.php');
-  shareIntent.searchParams.set('u', url);
-  shareIntent.searchParams.set('src', 'sdkpreparse');
-  return shareIntent.href;
-}
-
-function buildXShareUrl(url: string) {
-  const shareIntent = new URL('https://twitter.com/intent/tweet');
-  shareIntent.searchParams.set('url', url);
-  return shareIntent.href;
-}
-
-function buildRedditShareUrl(url: string) {
-  const shareIntent = new URL('https://reddit.com/submit');
-  shareIntent.searchParams.set('url', url);
-  return shareIntent.href;
-}
-
-const facebookShareUrl = buildFacebookShareUrl(shareUrl);
-const xShareUrl = buildXShareUrl(shareUrl);
-const redditShareUrl = buildRedditShareUrl(shareUrl);
+const { headings = [], compact = false } = Astro.props;
 ---
-
-{headings && headings.length > 0 && (
-  <div style={`
-    background: var(--paper);
-    border: 3px solid var(--ink);
-    box-shadow: 4px 4px 0 var(--ink);
-    padding: 1.5rem;
-    position: sticky;
-    top: 72px;
-    ${className}
-  `}>
-    <!-- Label -->
-    <div style="
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.58rem;
-      letter-spacing: 0.2em;
-      color: var(--warm-grey);
-      text-transform: uppercase;
-      margin-bottom: 1.25rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    ">
-      <span style="display:inline-block;width:16px;height:1px;background:var(--green-terminal);"></span>
-      DAFTAR ISI
-    </div>
-
-    <!-- Links -->
-    <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.1rem;">
-      {headings.map((heading) => (
-        <li style={heading.depth === 3 ? 'padding-left: 1rem; border-left: 2px solid var(--cream-dark);' : ''}>
-          <a
-            href={`#${heading.slug}`}
-            data-toc-link
-            data-heading-text={heading.text}
-            style={`
-              display: block;
-              font-family: 'Share Tech Mono', monospace;
-              font-size: ${heading.depth === 2 ? '0.65rem' : '0.6rem'};
-              letter-spacing: 0.1em;
-              text-transform: uppercase;
-              color: var(--warm-grey);
-              text-decoration: none;
-              padding: 0.4rem 0;
-              border-bottom: 1px dashed var(--cream-dark);
-              transition: color 0.15s;
-              ${heading.depth === 2 ? 'font-weight: 700;' : ''}
-            `}
-            onmouseover="this.style.color='var(--green-terminal)'"
-            onmouseout="this.style.color='var(--warm-grey)'"
-          >
-            {heading.text}
-          </a>
-        </li>
-      ))}
-    </ul>
-
-    <!-- Share section -->
-    <div style="
-      margin-top: 1.25rem;
-      padding-top: 1rem;
-      border-top: 2px solid var(--cream-dark);
-    ">
-      <p style="
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 0.55rem;
-        letter-spacing: 0.2em;
-        color: var(--warm-grey-dark);
-        text-transform: uppercase;
-        margin-bottom: 0.75rem;
-      ">BAGIKAN</p>
-      <div style="display: flex; gap: 0.5rem;">
-        <!-- Facebook -->
-        <a 
-          href={facebookShareUrl}
-          target="_blank" rel="noopener"
-          data-share-popup="facebook"
-          style="
-            width: 32px; height: 32px;
-            background: var(--paper-dark);
-            border: 2px solid var(--ink);
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-            transition: background 0.15s;
-          "
-          onmouseover="this.style.background='var(--ink)';this.querySelector('svg').style.stroke='var(--cream)'"
-          onmouseout="this.style.background='var(--paper-dark)';this.querySelector('svg').style.stroke='var(--warm-grey)'"
-          title="Bagikan ke Facebook"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--warm-grey)" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-        </a>
-        
-        <!-- X (formerly Twitter) -->
-        <a 
-          href={xShareUrl}
-          target="_blank" rel="noopener"
-          data-share-popup="x"
-          style="
-            width: 32px; height: 32px;
-            background: var(--paper-dark);
-            border: 2px solid var(--ink);
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-            transition: background 0.15s;
-          "
-          onmouseover="this.style.background='var(--ink)';this.querySelector('svg').style.stroke='var(--cream)'"
-          onmouseout="this.style.background='var(--paper-dark)';this.querySelector('svg').style.stroke='var(--warm-grey)'"
-          title="Bagikan ke X"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--warm-grey)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 4l11.733 16h4.267l-11.733 -16z" />
-            <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772" />
-          </svg>
-        </a>
-
-        <!-- Reddit -->
-        <a 
-          href={redditShareUrl}
-          target="_blank" rel="noopener"
-          data-share-popup="reddit"
-          style="
-            width: 32px; height: 32px;
-            background: var(--paper-dark);
-            border: 2px solid var(--ink);
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-            transition: background 0.15s;
-          "
-          onmouseover="this.style.background='var(--ink)';this.querySelector('svg').style.stroke='var(--cream)'"
-          onmouseout="this.style.background='var(--paper-dark)';this.querySelector('svg').style.stroke='var(--warm-grey)'"
-          title="Bagikan ke Reddit"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-grey)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 8c2.648 0 5.028 .826 6.675 2.14a2.5 2.5 0 0 1 2.326 4.36c0 3.59 -4.03 6.5 -9 6.5c-4.875 0 -8.845 -2.8 -9 -6.294l-1 -2.706c0 -1.38 .71 -2.5 1.5 -2.5c.34 0 .68 .12 1 .32c1.78 -1.2 4.09 -1.82 6.5 -1.82z" />
-            <path d="M12 8l1 -5l6 1" />
-            <circle cx="19" cy="4" r="1" />
-            <circle cx="9" cy="13" r=".5" fill="currentColor" />
-            <circle cx="15" cy="13" r=".5" fill="currentColor" />
-            <path d="M10 17c.667 .333 1.333 .5 2 .5s1.333 -.167 2 -.5" />
-          </svg>
-        </a>
-      </div>
-    </div>
-  </div>
-)}
-
+{headings.length>0&&<nav class:list={['reader-toc',{'reader-toc--compact':compact}]} aria-label="Daftar isi artikel">{!compact&&<>
+<div class="eyebrow">DALAM BACAAN INI</div>
+<h2>Daftar isi</h2>
+</>}<ol>{headings.map(heading=>
+<li class:list={{'toc-subheading':heading.depth===3}}>
+<a href={`#${heading.slug||heading.id}`} data-toc-link data-heading-text={heading.text}>{heading.text}</a>
+</li>)}</ol>
+</nav>}
+<style>
+.reader-toc {
+  padding: 24px 22px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-raised);
+}
+.reader-toc .eyebrow {
+  font-size: 0.55rem;
+}
+.reader-toc h2 {
+  font-size: 1.2rem;
+  margin-top: 10px;
+}
+.reader-toc ol {
+  display: grid;
+  gap: 0;
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 0;
+}
+.reader-toc li + li {
+  border-top: 1px solid #e7e8df;
+}
+.reader-toc a {
+  display: block;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  padding: 11px 0;
+}
+.reader-toc a:hover,
+.reader-toc a[aria-current] {
+  color: var(--forest);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.reader-toc .toc-subheading {
+  padding-left: 15px;
+}
+.reader-toc--compact {
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+.reader-toc--compact ol {
+  margin-top: 13px;
+}
+.reader-toc--compact a {
+  font-size: 0.9rem;
+}
+</style>
 <script>
-  const tocLinks = document.querySelectorAll('[data-toc-link]');
-  const popupLinks = document.querySelectorAll('[data-share-popup]');
-
-  function getAnchorTarget(id: string): HTMLElement | null {
-    if (!id) {
-      return null;
-    }
-
-    const existingTarget = document.getElementById(id);
-    if (existingTarget) {
-      return existingTarget;
-    }
-
-    return null;
+const links = document.querySelectorAll<HTMLAnchorElement>("[data-toc-link]");
+const normalize = (value: string) =>
+  value.replace(/\s+/g, " ").trim().toLowerCase();
+links.forEach((link) => {
+  const hash = link.getAttribute("href") || "";
+  if (!hash.startsWith("#")) return;
+  let target: HTMLElement | null = null;
+  try {
+    target = document.getElementById(decodeURIComponent(hash.slice(1)));
+  } catch {
+    /* Preserve browser anchor behavior. */
   }
-
-  function normalizeHeadingText(text: string) {
-    return text
-      .replace(/\s+/g, ' ')
-      .trim()
-      .toLowerCase();
+  if (!target) {
+    target =
+      [
+        ...document.querySelectorAll<HTMLElement>(
+          ".prose-arkara h2,.prose-arkara h3",
+        ),
+      ].find(
+        (h) =>
+          normalize(h.textContent || "") ===
+          normalize(link.dataset.headingText || ""),
+      ) || null;
+    if (target?.id) link.href = "#" + encodeURIComponent(target.id);
   }
-
-  function findHeadingByText(text: string): HTMLElement | null {
-    const normalizedText = normalizeHeadingText(text);
-    if (!normalizedText) {
-      return null;
-    }
-
-    const headings = document.querySelectorAll<HTMLElement>('.prose-arkara h2, .prose-arkara h3');
-
-    for (const heading of headings) {
-      if (normalizeHeadingText(heading.textContent || '') === normalizedText) {
-        return heading;
-      }
-    }
-
-    return null;
-  }
-
-  for (const link of tocLinks) {
-    link.addEventListener('click', (event) => {
-      if (!(link instanceof HTMLAnchorElement) || !link.hash) {
-        return;
-      }
-
-      const targetId = decodeURIComponent(link.hash.slice(1));
-      let target = getAnchorTarget(targetId);
-
-      if (!target) {
-        const headingText = link.getAttribute('data-heading-text') || '';
-        target = findHeadingByText(headingText);
-
-        if (target && targetId) {
-          target.id = targetId;
-        }
-      }
-
-      if (!target) {
-        return;
-      }
-
-      event.preventDefault();
-
-      const stickyOffset = 96;
-      const targetTop = target.getBoundingClientRect().top + window.scrollY - stickyOffset;
-      window.history.pushState(null, '', link.hash);
-      window.scrollTo({
-        top: Math.max(0, targetTop),
-        behavior: 'smooth',
-      });
-    });
-  }
-
-  for (const link of popupLinks) {
-    link.addEventListener('click', (event) => {
-      event.preventDefault();
-
-      const anchor = event.currentTarget;
-      if (!(anchor instanceof HTMLAnchorElement) || !anchor.href) {
-        return;
-      }
-
-      const width = 720;
-      const height = 720;
-      const left = window.screenX + Math.max(0, (window.outerWidth - width) / 2);
-      const top = window.screenY + Math.max(0, (window.outerHeight - height) / 2);
-      const features = [
-        `width=${width}`,
-        `height=${height}`,
-        `left=${Math.round(left)}`,
-        `top=${Math.round(top)}`,
-        'toolbar=0',
-        'menubar=0',
-        'location=1',
-        'status=0',
-        'scrollbars=1',
-        'resizable=1',
-      ].join(',');
-
-      const popup = window.open(anchor.href, 'arkara-share-popup', features);
-      if (popup) {
-        popup.focus();
-        return;
-      }
-
-      window.location.href = anchor.href;
-    });
-  }
+});
 </script>

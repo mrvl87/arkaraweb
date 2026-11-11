@@ -11,9 +11,10 @@ interface MediaPickerProps {
   disabled?: boolean
   label?: string
   id?: string
+  imageOnly?: boolean
 }
 
-export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar", value, id }: MediaPickerProps & { value?: any }) {
+export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar", value, id, imageOnly = false }: MediaPickerProps & { value?: any }) {
   const [isOpen, setIsOpen] = useState(false)
   const [media, setMedia] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -52,10 +53,13 @@ export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar", value,
     setIsOpen(false)
   }
 
-  const filteredMedia = media.filter(item => 
-    item.file_name.toLowerCase().includes(search.toLowerCase()) || 
-    (item.alt_text && item.alt_text.toLowerCase().includes(search.toLowerCase()))
-  )
+  const filteredMedia = media.filter(item => {
+    const type = String(item.file_type || '')
+    const isImage = type ? type.startsWith('image/') : /\.(avif|gif|jpe?g|png|svg|webp)$/i.test(String(item.file_name || ''))
+    if (imageOnly && !isImage) return false
+    return String(item.file_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      String(item.alt_text || '').toLowerCase().includes(search.toLowerCase())
+  })
 
   return (
     <>
@@ -101,7 +105,7 @@ export function MediaPicker({ onSelect, disabled, label = "Pilih Gambar", value,
                   className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-100 focus:border-amber-400 transition-all outline-none text-sm"
                 />
               </div>
-              <button 
+              <button type="button"
                 onClick={loadMedia}
                 className="text-xs font-bold text-gray-500 hover:text-gray-900 border border-gray-200 hover:border-gray-400 px-4 py-2 rounded-lg transition-all"
               >

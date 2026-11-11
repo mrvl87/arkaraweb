@@ -1,1308 +1,210 @@
 ---
-/**
- * index.astro — Homepage — Retro Survival Manual 2.0
- * Data fetching: unchanged (getRecentPosts from lib/content)
- * Changes:
- * - Warning band ticker (new — replaces nothing)
- * - Article grid: card-ink style, section label
- * - Categories: flat ink-border panels, no rounded, no hover scale
- * - CTA section: dark ink bg, flat box-shadow (no blur)
- */
-import BaseLayout from '../layouts/BaseLayout.astro';
-import OptimizedImage from '../components/ui/OptimizedImage.astro';
-import PostCard from '../components/blog/PostCard.astro';
-import HeroCarousel from '../components/home/HeroCarousel.astro';
-import MascotSection from '../components/home/MascotSection.astro';
-import SearchAutosuggest from '../components/SearchAutosuggest.astro';
-import { getRecentPosts, getCtaSection, getSiteSettings, getHeroSection } from '../lib/content';
-import { getPostImage, getPostImageUrl } from '../lib/post-media';
-
-const [recentPosts, cta, settings, hero] = await Promise.all([
-  getRecentPosts(5),
-  getCtaSection(),
-  getSiteSettings(),
-  getHeroSection(),
-]);
-const displayPosts = recentPosts.slice(0, 3);
-
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SearchAutosuggest from "../components/SearchAutosuggest.astro";
+import PostCard from "../components/blog/PostCard.astro";
+import FeaturedPost from "../components/blog/FeaturedPost.astro";
+import Icon from "../components/ui/Icon.astro";
+import StaticHeroMascot from "../components/home/StaticHeroMascot.astro";
+import { getHeroMascot } from "../lib/hero-media";
+import { getRecentPosts, getHeroSection } from "../lib/content";
+// Set response headers on the route itself, before any layout starts streaming.
+Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0');
+Astro.response.headers.set('CDN-Cache-Control', 'no-store');
+const [posts, hero] = await Promise.all([getRecentPosts(5), getHeroSection()]);
+const mascot = getHeroMascot(hero?.mascot_image);
+const mascotSpeech = hero?.mascot_speech_text?.trim();
+const mascotTagline = hero?.mascot_tagline?.trim() || "Teman perjalanan menuju hidup yang lebih tangguh.";
+const featured = posts[0];
 const categories = [
-  { name: 'Air',       slug: 'air',       icon: '💧' },
-  { name: 'Energi',    slug: 'energi',    icon: '⚡' },
-  { name: 'Pangan',    slug: 'pangan',    icon: '🌾' },
-  { name: 'Medis',     slug: 'medis',     icon: '⚕️' },
-  { name: 'Keamanan',  slug: 'keamanan',  icon: '🛡️' },
-  { name: 'Komunitas', slug: 'komunitas', icon: '👥' },
+  {
+    slug: "air",
+    name: "Air bersih",
+    description: "Setiap tetes berarti.",
+    detail: "Penyimpanan & pengolahan",
+  },
+  {
+    slug: "energi",
+    name: "Energi",
+    description: "Tetap berdaya.",
+    detail: "Listrik & bahan bakar",
+  },
+  {
+    slug: "pangan",
+    name: "Pangan",
+    description: "Dapur tetap hidup.",
+    detail: "Persediaan & pangan mandiri",
+  },
+  {
+    slug: "medis",
+    name: "Medis",
+    description: "Siap menolong.",
+    detail: "Kesehatan & pertolongan pertama",
+  },
+  {
+    slug: "keamanan",
+    name: "Keamanan",
+    description: "Lindungi yang berarti.",
+    detail: "Perlindungan & evakuasi",
+  },
+  {
+    slug: "komunitas",
+    name: "Komunitas",
+    description: "Lebih kuat bersama.",
+    detail: "Kerja sama & rencana keluarga",
+  },
 ];
-
-const tickerRaw = settings['ticker_items'] 
-const tickerItems = tickerRaw 
-  ? tickerRaw.split('|').map(s => s.trim())
-  : [
-    'Persiapan adalah investasi terbaik',
-    'Bukan panik — tapi siap',
-    'Pengetahuan tidak pernah basi',
-    'Siap sebelum perlu',
-    'Survival bukan gaya hidup — ini kebutuhan',
-  ];
-const tickerDouble = [...tickerItems, ...tickerItems];
-const featuredPost = displayPosts[0];
-const homePreloadImage = featuredPost ? getPostImageUrl(featuredPost) : undefined;
-const continuePosts = recentPosts.slice(1, 3);
-const editorPosts = recentPosts.slice(2, 5);
-const categoryLabels: Record<string, string> = {
-  air: 'Air',
-  energi: 'Energi',
-  pangan: 'Pangan',
-  medis: 'Medis',
-  keamanan: 'Keamanan',
-  komunitas: 'Komunitas',
-  panduan: 'Panduan',
-};
-const guideCategories = [
-  { label: 'Panduan', href: '/panduan', icon: 'guide' },
-  { label: 'Energi', href: '/panduan?category=energi', icon: 'energy' },
-  { label: 'Air', href: '/panduan?category=air', icon: 'water' },
-  { label: 'Pangan', href: '/panduan?category=pangan', icon: 'food' },
-  { label: 'Medis', href: '/panduan?category=medis', icon: 'medical' },
-  { label: 'Komunitas', href: '/panduan?category=komunitas', icon: 'community' },
-];
-const fixedGuideCategory = guideCategories[0];
-const scrollGuideCategories = guideCategories.slice(1);
-
-function getCategoryLabel(category?: string | null) {
-  if (!category) return 'Artikel';
-  return categoryLabels[category] || category;
-}
 ---
-
-<BaseLayout title="Beranda" preloadImage={homePreloadImage}>
-  <nav class="mobile-topic-rail" aria-label="Topik cepat">
-    <a href="/blog">Terbaru</a>
-    <a href="/panduan">Panduan</a>
-    {categories.map((cat) => (
-      <a href={`/panduan?category=${cat.slug}`}>{cat.name}</a>
-    ))}
-  </nav>
-
-  <section class="mobile-home-screen" aria-label="Beranda Arkara mobile">
-    <header class="mobile-home-header">
-      <a href="/" class="mobile-brand">Arkaraweb</a>
-      <div class="mobile-header-actions" aria-label="Aksi cepat">
-        <a href="/blog" aria-label="Artikel tersimpan">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4h12v17l-6-4-6 4V4Z"/></svg>
-        </a>
-        <a href="#mobile-search" aria-label="Cari">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        </a>
-      </div>
-    </header>
-
-    <SearchAutosuggest id="mobile-search" variant="mobile" placeholder="Cari panduan..." />
-
-    <nav class="mobile-home-tabs" aria-label="Kategori panduan">
-      <a href={fixedGuideCategory.href} class="mobile-category-fixed">
-        <span class="mobile-category-logo mobile-category-logo--guide" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path class="icon-soft-fill" d="M6 4.5h8.5A3.5 3.5 0 0 1 18 8v11.5H8.5A2.5 2.5 0 0 0 6 22V4.5Z" />
-            <path class="icon-primary-stroke" d="M6 4.5A2.5 2.5 0 0 1 8.5 2H18v17.5" />
-            <path class="icon-accent-stroke" d="M9 8h6M9 11h5" />
-          </svg>
-        </span>
-        <em>{fixedGuideCategory.label}</em>
-      </a>
-
-      <div class="mobile-category-scroll">
-        {scrollGuideCategories.map((category) => (
-          <a href={category.href} aria-label={category.label}>
-          <span class={`mobile-category-logo mobile-category-logo--${category.icon}`} aria-hidden="true">
-            {category.icon === 'energy' && (
-              <svg viewBox="0 0 24 24">
-                <path class="icon-soft-fill" d="M12.7 2.2 4.9 13.1h5.8L9.7 22l9.5-12.5h-6.1l-.4-7.3Z" />
-                <path class="icon-primary-fill" d="M13.4 2 6.2 12.2h5.4L10.5 22l7.7-11.1h-5.4L13.4 2Z" />
-                <path class="icon-accent-stroke" d="M9 12.2h2.6L11 17" />
-              </svg>
-            )}
-            {category.icon === 'water' && (
-              <svg viewBox="0 0 24 24">
-                <path class="icon-soft-fill" d="M12 2.5c-3.7 4.2-5.5 7.4-5.5 10a5.5 5.5 0 0 0 11 0c0-2.6-1.8-5.8-5.5-10Z" />
-                <path class="icon-primary-fill" d="M12 4.3c-2.7 3.3-4 5.8-4 7.9a4 4 0 0 0 8 0c0-2.1-1.3-4.6-4-7.9Z" />
-                <path class="icon-accent-stroke" d="M9.2 12.4c0 1.5 1 2.6 2.8 2.8" />
-              </svg>
-            )}
-            {category.icon === 'food' && (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path class="icon-soft-fill" d="M7 17c-.5-4.7 2.3-8.4 7.5-10.7 1.1-.5 2.4.4 2.2 1.6C15.8 13 12.1 16.2 7 17Z" />
-                <path class="icon-primary-stroke" d="M6 20c7.4-.8 11.4-4.9 12-12" />
-                <path class="icon-accent-stroke" d="M9 13c1.8.1 3.4.8 4.8 2.1" />
-              </svg>
-            )}
-            {category.icon === 'medical' && (
-              <svg viewBox="0 0 24 24">
-                <path class="icon-soft-fill" d="M9.2 2.8h5.6v6.4h6.4v5.6h-6.4v6.4H9.2v-6.4H2.8V9.2h6.4V2.8Z" />
-                <path class="icon-primary-fill" d="M10.3 4.2h3.4v6.1h6.1v3.4h-6.1v6.1h-3.4v-6.1H4.2v-3.4h6.1V4.2Z" />
-                <path class="icon-accent-stroke" d="M12 7.2v9.6M7.2 12h9.6" />
-              </svg>
-            )}
-            {category.icon === 'community' && (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path class="icon-soft-fill" d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-                <path class="icon-soft-fill icon-soft-fill--secondary" d="M17 10a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-                <path class="icon-primary-stroke" d="M3.5 20a5.5 5.5 0 0 1 11 0" />
-                <path class="icon-accent-stroke" d="M14.7 14.4A4.7 4.7 0 0 1 20.5 19" />
-              </svg>
-            )}
-          </span>
-          </a>
-        ))}
-      </div>
-    </nav>
-
-    {featuredPost && (
-      <a
-        href={`/blog/${featuredPost.slug}`}
-        class="mobile-feature-card"
-        data-reader-card
-        data-reader-id={`blog:${featuredPost.slug}`}
-        data-reader-type="blog"
-        data-reader-slug={featuredPost.slug}
-        data-reader-title={featuredPost.title}
-        data-reader-href={`/blog/${featuredPost.slug}`}
-        data-reader-image={getPostImageUrl(featuredPost)}
-        data-reader-category={getCategoryLabel(featuredPost.category)}
-      >
-        {getPostImage(featuredPost) && (
-          <div class="mobile-feature-image">
-            <OptimizedImage
-              image={getPostImage(featuredPost)}
-              alt={featuredPost.title}
-              class="w-full h-full object-cover"
-              aspectRatio="aspect-square"
-              loading="eager"
-              fetchpriority="high"
-              mobileMaxSrcSetWidth={400}
-              mobileTargetWidths={[160, 240, 320, 400]}
-              targetWidths={[320, 400]}
-              mobileSizes="38vw"
-              quality={72}
-            />
-          </div>
-        )}
-        <div class="mobile-feature-copy">
-          <span class="mobile-kicker">{getCategoryLabel(featuredPost.category)}</span>
-          <h2>{featuredPost.title}</h2>
-          <p>{featuredPost.description || 'Panduan ringkas Arkara untuk keputusan praktis saat kondisi tidak ideal.'}</p>
-          <div>
-            <span>◷</span>
-            <span>6 menit baca</span>
-            <span class="mobile-bookmark">⌑</span>
-          </div>
-        </div>
-      </a>
-    )}
-
-    <section class="mobile-reading-section">
-      <div class="mobile-section-head">
-        <h2>Lanjutkan Membaca</h2>
-        <a href="/blog">Lihat semua ›</a>
-      </div>
-      <div class="mobile-continue-list" data-mobile-continue-list>
-        {continuePosts.map((post) => (
-          <article
-            class="mobile-continue-item"
-            data-reader-card
-            data-reader-id={`blog:${post.slug}`}
-            data-reader-type="blog"
-            data-reader-slug={post.slug}
-            data-reader-title={post.title}
-            data-reader-href={`/blog/${post.slug}`}
-            data-reader-image={getPostImageUrl(post)}
-            data-reader-category={getCategoryLabel(post.category)}
-          >
-          <a href={`/blog/${post.slug}`} class="mobile-continue-link">
-            {getPostImage(post) && (
-              <div class="mobile-continue-image">
-                <OptimizedImage
-                  image={getPostImage(post)}
-                  alt={post.title}
-                  class="w-full h-full object-cover"
-                  aspectRatio="aspect-square"
-                  loading="lazy"
-                  mobileMaxSrcSetWidth={240}
-                  mobileTargetWidths={[120, 160, 240]}
-                  targetWidths={[160, 240]}
-                  mobileSizes="72px"
-                  quality={70}
-                />
-              </div>
-            )}
-            <div>
-              <h3>{post.title}</h3>
-              <span data-reader-progress-label>Mulai baca</span>
-              <div class="mobile-progress"><i data-reader-progress-bar style="width:0%"></i></div>
-            </div>
-            <span class="mobile-small-bookmark">⌑</span>
-          </a>
-          <button type="button" class="mobile-small-bookmark reader-save-button" data-reader-save aria-pressed="false" aria-label="Simpan artikel">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
-              <path d="M7 4h10v16l-5-3.2L7 20V4Z"></path>
-            </svg>
-          </button>
-          </article>
-        ))}
-      </div>
-    </section>
-
-    <section class="mobile-editor-section">
-      <div class="mobile-section-head">
-        <h2>Pilihan Editor</h2>
-        <a href="/blog">Lihat semua ›</a>
-      </div>
-      <div class="mobile-editor-rail">
-        {editorPosts.map((post, index) => (
-          <a href={`/blog/${post.slug}`} class="mobile-editor-card">
-            {getPostImage(post) && (
-              <div>
-                <OptimizedImage
-                  image={getPostImage(post)}
-                  alt={post.title}
-                  class="w-full h-full object-cover"
-                  aspectRatio="aspect-video"
-                  loading="lazy"
-                  mobileMaxSrcSetWidth={360}
-                  mobileTargetWidths={[160, 240, 320, 360]}
-                  targetWidths={[240, 360]}
-                  mobileSizes="42vw"
-                  quality={72}
-                />
-              </div>
-            )}
-            <span>{getCategoryLabel(post.category)}</span>
-            <h3>{post.title}</h3>
-          </a>
-        ))}
-      </div>
-    </section>
-  </section>
-
-  <!-- ── HERO SECTION (GRID 2 COLUMNS) ─────────────────── -->
-  <script>
-    import { enhanceMobileReadingList } from '../lib/reader-state';
-
-    enhanceMobileReadingList();
-    document.addEventListener('astro:after-swap', enhanceMobileReadingList);
-  </script>
-
-  <div class="home-hero-grid grid grid-cols-1 md:grid-cols-[1fr_400px] border-b-4 border-zinc-900 bg-zinc-900 overflow-hidden">
-    <HeroCarousel posts={displayPosts} />
-    <MascotSection 
-      mascotImage={hero?.mascot_image} 
-      speechText={hero?.mascot_speech_text} 
-      tagline={hero?.mascot_tagline} 
-    />
+<BaseLayout title="Kesiapsiagaan dimulai dari rumah" description="Arkara membantu keluarga Indonesia lebih siap menghadapi ketidakpastian. Jelajahi panduan air, energi, pangan, medis, keamanan, dan komunitas." preloadImage={mascot.src} cachePolicy="none">
+ <section class="home-hero">
+  <div class="site-container hero-grid">
+   <div class="hero-copy">
+<div class="eyebrow">
+<span class="eyebrow-dot">
+</span>PENGETAHUAN UNTUK HIDUP LEBIH TANGGUH</div>
+<h1>Siap sebelum<br/>
+<span class="hero-headline-accent">perlu.</span>
+</h1>
+<p>Kita tidak bisa memilih kapan krisis datang.<br class="desktop-break"/> Tapi kita bisa memilih untuk lebih siap.</p>
+<p class="hero-description">Panduan praktis dan pengetahuan tepercaya untuk membangun ketangguhan diri, keluarga, dan komunitas. Mulai dari langkah kecil, hari ini.</p>
+<div class="hero-actions">
+<a href="/panduan" class="button button-primary">Mulai bersiap <Icon name="arrow" size={18}/>
+</a>
+<a href="/blog" class="button button-outline">Jelajahi jurnal <Icon name="journal" size={18}/>
+</a>
+</div>
+<div class="hero-footnote">
+<span class="hero-check">
+<Icon name="check" size={14}/>
+</span>Praktis untuk keseharian. Berguna saat keadaan berubah.</div>
+</div>
+   <div class="hero-visual">
+<div class="hero-orbit" aria-hidden="true">
+</div>
+<div class="hero-contour" aria-hidden="true">
+</div>
+<div class="hero-note">
+<span class="hero-note-icon">
+<Icon name="keamanan" size={21}/>
+</span>
+{mascotSpeech ? <span>{mascotSpeech}</span> : <span>Bukan panik.<br/>
+<strong>Punya persiapan.</strong>
+</span>}
+</div>
+<StaticHeroMascot image={hero?.mascot_image} />
+<div class="hero-stamp">
+<span>ARKARA</span>
+<strong>READY<br/>TOGETHER</strong>
+<Icon name="check" size={16}/>
+</div>
+<span class="hero-caption">{mascotTagline}</span>
+</div>
   </div>
-
-  <!-- ── WARNING BAND TICKER ───────────────────────────── -->
-  <div class="home-ticker" style="
-    background: var(--yellow-manual);
-    border-top: 3px solid var(--ink);
-    border-bottom: 3px solid var(--ink);
-    padding: 0.6rem 0;
-    overflow: hidden;
-    position: relative;
-    z-index: 2;
-  " aria-hidden="true">
-    <div style="
-      display: flex;
-      gap: 3rem;
-      animation: scroll-ticker 22s linear infinite;
-      white-space: nowrap;
-    ">
-      {tickerDouble.map(item => (
-        <span style="
-          font-family: 'Barlow Condensed', sans-serif;
-          font-weight: 700;
-          font-size: 0.78rem;
-          letter-spacing: 0.2em;
-          color: var(--ink);
-          text-transform: uppercase;
-          display: inline-flex;
-          align-items: center;
-          gap: 1rem;
-        ">
-          <span style="color:var(--red-warning);font-size:0.5rem;">◆</span>
-          {item}
-        </span>
-      ))}
-    </div>
-  </div>
-
-  <!-- ── RECENT ARTICLES ───────────────────────────────── -->
-  <section class="home-feed-section" style="
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 4rem 2rem;
-    position: relative;
-    z-index: 2;
-  ">
-    <!-- Section header -->
-    <div style="
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-bottom: 2.5rem;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-    ">
-      <div>
-        <h1 style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">
-          Arkara — Survive with Knowledge | Pengetahuan Survival Indonesia
-        </h1>
-        <div style="
-          font-family: 'Share Tech Mono', monospace;
-          font-size: 0.6rem;
-          letter-spacing: 0.25em;
-          color: var(--warm-grey);
-          text-transform: uppercase;
-          display: flex; align-items: center; gap: 0.75rem;
-          margin-bottom: 0.75rem;
-        ">
-          <span style="display:inline-block;width:20px;height:1px;background:var(--green-terminal);"></span>
-          SECTION A — ARTIKEL TERBARU
-        </div>
-        <h2 style="
-          font-family: 'Barlow Condensed', sans-serif;
-          font-size: clamp(2rem, 4vw, 3rem);
-          font-weight: 800;
-          text-transform: uppercase;
-          color: var(--ink);
-          line-height: 1;
-          margin: 0;
-        ">JURNAL<br><span style="font-family:'Special Elite',cursive;text-transform:none;font-size:0.75em;color:var(--green-muted);">Teranyar</span></h2>
-      </div>
-
-      <a href="/blog" style="
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 0.65rem;
-        letter-spacing: 0.15em;
-        text-transform: uppercase;
-        padding: 0.7rem 1.4rem;
-        background: transparent;
-        color: var(--ink);
-        border: 2px solid var(--ink);
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: all 0.15s;
-        white-space: nowrap;
-      "
-      onmouseover="this.style.background='var(--ink)';this.style.color='var(--cream)';this.style.transform='translate(-2px,-2px)';this.style.boxShadow='4px 4px 0 var(--ink)'"
-      onmouseout="this.style.background='transparent';this.style.color='var(--ink)';this.style.transform='';this.style.boxShadow=''"
-      >LIHAT SEMUA →</a>
-    </div>
-
-    <!-- Posts grid -->
-    {recentPosts.length > 0 ? (
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5px; background: var(--ink); border: 3px solid var(--ink);" class="posts-grid home-feed-grid">
-        {displayPosts.map((post) => (
-          <div style="background: var(--cream);">
-            <PostCard
-              title={post.title}
-              excerpt={post.description || ''}
-              category={post.category || ''}
-              date={post.published_at || ''}
-              slug={post.slug}
-              readingTime={post.reading_time}
-              image={post.thumbnail_image || post.cover_image}
-              sizes="(max-width: 640px) 100vw, (max-width: 900px) 50vw, 400px"
-            />
-          </div>
-        ))}
-      </div>
-    ) : (
-      <div style="
-        background: var(--paper);
-        border: 3px solid var(--ink);
-        padding: 5rem 2rem;
-        text-align: center;
-      ">
-        <p style="font-family:'Special Elite',cursive;font-size:1.2rem;color:var(--warm-grey);">Belum ada jurnal yang diterbitkan.</p>
-      </div>
-    )}
-  </section>
-
-  <!-- ── PILAR PENGETAHUAN ──────────────────────────────── -->
-  <section class="home-category-section" style="
-    background: var(--ink);
-    border-top: 3px solid var(--green-terminal);
-    border-bottom: 3px solid var(--green-terminal);
-    padding: 4rem 2rem;
-    position: relative;
-    overflow: hidden;
-    z-index: 2;
-  ">
-    <!-- Watermark text -->
-    <div style="
-      position: absolute; bottom: -1rem; right: 1rem;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 800;
-      font-size: 8rem;
-      color: rgba(143,175,143,0.04);
-      letter-spacing: -0.03em;
-      pointer-events: none;
-      line-height: 1;
-    " aria-hidden="true">MODUL</div>
-
-    <div style="max-width: 1200px; margin: 0 auto; position: relative; z-index: 1;">
-
-      <!-- Section header -->
-      <div style="margin-bottom: 2.5rem;">
-        <div style="
-          font-family: 'Share Tech Mono', monospace;
-          font-size: 0.6rem;
-          letter-spacing: 0.25em;
-          color: var(--green-terminal);
-          text-transform: uppercase;
-          display: flex; align-items: center; gap: 0.75rem;
-          margin-bottom: 0.75rem;
-        ">
-          <span style="display:inline-block;width:20px;height:1px;background:var(--green-terminal);"></span>
-          SECTION B — TOPIK UTAMA
-        </div>
-        <h2 style="
-          font-family: 'Barlow Condensed', sans-serif;
-          font-size: clamp(2rem, 4vw, 3rem);
-          font-weight: 800;
-          text-transform: uppercase;
-          color: var(--cream);
-          line-height: 1;
-          margin: 0;
-        ">PILAR<br>PENGETAHUAN</h2>
-      </div>
-
-      <!-- Category grid — flat ink-border panels -->
-      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 1.5px; background: var(--green-terminal); border: 2px solid var(--green-terminal);" class="cat-grid home-category-grid">
-        {categories.map((cat) => (
-          <a href={`/panduan?category=${cat.slug}`} style="
-            background: var(--ink);
-            padding: 1.5rem 1rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.75rem;
-            text-decoration: none;
-            transition: background 0.15s;
-            border: none;
-          "
-          onmouseover="this.style.background='var(--green-dark)'"
-          onmouseout="this.style.background='var(--ink)'"
-          >
-            <span style="font-size: 2rem; filter: saturate(0.7);">{cat.icon}</span>
-            <span style="
-              font-family: 'Barlow Condensed', sans-serif;
-              font-size: 0.85rem;
-              font-weight: 700;
-              text-transform: uppercase;
-              letter-spacing: 0.05em;
-              color: var(--green-terminal);
-              text-align: center;
-            ">{cat.name}</span>
-          </a>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- ── CTA / PANDUAN ─────────────────────────────────── -->
-  <section class="home-cta-section" style="
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 4rem 2rem;
-    position: relative;
-    z-index: 2;
-  ">
-    <div style="
-      background: var(--ink);
-      border: 3px solid var(--green-terminal);
-      box-shadow: 8px 8px 0 var(--green-terminal);
-      padding: 3.5rem;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 2rem;
-      align-items: center;
-      position: relative;
-      overflow: hidden;
-    " class="cta-grid">
-      <!-- Background watermark -->
-      <div style="
-        position:absolute;right:-1rem;bottom:-1rem;
-        font-family:'Barlow Condensed',sans-serif;
-        font-size:10rem;
-        font-weight:800;
-        color:rgba(143,175,143,0.04);
-        line-height:1;
-        pointer-events:none;
-        letter-spacing:-0.04em;
-      " aria-hidden="true">PANDUAN</div>
-
-      <div style="position:relative;z-index:1;">
-        <div style="
-          font-family: 'Share Tech Mono', monospace;
-          font-size: 0.58rem;
-          letter-spacing: 0.2em;
-          color: var(--green-terminal);
-          text-transform: uppercase;
-          margin-bottom: 0.75rem;
-          display: flex; align-items: center; gap: 0.5rem;
-        ">
-          <span style="display:inline-block;width:16px;height:1px;background:var(--green-terminal);"></span>
-          AKSES OFFLINE AVAILABLE SOON
-        </div>
-        <h2 style="
-          font-family: 'Barlow Condensed', sans-serif;
-          font-size: clamp(1.8rem, 4vw, 3rem);
-          font-weight: 800;
-          text-transform: uppercase;
-          color: var(--cream);
-          line-height: 0.95;
-          margin-bottom: 1rem;
-        ">
-          {cta?.headline || 'KOLEKSI'}
-          <br>
-          <span style="font-family:'Special Elite',cursive;text-transform:none;color:var(--yellow-manual);">
-            {cta?.body_text ? 'Panduan Taktis' : 'Panduan Taktis'} 
-          </span>
-        </h2>
-        <p style="
-          font-size: 0.85rem;
-          color: var(--warm-grey);
-          max-width: 400px;
-          line-height: 1.65;
-        ">
-          {cta?.body_text || 'Instruksi teknis yang terhubung dengan Buku Pegangan Krisis. Dapat dibaca offline, dirancang untuk situasi darurat.'}
-        </p>
-      </div>
-
-      <div style="position:relative;z-index:1;flex-shrink:0;">
-        <a href={cta?.button_href || '/panduan'} style="
-          font-family: 'Share Tech Mono', monospace;
-          font-size: 0.72rem;
-          letter-spacing: 0.15em;
-          text-transform: uppercase;
-          padding: 1rem 2rem;
-          background: var(--green-terminal);
-          color: var(--ink);
-          border: 2px solid var(--green-terminal);
-          text-decoration: none;
-          display: inline-flex;
-          align-items: center;
-          gap: 0.5rem;
-          font-weight: 700;
-          white-space: nowrap;
-          transition: all 0.15s;
-        "
-        onmouseover="this.style.background='var(--yellow-manual)';this.style.borderColor='var(--yellow-manual)';this.style.transform='translate(-2px,-2px)';this.style.boxShadow='4px 4px 0 var(--green-terminal)'"
-        onmouseout="this.style.background='var(--green-terminal)';this.style.borderColor='var(--green-terminal)';this.style.transform='';this.style.boxShadow=''"
-        >▶ {cta?.button_label || 'MULAI PELAJARI'}</a>
-      </div>
-    </div>
-  </section>
-
+ </section>
+ <div class="values-strip">
+<div class="site-container">
+<span>
+<Icon name="keamanan" size={18}/>Kesiapsiagaan, bukan ketakutan.</span>
+<span>
+<Icon name="book" size={18}/>Pengetahuan yang bisa dipraktikkan.</span>
+<span>
+<Icon name="komunitas" size={18}/>Ketangguhan dimulai bersama.</span>
+</div>
+</div>
+ <div class="site-container mobile-home-search">
+<SearchAutosuggest id="mobile-search" variant="mobile" placeholder="Apa yang ingin Anda persiapkan?" />
+</div>
+ <section class="site-container section-space topics-section">
+<div class="section-heading">
+<div>
+<span class="eyebrow">ENAM PILAR KETANGGUHAN</span>
+<h2>Mulai dari yang paling penting.</h2>
+</div>
+<p>Kebutuhan dasar. Pengetahuan yang bertahan.</p>
+</div>
+<div class="topic-grid">{categories.map((cat,index)=>
+<a href={`/panduan?category=${cat.slug}`} class="topic-card">
+<div class="topic-card-top">
+<span class="topic-icon">
+<Icon name={cat.slug} size={29}/>
+</span>
+<span class="topic-number">0{index+1}</span>
+</div>
+<h3>{cat.name}</h3>
+<p>{cat.description}</p>
+<div class="topic-card-bottom">
+<span>{cat.detail}</span>
+<Icon name="arrow" size={17}/>
+</div>
+</a>)}</div>
+</section>
+ <section class="readiness-section">
+<div class="site-container readiness-grid">
+<div>
+<span class="eyebrow">LANGKAH PERTAMA, DAMPAK NYATA</span>
+<h2>Keluarga siap.<br/>Pikiran lebih tenang.</h2>
+<p>Tidak perlu langsung memiliki semuanya. Kenali kebutuhan rumah, buat rencana sederhana, dan bangun persiapan sedikit demi sedikit.</p>
+<a href="/panduan" class="button button-primary">Temukan panduan pertama Anda <Icon name="arrow" size={18}/>
+</a>
+</div>
+<div class="readiness-checklist">
+<div class="checklist-heading">
+<span class="topic-icon">
+<Icon name="book" size={24}/>
+</span>
+<div>
+<span class="eyebrow">MULAI DARI RUMAH</span>
+<h3>Empat langkah kecil hari ini</h3>
+</div>
+</div>{['Kenali kebutuhan air dan pangan keluarga.','Periksa kotak P3K dan penerangan cadangan.','Sepakati kontak dan titik kumpul darurat.','Pelajari satu keterampilan praktis baru.'].map((text,index)=>
+<div class="checklist-row">
+<span>{String(index+1).padStart(2,'0')}</span>
+<p>{text}</p>
+<Icon name="check" size={17}/>
+</div>)}<div class="checklist-note">Persiapan terbaik adalah yang mulai dilakukan.</div>
+</div>
+</div>
+</section>
+ {featured&&<section class="site-container section-space">
+<div class="section-heading">
+<div>
+<span class="eyebrow">LIHAT LEBIH JAUH</span>
+<h2>Di balik kehidupan sehari-hari.</h2>
+</div>
+<a href="/blog" class="text-link">Semua jurnal <Icon name="arrow" size={18}/>
+</a>
+</div>
+<FeaturedPost post={featured} categoryLabel="Jurnal Arkara"/>
+<div class="posts-grid">{posts.slice(1,4).map(post=>
+<PostCard title={post.title} excerpt={post.description||''} category={post.category||'Wawasan'} date={post.published_at||''} slug={post.slug} content={post.content} readingTime={post.reading_time} image={post.thumbnail_image||post.cover_image}/>)}</div>
+</section>}
+ <section class="site-container reading-section" data-reader-section hidden>
+<div class="section-heading">
+<div>
+<span class="eyebrow">PERJALANAN PENGETAHUAN ANDA</span>
+<h2>Lanjutkan membaca</h2>
+</div>
+<span class="section-count">Tersimpan di perangkat ini</span>
+</div>
+<div class="mobile-continue-list" data-mobile-continue-list>
+</div>
+</section>
+ <section class="site-container home-community">
+<div class="community-inner">
+<div class="community-mark">
+<Icon name="komunitas" size={42}/>
+</div>
+<div>
+<span class="eyebrow">SIAP BERSAMA, TANGGUH BERSAMA</span>
+<h2>Ketangguhan itu menular.</h2>
+<p>Mulai dari diri sendiri. Bagikan pengetahuan. Bangun keluarga dan lingkungan yang saling menjaga.</p>
+</div>
+<a href="/panduan?category=komunitas" class="button button-amber">Bangun kesiapan bersama <Icon name="arrow" size={18}/>
+</a>
+</div>
+</section>
+ <script>
+import { enhanceMobileReadingList } from "../lib/reader-state";
+enhanceMobileReadingList();
+document.addEventListener("astro:after-swap", enhanceMobileReadingList);
+</script>
 </BaseLayout>
-
-<style>
-  .mobile-home-appbar,
-  .mobile-topic-rail,
-  .mobile-home-screen {
-    display: none;
-  }
-
-  @media (max-width: 900px) {
-    .posts-grid { grid-template-columns: 1fr !important; }
-    .cat-grid   { grid-template-columns: repeat(3, 1fr) !important; }
-    .cta-grid   { grid-template-columns: 1fr !important; }
-  }
-  @media (max-width: 768px) {
-    :global(html),
-    :global(body),
-    :global(main) {
-      background: #070b0c !important;
-    }
-
-    :global(main) {
-      padding-bottom: 0 !important;
-    }
-
-    .mobile-home-appbar,
-    .mobile-topic-rail {
-      display: none !important;
-    }
-
-    .mobile-home-screen {
-      display: block;
-      min-height: 100dvh;
-      padding: 0.75rem 0.9rem calc(5.1rem + env(safe-area-inset-bottom));
-      background:
-        radial-gradient(circle at 50% -10%, rgba(110,231,183,0.08), transparent 32rem),
-        #070b0c;
-      color: #f8fafc;
-    }
-
-    .mobile-home-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding-top: 0.2rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .mobile-brand {
-      color: #f3ead9;
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 1.55rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      text-decoration: none;
-    }
-
-    .mobile-header-actions {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .mobile-header-actions a {
-      color: #f8fafc;
-      display: grid;
-      height: 1.7rem;
-      width: 1.7rem;
-      place-items: center;
-      text-decoration: none;
-    }
-
-    .mobile-header-actions svg {
-      height: 1.45rem;
-      width: 1.45rem;
-    }
-
-    .mobile-home-tabs {
-      position: relative;
-      display: grid;
-      grid-template-columns: minmax(7rem, 1.25fr) repeat(5, minmax(2.55rem, 1fr));
-      align-items: center;
-      gap: clamp(0.34rem, 1.35vw, 0.7rem);
-      min-height: 3.75rem;
-      margin: 0 -0.9rem 0.9rem;
-      padding: 0.25rem 0.9rem 0.45rem;
-      overflow: hidden;
-    }
-
-    .mobile-category-scroll {
-      display: contents;
-    }
-
-    .mobile-home-tabs a {
-      flex: 0 0 auto;
-      display: inline-grid;
-      align-items: center;
-      color: #dbeafe;
-      text-decoration: none;
-    }
-
-    .mobile-category-fixed {
-      z-index: 3;
-      grid-template-columns: 2rem auto;
-      gap: 0.45rem;
-      min-height: 3.05rem;
-      min-width: 0;
-      padding: 0.42rem 0.72rem 0.42rem 0.48rem;
-      border: 1px solid rgba(74,222,128,0.42);
-      border-radius: 8px;
-      background: #0b1815;
-      color: #d1fae5;
-    }
-
-    .mobile-category-scroll a {
-      justify-self: center;
-      width: clamp(2.45rem, 10.2vw, 3.15rem);
-      height: clamp(2.45rem, 10.2vw, 3.15rem);
-      place-items: center;
-      border: 0;
-      background: transparent;
-    }
-
-    .mobile-category-fixed:first-child {
-      border-color: rgba(74,222,128,0.42);
-      background: rgba(16,185,129,0.16);
-      color: #d1fae5;
-    }
-
-    .mobile-category-logo {
-      --icon-main: #6ee7b7;
-      --icon-accent: #d1fae5;
-      --icon-fill: rgba(110,231,183,0.18);
-      --icon-ring: rgba(110,231,183,0.28);
-      --icon-glow: rgba(110,231,183,0.22);
-      display: grid;
-      width: 100%;
-      height: 100%;
-      place-items: center;
-      border-radius: 999px;
-      border: 1px solid var(--icon-ring);
-      background:
-        radial-gradient(circle at 34% 22%, var(--icon-glow), transparent 34%),
-        radial-gradient(circle at 70% 78%, rgba(0,0,0,0.22), transparent 42%),
-        rgba(20,83,45,0.52);
-      color: var(--icon-main);
-      line-height: 1;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,0.04),
-        inset 0 -10px 18px rgba(0,0,0,0.18);
-    }
-
-    .mobile-category-logo svg {
-      width: 54%;
-      height: 54%;
-      overflow: visible;
-    }
-
-    .mobile-category-logo--guide {
-      --icon-main: #6ee7b7;
-      --icon-accent: #e0f2fe;
-      --icon-fill: rgba(45,212,191,0.14);
-      --icon-ring: rgba(110,231,183,0.34);
-      --icon-glow: rgba(125,211,252,0.18);
-    }
-
-    .mobile-category-logo--energy {
-      --icon-main: #fde047;
-      --icon-accent: #86efac;
-      --icon-fill: rgba(250,204,21,0.18);
-      --icon-ring: rgba(250,204,21,0.34);
-      --icon-glow: rgba(250,204,21,0.26);
-    }
-
-    .mobile-category-logo--water {
-      --icon-main: #67e8f9;
-      --icon-accent: #99f6e4;
-      --icon-fill: rgba(34,211,238,0.18);
-      --icon-ring: rgba(34,211,238,0.32);
-      --icon-glow: rgba(103,232,249,0.24);
-    }
-
-    .mobile-category-logo--food {
-      --icon-main: #bef264;
-      --icon-accent: #5eead4;
-      --icon-fill: rgba(132,204,22,0.18);
-      --icon-ring: rgba(190,242,100,0.30);
-      --icon-glow: rgba(190,242,100,0.22);
-    }
-
-    .mobile-category-logo--medical {
-      --icon-main: #fb7185;
-      --icon-accent: #fff7ed;
-      --icon-fill: rgba(251,113,133,0.16);
-      --icon-ring: rgba(251,113,133,0.34);
-      --icon-glow: rgba(251,113,133,0.23);
-    }
-
-    .mobile-category-logo--community {
-      --icon-main: #c4b5fd;
-      --icon-accent: #67e8f9;
-      --icon-fill: rgba(196,181,253,0.15);
-      --icon-ring: rgba(196,181,253,0.32);
-      --icon-glow: rgba(103,232,249,0.18);
-    }
-
-    .icon-primary-fill {
-      fill: var(--icon-main);
-    }
-
-    .icon-primary-stroke {
-      fill: none;
-      stroke: var(--icon-main);
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .icon-accent-stroke {
-      fill: none;
-      stroke: var(--icon-accent);
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .icon-soft-fill {
-      fill: var(--icon-fill);
-      stroke: var(--icon-main);
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .icon-soft-fill--secondary {
-      stroke: var(--icon-accent);
-    }
-
-    .mobile-category-fixed em {
-      font-style: normal;
-      font-size: 0.8rem;
-      font-weight: 700;
-      line-height: 1;
-      white-space: nowrap;
-    }
-
-    .mobile-feature-card {
-      display: grid;
-      grid-template-columns: 38% 1fr;
-      gap: 0.85rem;
-      margin-bottom: 1.45rem;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 12px;
-      background: rgba(255,255,255,0.045);
-      padding: 0.7rem;
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .mobile-feature-image {
-      overflow: hidden;
-      border-radius: 8px;
-      background: #111827;
-      aspect-ratio: 1;
-    }
-
-    .mobile-feature-copy {
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 0.45rem;
-    }
-
-    .mobile-kicker {
-      width: fit-content;
-      border: 1px solid rgba(245,158,11,0.72);
-      border-radius: 5px;
-      color: #f59e0b;
-      padding: 0.15rem 0.42rem;
-      font-size: 0.68rem;
-      font-weight: 900;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .mobile-feature-copy h2 {
-      margin: 0;
-      color: #f3ead9;
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 1.08rem;
-      line-height: 1.25;
-      letter-spacing: 0;
-      text-transform: none;
-    }
-
-    .mobile-feature-copy p {
-      display: -webkit-box;
-      margin: 0;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      color: #a8b3bd;
-      font-size: 0.83rem;
-      line-height: 1.45;
-    }
-
-    .mobile-feature-copy div {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      margin-top: auto;
-      color: #cbd5e1;
-      font-size: 0.82rem;
-    }
-
-    .mobile-bookmark {
-      margin-left: auto;
-      color: #f8fafc;
-      font-size: 1.25rem;
-    }
-
-    .mobile-bookmark.is-saved {
-      color: #63d2b5;
-    }
-
-    .mobile-reading-section,
-    .mobile-editor-section {
-      margin-top: 1.1rem;
-    }
-
-    .mobile-section-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      margin-bottom: 0.75rem;
-    }
-
-    .mobile-section-head h2 {
-      margin: 0;
-      color: #f3ead9;
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 1.15rem;
-      line-height: 1.2;
-      text-transform: none;
-      letter-spacing: 0;
-    }
-
-    .mobile-section-head a {
-      color: #cbd5e1;
-      font-size: 0.82rem;
-      text-decoration: none;
-    }
-
-    .mobile-continue-list {
-      display: grid;
-      gap: 0;
-      border: 1px solid rgba(255,255,255,0.11);
-      border-radius: 12px;
-      background: rgba(255,255,255,0.035);
-      padding: 0.65rem;
-    }
-
-    .mobile-continue-item {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 0.7rem;
-      align-items: center;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      padding: 0.55rem 0;
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .mobile-continue-link {
-      display: grid;
-      grid-template-columns: 4rem minmax(0, 1fr);
-      gap: 0.72rem;
-      align-items: center;
-      min-width: 0;
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .mobile-continue-link > .mobile-small-bookmark {
-      display: none !important;
-    }
-
-    .mobile-continue-item:last-child {
-      border-bottom: 0;
-      padding-bottom: 0.45rem;
-    }
-
-    .mobile-continue-image {
-      overflow: hidden;
-      width: 4rem;
-      height: 4rem;
-      border-radius: 7px;
-      background: #111827;
-    }
-
-    .mobile-continue-image img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .mobile-continue-item h3 {
-      margin: 0 0 0.25rem;
-      color: #f8fafc;
-      font-family: 'Barlow', sans-serif;
-      font-size: 0.88rem;
-      line-height: 1.23;
-      text-transform: none;
-      letter-spacing: 0;
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-    }
-
-    .mobile-continue-item span {
-      color: #a8b3bd;
-      font-size: 0.74rem;
-    }
-
-    .mobile-progress {
-      height: 2px;
-      margin-top: 0.35rem;
-      background: rgba(255,255,255,0.12);
-    }
-
-    .mobile-progress i {
-      display: block;
-      height: 100%;
-      background: #63d2b5;
-    }
-
-    .mobile-small-bookmark {
-      display: grid;
-      width: 1.85rem;
-      height: 1.85rem;
-      place-items: center;
-      border: 0;
-      background: transparent;
-      color: #f8fafc !important;
-      cursor: pointer;
-      padding: 0;
-    }
-
-    .mobile-small-bookmark svg {
-      width: 1rem;
-      height: 1rem;
-    }
-
-    .mobile-small-bookmark.is-saved {
-      color: #63d2b5 !important;
-    }
-
-    .mobile-small-bookmark.is-saved svg {
-      fill: currentColor;
-    }
-
-    :global(.mobile-home-screen .mobile-continue-item) {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 0.7rem;
-      align-items: center;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      padding: 0.55rem 0;
-      color: inherit;
-      text-decoration: none;
-    }
-
-    :global(.mobile-home-screen .mobile-continue-item:last-child) {
-      border-bottom: 0;
-      padding-bottom: 0.45rem;
-    }
-
-    :global(.mobile-home-screen .mobile-continue-link) {
-      display: grid;
-      grid-template-columns: 4rem minmax(0, 1fr);
-      gap: 0.72rem;
-      align-items: center;
-      min-width: 0;
-      color: inherit;
-      text-decoration: none;
-    }
-
-    :global(.mobile-home-screen .mobile-continue-link > .mobile-small-bookmark) {
-      display: none !important;
-    }
-
-    :global(.mobile-home-screen .mobile-continue-image) {
-      overflow: hidden;
-      width: 4rem;
-      height: 4rem;
-      border-radius: 7px;
-      background: #111827;
-    }
-
-    :global(.mobile-home-screen .mobile-continue-image img) {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    :global(.mobile-home-screen .mobile-continue-item h3) {
-      margin: 0 0 0.25rem;
-      color: #f8fafc;
-      font-family: 'Barlow', sans-serif;
-      font-size: 0.88rem;
-      line-height: 1.23;
-      text-transform: none;
-      letter-spacing: 0;
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-    }
-
-    :global(.mobile-home-screen .mobile-continue-item span) {
-      color: #a8b3bd;
-      font-size: 0.74rem;
-    }
-
-    :global(.mobile-home-screen .mobile-progress) {
-      height: 2px;
-      margin-top: 0.35rem;
-      background: rgba(255,255,255,0.12);
-    }
-
-    :global(.mobile-home-screen .mobile-progress i) {
-      display: block;
-      height: 100%;
-      background: #63d2b5;
-    }
-
-    :global(.mobile-home-screen .mobile-small-bookmark) {
-      display: grid;
-      width: 1.85rem;
-      height: 1.85rem;
-      place-items: center;
-      border: 0;
-      background: transparent;
-      color: #f8fafc !important;
-      cursor: pointer;
-      padding: 0;
-    }
-
-    :global(.mobile-home-screen .mobile-small-bookmark svg) {
-      width: 1rem;
-      height: 1rem;
-    }
-
-    :global(.mobile-home-screen .mobile-small-bookmark.is-saved) {
-      color: #63d2b5 !important;
-    }
-
-    .mobile-editor-rail {
-      display: flex;
-      gap: 0.75rem;
-      overflow-x: auto;
-      padding-bottom: 0.35rem;
-      scrollbar-width: none;
-    }
-
-    .mobile-editor-rail::-webkit-scrollbar {
-      display: none;
-    }
-
-    .mobile-editor-card {
-      flex: 0 0 8.65rem;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 10px;
-      background: rgba(255,255,255,0.045);
-      color: inherit;
-      text-decoration: none;
-    }
-
-    .mobile-editor-card > div {
-      height: 5.1rem;
-      overflow: hidden;
-      background: #111827;
-    }
-
-    .mobile-editor-card span {
-      display: block;
-      padding: 0.65rem 0.65rem 0.2rem;
-      color: #6ee7b7;
-      font-size: 0.68rem;
-      font-weight: 900;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .mobile-editor-card h3 {
-      margin: 0;
-      padding: 0 0.65rem 0.8rem;
-      color: #f8fafc;
-      font-family: 'Barlow', sans-serif;
-      font-size: 0.84rem;
-      line-height: 1.35;
-      text-transform: none;
-      letter-spacing: 0;
-    }
-
-    .mobile-home-appbar {
-      position: sticky;
-      top: 0;
-      z-index: 60;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 0.9rem 1rem;
-      background: rgba(7, 11, 12, 0.92);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      backdrop-filter: blur(16px);
-    }
-
-    .mobile-home-appbar p {
-      margin: 0;
-      color: #f8fafc;
-      font-family: 'Barlow', sans-serif;
-      font-weight: 900;
-      letter-spacing: 0;
-      line-height: 1;
-    }
-
-    .mobile-home-appbar span {
-      display: block;
-      margin-top: 0.18rem;
-      color: #64748b;
-      font-size: 0.72rem;
-      line-height: 1;
-    }
-
-    .mobile-home-appbar a {
-      display: grid;
-      width: 2.35rem;
-      height: 2.35rem;
-      place-items: center;
-      border-radius: 999px;
-      background: rgba(110,231,183,0.12);
-      border: 1px solid rgba(110,231,183,0.28);
-      color: #a7f3d0;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.74rem;
-      font-weight: 700;
-      text-decoration: none;
-    }
-
-    .mobile-topic-rail {
-      display: flex;
-      gap: 0.55rem;
-      overflow-x: auto;
-      padding: 0.8rem 1rem 0.9rem;
-      background: #070b0c;
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-      scrollbar-width: none;
-    }
-
-    .mobile-topic-rail::-webkit-scrollbar {
-      display: none;
-    }
-
-    .mobile-topic-rail a {
-      flex: 0 0 auto;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(255,255,255,0.045);
-      padding: 0.58rem 0.85rem;
-      color: #cbd5e1;
-      font-size: 0.78rem;
-      font-weight: 800;
-      text-decoration: none;
-    }
-
-    .mobile-topic-rail a:first-child {
-      background: rgba(110,231,183,0.12);
-      border-color: rgba(110,231,183,0.25);
-      color: #a7f3d0;
-    }
-
-    .home-hero-grid {
-      display: none !important;
-    }
-
-    .home-ticker,
-    .home-feed-section,
-    .home-category-section,
-    .home-cta-section {
-      display: none !important;
-    }
-  }
-</style>

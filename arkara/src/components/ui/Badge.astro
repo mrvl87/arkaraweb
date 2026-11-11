@@ -1,21 +1,31 @@
 ---
 interface Props {
-  variant?: 'primary' | 'success' | 'warning' | 'danger';
+  variant?: "primary" | "success" | "warning" | "danger";
   class?: string;
 }
-
-const { variant = 'primary', class: className } = Astro.props;
-
-const variantClass = {
-  primary: 'bg-forest text-sand',
-  success: 'bg-moss text-sand',
-  warning: 'bg-amber text-forest',
-  danger: 'bg-danger text-sand',
-};
+const { variant = "primary", class: className = "" } = Astro.props;
 ---
-
-<span
-  class={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${variantClass[variant]} ${className}`}
->
-  <slot />
+<span class:list={['ui-badge',`ui-badge--${variant}`,className]}>
+<slot/>
 </span>
+<style>
+.ui-badge {
+  display: inline-flex;
+  padding: 4px 9px;
+  border: 1px solid #ccd7c2;
+  border-radius: 4px;
+  background: var(--forest-soft);
+  color: var(--forest);
+  font: 600 0.7rem var(--font-body);
+}
+.ui-badge--warning {
+  background: var(--amber-soft);
+  color: #714900;
+  border-color: #e2c68c;
+}
+.ui-badge--danger {
+  background: #fbe9e4;
+  color: #8a2e2e;
+  border-color: #e9beb4;
+}
+</style>

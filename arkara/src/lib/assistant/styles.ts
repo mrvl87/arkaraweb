@@ -1,7 +1,7 @@
 ﻿export const assistantStyles = `
 :host {
-  font-family: "Barlow", system-ui, sans-serif;
-  color: #2a2218;
+  font-family: "Source Sans 3", system-ui, sans-serif;
+  color: #2b2b28;
 }
 
 :host,
@@ -9,6 +9,8 @@
   box-sizing: border-box;
 }
 
+:host :focus-visible { outline: 3px solid #F59E0B; outline-offset: 3px; }
+@media(prefers-reduced-motion:reduce) { :host * { transition: none !important; animation: none !important; } }
 .hidden {
   display: none !important;
 }
@@ -26,13 +28,13 @@
 }
 
 .assistant-shell {
-  --ink: #2a2218;
-  --paper: #f0e8d0;
-  --paper-strong: #faf4e7;
-  --green: #86a786;
-  --green-dark: #3d5c3d;
-  --yellow: #d8c58a;
-  --muted: #746a5c;
+  --ink: #2b2b28;
+  --paper: #f8f5ec;
+  --paper-strong: #fffdf8;
+  --green: #55734d;
+  --green-dark: #1f4d2e;
+  --yellow: #f59e0b;
+  --muted: #64685e;
   --line: rgba(42, 34, 24, 0.12);
 }
 
@@ -97,7 +99,7 @@
 .analyzer-card__eyebrow,
 .source-card__type,
 .bubble-meta {
-  font-family: "Share Tech Mono", monospace;
+  font-family: "IBM Plex Mono", monospace;
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -111,7 +113,7 @@
 .assistant-header h2,
 .empty-state h3,
 .analyzer-intro h3 {
-  font-family: "Barlow Condensed", sans-serif;
+  font-family: "Manrope", sans-serif;
   text-transform: none;
   letter-spacing: -0.01em;
 }

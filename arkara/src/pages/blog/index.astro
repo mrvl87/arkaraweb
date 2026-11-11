@@ -1,238 +1,34 @@
 ---
-/**
- * blog/index.astro — Retro Survival Manual 2.0
- * Data fetching: unchanged (getPublishedPosts)
- * Changes:
- *   - Hero: ink bg + muted gradient, mono label, no dot grid
- *   - Category filter: mono pill → flat ink-border tabs
- *   - Layout: warning band above content, section labels
- */
-import { getPublishedPosts } from '../../lib/content';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import PostCard from '../../components/blog/PostCard.astro';
-import FeaturedPost from '../../components/blog/FeaturedPost.astro';
-
-const sortedPosts = await getPublishedPosts();
+import { getPublishedPosts } from "../../lib/content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import PostCard from "../../components/blog/PostCard.astro";
+import FeaturedPost from "../../components/blog/FeaturedPost.astro";
+const posts = await getPublishedPosts();
 ---
-
-<BaseLayout title="Blog">
-
-  <!-- ── HEADER ────────────────────────────────────────── -->
-  <header class="listing-page-hero blog-page-hero" style="
-    background: var(--ink);
-    border-bottom: 3px solid var(--green-terminal);
-    padding: 3.5rem 2rem 4rem;
-    position: relative;
-    overflow: hidden;
-  ">
-    <!-- Grid texture -->
-    <div style="
-      position:absolute;inset:0;
-      background-image:
-        linear-gradient(rgba(143,175,143,0.04) 1px,transparent 1px),
-        linear-gradient(90deg,rgba(143,175,143,0.04) 1px,transparent 1px);
-      background-size:40px 40px;
-      pointer-events:none;
-    " aria-hidden="true"></div>
-
-    <div class="listing-page-shell" style="max-width:1200px;margin:0 auto;position:relative;z-index:1;">
-      <!-- Label -->
-      <div class="listing-kicker" style="
-        font-family:'Share Tech Mono',monospace;
-        font-size:0.6rem;letter-spacing:0.25em;
-        color:var(--green-terminal);text-transform:uppercase;
-        display:flex;align-items:center;gap:0.75rem;
-        margin-bottom:1rem;
-      ">
-        <span style="display:inline-block;width:20px;height:1px;background:var(--green-terminal);"></span>
-        ARKARA — ARSIP PENGETAHUAN
-      </div>
-
-      <!-- Title -->
-      <h1 class="blog-page-title" style="
-        font-family:'Barlow Condensed',sans-serif;
-        font-size:clamp(3rem,8vw,6rem);
-        font-weight:800;text-transform:uppercase;
-        color:var(--cream);line-height:0.9;
-        letter-spacing:-0.01em;
-        margin-bottom:1.25rem;
-      ">ARKARA<br><span style="font-family:'Special Elite',cursive;text-transform:none;font-size:0.65em;color:var(--green-terminal);">Jurnal</span></h1>
-
-      <p class="blog-page-intro" style="
-        font-size:0.85rem;color:var(--warm-grey);
-        max-width:440px;line-height:1.65;
-        margin-bottom:2rem;
-        border-left:3px solid var(--green-terminal);
-        padding-left:1rem;
-      ">
-        Kumpulan pengetahuan, strategi, dan catatan lapangan untuk membangun kemandirian di era ketidakpastian.
-      </p>
-
-      </div>
-    </div>
-  </header>
-
-  <!-- ── CONTENT ────────────────────────────────────────── -->
-  <section class="listing-page-section blog-listing-section" style="
-    max-width:1200px;margin:0 auto;
-    padding:3rem 2rem 5rem;
-    position:relative;z-index:2;
-  ">
-    {sortedPosts.length > 0 ? (
-      <>
-        {/* Featured */}
-        <FeaturedPost
-            post={sortedPosts[0]}
-            categoryLabel="BLOG"
-          />
-
-        <div class="listing-section-label" style="
-          font-family:'Share Tech Mono',monospace;
-          font-size:0.6rem;letter-spacing:0.25em;
-          color:var(--warm-grey);text-transform:uppercase;
-          display:flex;align-items:center;gap:1rem;
-          margin-bottom:2rem;
-        ">
-          ARTIKEL TERBARU
-          <span style="flex:1;height:1px;background:var(--cream-dark);max-width:80px;"></span>
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5px;background:var(--ink);border:3px solid var(--ink);" class="blog-grid listing-grid">
-          {sortedPosts.slice(1).map(post => (
-            <div class="blog-card-frame" style="background:var(--cream);">
-              <PostCard
-                title={post.title}
-                excerpt={post.description || ''}
-                category="ARKARA JURNAL"
-                date={post.published_at || ''}
-                slug={post.slug}
-                readingTime={post.reading_time}
-                image={post.thumbnail_image || post.cover_image}
-              />
-            </div>
-          ))}
-        </div>
-      </>
-    ) : (
-      <div style="
-        background:var(--paper);
-        border:3px solid var(--ink);
-        box-shadow:6px 6px 0 var(--ink);
-        padding:4rem 2rem;text-align:center;
-      ">
-        <div style="font-size:4rem;margin-bottom:1rem;filter:saturate(0);">📭</div>
-        <h2 style="
-          font-family:'Barlow Condensed',sans-serif;
-          font-size:2rem;font-weight:800;
-          text-transform:uppercase;
-          color:var(--ink);margin-bottom:0.5rem;
-        ">JURNAL BELUM TERSEDIA</h2>
-        <p style="font-size:0.85rem;color:var(--warm-grey);margin-bottom:1.5rem;">
-          Belum ada artikel yang dipublikasikan saat ini.
-        </p>
-        <a href="/blog" style="
-          font-family:'Share Tech Mono',monospace;
-          font-size:0.65rem;letter-spacing:0.15em;
-          text-transform:uppercase;
-          padding:0.7rem 1.4rem;
-          background:var(--ink);color:var(--green-terminal);
-          border:2px solid var(--green-terminal);
-          text-decoration:none;
-        ">TAMPILKAN SEMUA</a>
-      </div>
-    )}
-  </section>
+<BaseLayout title="Jurnal" description="Investigasi, wawasan, dan cerita tentang kesiapsiagaan serta ketangguhan hidup sehari-hari.">
+ <header class="listing-hero">
+<div class="site-container">
+<div class="eyebrow">JURNAL ARKARA</div>
+<h1>Memahami hari ini.<br/>
+<span class="text-forest">Lebih siap untuk esok.</span>
+</h1>
+<p>Wawasan, investigasi, dan cerita yang membantu kita memahami risiko, mengambil keputusan, dan membangun ketangguhan.</p>
+</div>
+</header>
+ <section class="site-container section-space" aria-label="Artikel Arkara">{posts.length>0?<>
+<FeaturedPost post={posts[0]} categoryLabel="Pilihan bacaan"/>
+<div class="section-heading">
+<div>
+<span class="eyebrow">TERUS MENAMBAH PENGETAHUAN</span>
+<h2>Artikel terbaru</h2>
+</div>
+<span class="section-count">{posts.length} artikel</span>
+</div>
+<div class="posts-grid">{posts.slice(1).map(post=>
+<PostCard title={post.title} excerpt={post.description||''} category={post.category||'Wawasan'} date={post.published_at||''} slug={post.slug} content={post.content} readingTime={post.reading_time} image={post.thumbnail_image||post.cover_image}/>)}</div>
+</>:<div class="empty-state">
+<h2>Pengetahuan baru sedang disiapkan.</h2>
+<p>Jelajahi panduan praktis sambil menunggu jurnal berikutnya.</p>
+<a class="button button-primary" href="/panduan">Jelajahi panduan</a>
+</div>}</section>
 </BaseLayout>
-
-<style>
-  @media (max-width: 900px) { .blog-grid { grid-template-columns: 1fr 1fr !important; } }
-  @media (max-width: 640px) { .blog-grid { grid-template-columns: 1fr !important; } }
-
-  @media (max-width: 768px) {
-    :global(html),
-    :global(body),
-    :global(main) {
-      background: #070b0c !important;
-    }
-
-    .listing-page-hero {
-      background: #070b0c !important;
-      border-bottom: 1px solid rgba(255,255,255,0.10) !important;
-      padding: 1.25rem 1rem 1rem !important;
-    }
-
-    .listing-page-hero > div[aria-hidden="true"] {
-      opacity: 0.55 !important;
-      background-size: 28px 28px !important;
-    }
-
-    .listing-page-shell {
-      max-width: none !important;
-    }
-
-    .listing-kicker {
-      margin-bottom: 0.7rem !important;
-      color: #63d2b5 !important;
-      font-size: 0.58rem !important;
-      letter-spacing: 0.18em !important;
-    }
-
-    .listing-kicker span {
-      width: 16px !important;
-    }
-
-    .blog-page-title {
-      color: #f8fafc !important;
-      font-family: 'Barlow', system-ui, sans-serif !important;
-      font-size: clamp(2rem, 12vw, 3.2rem) !important;
-      line-height: 1 !important;
-      letter-spacing: 0 !important;
-      margin-bottom: 0.8rem !important;
-      text-transform: none !important;
-    }
-
-    .blog-page-title span {
-      color: #f7c948 !important;
-      font-size: 0.72em !important;
-    }
-
-    .blog-page-intro {
-      max-width: none !important;
-      margin-bottom: 0 !important;
-      border-left: 0 !important;
-      padding-left: 0 !important;
-      color: #b7c9cf !important;
-      font-size: 0.9rem !important;
-      line-height: 1.55 !important;
-    }
-
-    .listing-page-section {
-      max-width: none !important;
-      padding: 1rem 1rem calc(6rem + env(safe-area-inset-bottom)) !important;
-      background: #070b0c !important;
-    }
-
-    .listing-section-label {
-      margin: 1.1rem 0 0.85rem !important;
-      color: #8fa3aa !important;
-      font-size: 0.6rem !important;
-      letter-spacing: 0.16em !important;
-    }
-
-    .listing-section-label span {
-      background: rgba(255,255,255,0.14) !important;
-    }
-
-    .listing-grid {
-      display: grid !important;
-      grid-template-columns: 1fr !important;
-      gap: 0.85rem !important;
-      border: 0 !important;
-      background: transparent !important;
-    }
-
-    .blog-card-frame {
-      background: transparent !important;
-    }
-  }
-</style>

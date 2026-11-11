@@ -1,21 +1,24 @@
 ---
 interface Props {
   id?: string;
-  variant?: 'desktop' | 'mobile';
+  variant?: "desktop" | "mobile";
   placeholder?: string;
 }
 
 const {
   id,
-  variant = 'desktop',
-  placeholder = 'Cari panduan...',
+  variant = "desktop",
+  placeholder = "Cari panduan...",
 } = Astro.props;
 const rootClass = `search-autosuggest search-autosuggest--${variant}`;
 type SearchAutosuggestLocals = App.Locals & {
-  __arkaraSearchAutosuggestCounters?: Partial<Record<NonNullable<Props['variant']>, number>>;
+  __arkaraSearchAutosuggestCounters?: Partial<
+    Record<NonNullable<Props["variant"]>, number>
+  >;
 };
 const searchAutosuggestLocals = Astro.locals as SearchAutosuggestLocals;
-const searchAutosuggestCounters = searchAutosuggestLocals.__arkaraSearchAutosuggestCounters ??= {};
+const searchAutosuggestCounters =
+  (searchAutosuggestLocals.__arkaraSearchAutosuggestCounters ??= {});
 let generatedInstanceId: string | undefined;
 
 if (!id) {
@@ -27,7 +30,6 @@ if (!id) {
 const instanceId = id ?? generatedInstanceId ?? `search-autosuggest-${variant}`;
 const resultsId = `${instanceId}-results`;
 ---
-
 <form id={instanceId} class={rootClass} data-search-autosuggest role="search" autocomplete="off">
   <div class="search-autosuggest__field">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
@@ -52,454 +54,402 @@ const resultsId = `${instanceId}-results`;
   </div>
   <div class="search-autosuggest__panel" data-search-panel hidden>
     <div class="search-autosuggest__status" data-search-status aria-live="polite">Ketik minimal 2 karakter.</div>
-    <div id={resultsId} class="search-autosuggest__results" data-search-results role="listbox"></div>
+    <div id={resultsId} class="search-autosuggest__results" data-search-results role="listbox">
+</div>
   </div>
 </form>
 
+
+
+
+
 <style>
-  .search-autosuggest {
-    position: relative;
-    width: 100%;
-    color: #f8fafc;
-  }
-
-  .search-autosuggest__field {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    border: 1px solid rgba(255,255,255,0.14);
-    background: rgba(255,255,255,0.045);
-  }
-
-  .search-autosuggest__field svg {
-    flex: 0 0 auto;
-    color: #e2e8f0;
-  }
-
-  .search-autosuggest__label {
-    min-width: 0;
-    flex: 1;
-  }
-
-  .search-autosuggest__label span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .search-autosuggest input {
-    width: 100%;
-    min-width: 0;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: #f8fafc;
-    font-family: 'Barlow', system-ui, sans-serif;
-  }
-
-  .search-autosuggest input::placeholder {
-    color: #8fa3aa;
-  }
-
-  .search-autosuggest__panel {
-    position: absolute;
-    left: 0;
-    right: 0;
-    z-index: 180;
-    margin-top: 0.5rem;
-    overflow: hidden;
-    border: 1px solid rgba(99,210,181,0.22);
-    border-radius: 10px;
-    background: rgba(8, 14, 15, 0.98);
-    box-shadow: 0 18px 42px rgba(0,0,0,0.42);
-    backdrop-filter: blur(18px);
-  }
-
-  .search-autosuggest__status {
-    padding: 0.82rem 0.95rem;
-    color: #8fa3aa;
-    font-size: 0.82rem;
-    line-height: 1.35;
-  }
-
-  .search-autosuggest__results {
-    display: grid;
-    gap: 0.28rem;
-    padding: 0.35rem;
-    overflow: visible;
-  }
-
-  .search-autosuggest--desktop {
-    width: min(25vw, 20rem);
-    min-width: 15rem;
-  }
-
-  .search-autosuggest--desktop .search-autosuggest__panel {
-    left: auto;
-    right: 0;
-    width: min(26rem, calc(100vw - 2rem));
-  }
-
-  .search-autosuggest--desktop .search-autosuggest__field {
-    height: 2.35rem;
-    border-radius: 999px;
-    padding: 0 0.85rem;
-  }
-
-  .search-autosuggest--desktop .search-autosuggest__field svg {
-    width: 1rem;
-    height: 1rem;
-  }
-
-  .search-autosuggest--desktop input {
-    font-size: 0.82rem;
-  }
-
-  .search-autosuggest--mobile .search-autosuggest__field {
-    min-height: 3.25rem;
-    border-radius: 10px;
-    padding: 0 0.95rem;
-  }
-
-  .search-autosuggest--mobile {
-    margin-bottom: 1.35rem;
-  }
-
-  .search-autosuggest--mobile .search-autosuggest__field svg {
-    width: 1.35rem;
-    height: 1.35rem;
-  }
-
-  .search-autosuggest--mobile input {
-    font-size: 0.98rem;
-  }
-
-  .search-autosuggest--mobile .search-autosuggest__panel {
-    margin-top: 0.55rem;
-  }
-
-  @media (max-width: 768px) {
-    .search-autosuggest--desktop {
-      display: none;
-    }
-
-  }
+.search-autosuggest {
+  position: relative;
+  width: 100%;
+  color: var(--text);
+}
+.search-autosuggest__field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  background: #fffdf8;
+  border-radius: 7px;
+  min-height: 44px;
+  padding: 0 13px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.search-autosuggest__field:focus-within {
+  border-color: var(--forest);
+  box-shadow: 0 0 0 3px #dfe7d7;
+}
+.search-autosuggest__field svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--forest);
+}
+.search-autosuggest__label {
+  min-width: 0;
+  flex: 1;
+}
+.search-autosuggest__label span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.search-autosuggest input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: 400 0.88rem/1.5 var(--font-body);
+}
+.search-autosuggest input::placeholder {
+  color: #6f7567;
+}
+.search-autosuggest__panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 180;
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid #cbd5bf;
+  border-radius: 9px;
+  background: #fffdf8;
+  box-shadow: 0 12px 35px #1f4d2e17;
+}
+.search-autosuggest__status {
+  padding: 14px 16px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.search-autosuggest__results {
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+}
+.search-autosuggest--desktop .search-autosuggest__panel {
+  left: auto;
+  right: 0;
+  width: min(430px, calc(100vw - 36px));
+}
+.search-autosuggest--mobile .search-autosuggest__field {
+  min-height: 51px;
+  padding: 0 16px;
+}
+.search-autosuggest--mobile input {
+  font-size: 0.94rem;
+}
 </style>
-
 <style is:global>
-  .search-suggest-item {
-    display: grid;
-    grid-template-columns: 4.65rem minmax(0, 1fr);
-    align-items: center;
-    gap: 0.72rem;
-    min-width: 0;
-    min-height: 2.75rem;
-    padding: 0 0.72rem;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-left: 2px solid transparent;
-    border-radius: 8px;
-    color: inherit;
-    text-decoration: none;
-    transition:
-      background 0.14s ease,
-      border-color 0.14s ease,
-      color 0.14s ease,
-      transform 0.14s ease;
-  }
-
-  .search-suggest-item:hover,
-  .search-suggest-item:focus,
-  .search-suggest-item.is-active,
-  .search-suggest-item[aria-selected="true"] {
-    border-left-color: #63d2b5;
-    border-color: rgba(99,210,181,0.30);
-    background: rgba(99,210,181,0.11);
-    outline: 0;
-    transform: translateX(1px);
-  }
-
-  .search-suggest-type {
-    display: inline-grid;
-    place-items: center;
-    min-width: 0;
-    height: 1.35rem;
-    border: 1px solid rgba(99,210,181,0.36);
-    border-radius: 999px;
-    background: rgba(99,210,181,0.08);
-    color: #7ee7ca;
-    font: 900 0.58rem 'Barlow', system-ui, sans-serif;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  .search-suggest-type--post {
-    border-color: rgba(245,158,11,0.46);
-    background: rgba(245,158,11,0.10);
-    color: #f6b34b;
-  }
-
-  .search-suggest-type--panduan {
-    border-color: rgba(99,210,181,0.40);
-    background: rgba(99,210,181,0.10);
-    color: #7ee7ca;
-  }
-
-  .search-suggest-title {
-    min-width: 0;
-    overflow: hidden;
-    color: #f4efe1;
-    font: 800 0.78rem/1.25 'Barlow', system-ui, sans-serif;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  @media (max-width: 768px) {
-    .search-suggest-item {
-      grid-template-columns: 4.45rem minmax(0, 1fr);
-      gap: 0.62rem;
-      min-height: 2.85rem;
-      padding: 0 0.62rem;
-    }
-
-    .search-suggest-type {
-      font-size: 0.56rem;
-    }
-
-    .search-suggest-title {
-      font-size: 0.76rem;
-    }
-  }
+.search-suggest-item {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 52px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--text);
+  text-decoration: none;
+}
+.search-suggest-item:hover,
+.search-suggest-item:focus,
+.search-suggest-item.is-active,
+.search-suggest-item[aria-selected="true"] {
+  border-color: #b7c5a7;
+  background: var(--forest-soft);
+  outline: 0;
+}
+.search-suggest-type {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 5px 6px;
+  border: 1px solid #cbd7bd;
+  border-radius: 4px;
+  color: var(--forest);
+  background: #edf2e7;
+  font: 600 0.65rem var(--font-body);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.search-suggest-type--post {
+  background: var(--amber-soft);
+  color: #714900;
+  border-color: #e0c58c;
+}
+.search-suggest-title {
+  font: 650 0.87rem/1.5 var(--font-body);
+  color: var(--forest);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
 </style>
 
 <script>
-  type SearchSuggestion = {
-    title: string;
-    href: string;
-    type: 'post' | 'panduan';
-    category?: string;
-    excerpt?: string;
-    image?: string | null;
-  };
+type SearchSuggestion = {
+  title: string;
+  href: string;
+  type: "post" | "panduan";
+  category?: string;
+  excerpt?: string;
+  image?: string | null;
+};
 
-  type SearchAutosuggestWindow = typeof window & {
-    __arkaraSearchAutosuggestDocumentClick?: boolean;
-  };
+type SearchAutosuggestWindow = typeof window & {
+  __arkaraSearchAutosuggestDocumentClick?: boolean;
+};
 
-  const searchRoots = document.querySelectorAll<HTMLFormElement>('[data-search-autosuggest]');
+const searchRoots = document.querySelectorAll<HTMLFormElement>(
+  "[data-search-autosuggest]",
+);
 
-  function sanitize(value: string) {
-    return value
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
-  }
+function sanitize(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
-  function renderSuggestion(result: SearchSuggestion, instanceId: string, index: number) {
-    const typeLabel = result.type === 'panduan' ? 'Panduan' : 'Artikel';
-    const typeClass = result.type === 'panduan' ? 'search-suggest-type--panduan' : 'search-suggest-type--post';
+function renderSuggestion(
+  result: SearchSuggestion,
+  instanceId: string,
+  index: number,
+) {
+  const typeLabel = result.type === "panduan" ? "Panduan" : "Artikel";
+  const typeClass =
+    result.type === "panduan"
+      ? "search-suggest-type--panduan"
+      : "search-suggest-type--post";
 
-    return `
+  return `
       <a id="${sanitize(`${instanceId}-option-${index}`)}" class="search-suggest-item" href="${sanitize(result.href)}" role="option" aria-selected="false">
         <span class="search-suggest-type ${typeClass}">${typeLabel}</span>
         <span class="search-suggest-title">${sanitize(result.title)}</span>
       </a>
     `;
+}
+
+searchRoots.forEach((root) => {
+  const input = root.querySelector<HTMLInputElement>("[data-search-input]");
+  const panel = root.querySelector<HTMLElement>("[data-search-panel]");
+  const status = root.querySelector<HTMLElement>("[data-search-status]");
+  const results = root.querySelector<HTMLElement>("[data-search-results]");
+  let timer: number | undefined;
+  let controller: AbortController | undefined;
+
+  if (!input || !panel || !status || !results) return;
+
+  const searchInput = input;
+  const searchPanel = panel;
+  const searchStatus = status;
+  const searchResults = results;
+  const searchInstanceId = root.id;
+  let activeIndex = -1;
+
+  function getOptions(): HTMLAnchorElement[] {
+    return Array.from(
+      searchResults.querySelectorAll<HTMLAnchorElement>('[role="option"]'),
+    );
   }
 
-  searchRoots.forEach((root) => {
-    const input = root.querySelector<HTMLInputElement>('[data-search-input]');
-    const panel = root.querySelector<HTMLElement>('[data-search-panel]');
-    const status = root.querySelector<HTMLElement>('[data-search-status]');
-    const results = root.querySelector<HTMLElement>('[data-search-results]');
-    let timer: number | undefined;
-    let controller: AbortController | undefined;
+  function resetActiveOption() {
+    activeIndex = -1;
+    getOptions().forEach((option) => {
+      option.classList.remove("is-active");
+      option.setAttribute("aria-selected", "false");
+    });
+    searchInput.removeAttribute("aria-activedescendant");
+  }
 
-    if (!input || !panel || !status || !results) return;
+  function setActiveIndex(index: number) {
+    const options = getOptions();
+    resetActiveOption();
 
-    const searchInput = input;
-    const searchPanel = panel;
-    const searchStatus = status;
-    const searchResults = results;
-    const searchInstanceId = root.id;
-    let activeIndex = -1;
-
-    function getOptions(): HTMLAnchorElement[] {
-      return Array.from(searchResults.querySelectorAll<HTMLAnchorElement>('[role="option"]'));
-    }
-
-    function resetActiveOption() {
+    if (options.length === 0) {
       activeIndex = -1;
-      getOptions().forEach((option) => {
-        option.classList.remove('is-active');
-        option.setAttribute('aria-selected', 'false');
-      });
-      searchInput.removeAttribute('aria-activedescendant');
+      return;
     }
 
-    function setActiveIndex(index: number) {
-      const options = getOptions();
+    const normalizedIndex =
+      ((index % options.length) + options.length) % options.length;
+    const option = options[normalizedIndex];
+    activeIndex = normalizedIndex;
+    option.classList.add("is-active");
+    option.setAttribute("aria-selected", "true");
+    searchInput.setAttribute("aria-activedescendant", option.id);
+    option.scrollIntoView({ block: "nearest" });
+  }
+
+  function closePanel() {
+    searchPanel.hidden = true;
+    searchInput.setAttribute("aria-expanded", "false");
+    resetActiveOption();
+  }
+
+  function openPanel(message?: string) {
+    if (message) {
       resetActiveOption();
+      searchStatus.textContent = message;
+      searchStatus.hidden = false;
+      searchResults.innerHTML = "";
+    }
+    searchPanel.hidden = false;
+    searchInput.setAttribute("aria-expanded", "true");
+  }
 
-      if (options.length === 0) {
-        activeIndex = -1;
-        return;
-      }
+  async function runSearch(query: string) {
+    const trimmed = query.trim();
+    resetActiveOption();
 
-      const normalizedIndex = ((index % options.length) + options.length) % options.length;
-      const option = options[normalizedIndex];
-      activeIndex = normalizedIndex;
-      option.classList.add('is-active');
-      option.setAttribute('aria-selected', 'true');
-      searchInput.setAttribute('aria-activedescendant', option.id);
-      option.scrollIntoView({ block: 'nearest' });
+    if (trimmed.length < 2) {
+      openPanel("Ketik minimal 2 karakter.");
+      return;
     }
 
-    function closePanel() {
-      searchPanel.hidden = true;
-      searchInput.setAttribute('aria-expanded', 'false');
-      resetActiveOption();
-    }
+    controller?.abort();
+    controller = new AbortController();
+    openPanel("Mencari...");
 
-    function openPanel(message?: string) {
-      if (message) {
-        resetActiveOption();
-        searchStatus.textContent = message;
-        searchStatus.hidden = false;
-        searchResults.innerHTML = '';
-      }
-      searchPanel.hidden = false;
-      searchInput.setAttribute('aria-expanded', 'true');
-    }
-
-    async function runSearch(query: string) {
-      const trimmed = query.trim();
-      resetActiveOption();
-
-      if (trimmed.length < 2) {
-        openPanel('Ketik minimal 2 karakter.');
-        return;
-      }
-
-      controller?.abort();
-      controller = new AbortController();
-      openPanel('Mencari...');
-
-      try {
-        const response = await fetch(`/api/search-suggestions?q=${encodeURIComponent(trimmed)}`, {
+    try {
+      const response = await fetch(
+        `/api/search-suggestions?q=${encodeURIComponent(trimmed)}`,
+        {
           signal: controller.signal,
-          headers: { Accept: 'application/json' },
-        });
-        if (!response.ok) throw new Error('Search request failed');
+          headers: { Accept: "application/json" },
+        },
+      );
+      if (!response.ok) throw new Error("Search request failed");
 
-        const payload = await response.json() as { results?: SearchSuggestion[] };
-        const items = payload.results || [];
-        if (items.length === 0) {
-          openPanel('Tidak ada hasil yang cocok.');
-          return;
-        }
-
-        searchStatus.hidden = true;
-        searchResults.innerHTML = items.map((item, index) => renderSuggestion(item, searchInstanceId, index)).join('');
-        resetActiveOption();
-        openPanel();
-      } catch (error) {
-        if ((error as Error).name === 'AbortError') return;
-        resetActiveOption();
-        openPanel('Search belum bisa dipakai. Coba lagi.');
+      const payload = (await response.json()) as {
+        results?: SearchSuggestion[];
+      };
+      const items = payload.results || [];
+      if (items.length === 0) {
+        openPanel("Tidak ada hasil yang cocok.");
+        return;
       }
-    }
 
-    searchInput.addEventListener('input', () => {
+      searchStatus.hidden = true;
+      searchResults.innerHTML = items
+        .map((item, index) => renderSuggestion(item, searchInstanceId, index))
+        .join("");
       resetActiveOption();
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => runSearch(searchInput.value), 180);
-    });
+      openPanel();
+    } catch (error) {
+      if ((error as Error).name === "AbortError") return;
+      resetActiveOption();
+      openPanel("Search belum bisa dipakai. Coba lagi.");
+    }
+  }
 
-    searchInput.addEventListener('focus', () => {
-      if (searchInput.value.trim().length >= 2 || searchResults.innerHTML) {
-        openPanel();
-      }
-    });
-
-    searchResults.addEventListener('pointerover', (event) => {
-      const target = event.target as Element | null;
-      const option = target?.closest<HTMLAnchorElement>('[role="option"]');
-      if (!option || !searchResults.contains(option)) return;
-
-      const optionIndex = getOptions().indexOf(option);
-      if (optionIndex >= 0) setActiveIndex(optionIndex);
-    });
-
-    root.addEventListener('submit', (event) => {
-      event.preventDefault();
-      const firstResult = searchResults.querySelector<HTMLAnchorElement>('a');
-      if (firstResult) {
-        window.location.href = firstResult.href;
-      } else {
-        runSearch(searchInput.value);
-      }
-    });
-
-    root.addEventListener('arkara:search-close', closePanel);
-
-    searchInput.addEventListener('keydown', (event) => {
-      const options = getOptions();
-
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        if (searchPanel.hidden && searchInput.value.trim().length >= 2) openPanel();
-        if (options.length > 0) setActiveIndex(activeIndex < 0 ? 0 : activeIndex + 1);
-        return;
-      }
-
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        if (searchPanel.hidden && options.length > 0) openPanel();
-        if (options.length > 0) setActiveIndex(activeIndex < 0 ? options.length - 1 : activeIndex - 1);
-        return;
-      }
-
-      if (event.key === 'Enter') {
-        const activeOption = activeIndex >= 0 ? options[activeIndex] : undefined;
-        const firstResult = searchResults.querySelector<HTMLAnchorElement>('a');
-        if (activeOption) {
-          event.preventDefault();
-          window.location.href = activeOption.href;
-        } else if (firstResult) {
-          event.preventDefault();
-          window.location.href = firstResult.href;
-        } else {
-          event.preventDefault();
-          runSearch(searchInput.value);
-        }
-        return;
-      }
-
-      if (event.key === 'Escape') {
-        closePanel();
-      }
-    });
+  searchInput.addEventListener("input", () => {
+    resetActiveOption();
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => runSearch(searchInput.value), 180);
   });
 
-  const searchAutosuggestWindow = window as SearchAutosuggestWindow;
-  if (!searchAutosuggestWindow.__arkaraSearchAutosuggestDocumentClick) {
-    document.addEventListener('click', (event) => {
-      const target = event.target as Node;
-      document.querySelectorAll<HTMLFormElement>('[data-search-autosuggest]').forEach((root) => {
+  searchInput.addEventListener("focus", () => {
+    if (searchInput.value.trim().length >= 2 || searchResults.innerHTML) {
+      openPanel();
+    }
+  });
+
+  searchResults.addEventListener("pointerover", (event) => {
+    const target = event.target as Element | null;
+    const option = target?.closest<HTMLAnchorElement>('[role="option"]');
+    if (!option || !searchResults.contains(option)) return;
+
+    const optionIndex = getOptions().indexOf(option);
+    if (optionIndex >= 0) setActiveIndex(optionIndex);
+  });
+
+  root.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const firstResult = searchResults.querySelector<HTMLAnchorElement>("a");
+    if (firstResult) {
+      window.location.href = firstResult.href;
+    } else {
+      runSearch(searchInput.value);
+    }
+  });
+
+  root.addEventListener("arkara:search-close", closePanel);
+
+  searchInput.addEventListener("keydown", (event) => {
+    const options = getOptions();
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (searchPanel.hidden && searchInput.value.trim().length >= 2)
+        openPanel();
+      if (options.length > 0)
+        setActiveIndex(activeIndex < 0 ? 0 : activeIndex + 1);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (searchPanel.hidden && options.length > 0) openPanel();
+      if (options.length > 0)
+        setActiveIndex(activeIndex < 0 ? options.length - 1 : activeIndex - 1);
+      return;
+    }
+
+    if (event.key === "Enter") {
+      const activeOption = activeIndex >= 0 ? options[activeIndex] : undefined;
+      const firstResult = searchResults.querySelector<HTMLAnchorElement>("a");
+      if (activeOption) {
+        event.preventDefault();
+        window.location.href = activeOption.href;
+      } else if (firstResult) {
+        event.preventDefault();
+        window.location.href = firstResult.href;
+      } else {
+        event.preventDefault();
+        runSearch(searchInput.value);
+      }
+      return;
+    }
+
+    if (event.key === "Escape") {
+      closePanel();
+    }
+  });
+});
+
+const searchAutosuggestWindow = window as SearchAutosuggestWindow;
+if (!searchAutosuggestWindow.__arkaraSearchAutosuggestDocumentClick) {
+  document.addEventListener("click", (event) => {
+    const target = event.target as Node;
+    document
+      .querySelectorAll<HTMLFormElement>("[data-search-autosuggest]")
+      .forEach((root) => {
         if (!root.contains(target)) {
-          root.dispatchEvent(new CustomEvent('arkara:search-close'));
+          root.dispatchEvent(new CustomEvent("arkara:search-close"));
         }
       });
-    });
-    searchAutosuggestWindow.__arkaraSearchAutosuggestDocumentClick = true;
-  }
+  });
+  searchAutosuggestWindow.__arkaraSearchAutosuggestDocumentClick = true;
+}
 </script>

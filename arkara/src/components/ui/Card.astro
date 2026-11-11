@@ -2,12 +2,16 @@
 interface Props {
   class?: string;
 }
-
-const { class: className } = Astro.props;
+const { class: className = "" } = Astro.props;
 ---
-
-<div
-  class={`bg-parchment border border-sand rounded-lg p-6 ${className}`}
->
-  <slot />
+<div class:list={['ui-card',className]}>
+<slot/>
 </div>
+<style>
+.ui-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 24px;
+}
+</style>

@@ -617,21 +617,29 @@ export interface HeroSection {
   headline: string
   subheadline?: string
   body_text?: string
-  mascot_image?: any
+  mascot_image?: unknown
   mascot_speech_text?: string
   mascot_tagline?: string
 }
 
 export async function getHeroSection(): Promise<HeroSection | null> {
-  return getCachedContent('hero-section', async () => {
+  // CMS-managed hero media must be current on the next homepage request.
+  // Other content keeps its existing cache; the homepage HTML is no-store.
+  try {
     const { data, error } = await supabase
       .from('hero_section')
       .select('*')
       .single()
     
-    if (error) return null
+    if (error) {
+      console.warn('Error fetching hero section:', error.code)
+      return null
+    }
     return data
-  })
+  } catch {
+    console.warn('Hero section is temporarily unavailable')
+    return null
+  }
 }
 
 export interface CtaSection {

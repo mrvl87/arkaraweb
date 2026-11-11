@@ -1,16 +1,7 @@
 ---
-/**
- * PostCard.astro — Retro Survival Manual 2.0
- * Props: unchanged (backward compatible)
- * Changes:
- *   - Removed: rounded-2xl, shadow-sm, hover:shadow-xl, gradient-br
- *   - Added: ink border, box-shadow offset, flat image filter
- *   - Category badge: mono font, ink style (not backdrop-blur)
- *   - "Lanjutkan →" replaced with mono-style label
- */
-import OptimizedImage from '../ui/OptimizedImage.astro';
-import { calculateReadingTime } from '../../lib/markdown';
-
+import OptimizedImage from "../ui/OptimizedImage.astro";
+import Icon from "../ui/Icon.astro";
+import { calculateReadingTime } from "../../lib/markdown";
 interface Props {
   title: string;
   excerpt: string;
@@ -22,217 +13,45 @@ interface Props {
   sizes?: string;
   readingTime?: number;
 }
-
-const { title, excerpt, category, date, slug, content, image, sizes, readingTime: providedReadingTime } = Astro.props;
-const readingTime = providedReadingTime ?? calculateReadingTime(content || '');
-
-const formattedDate = new Date(date).toLocaleDateString('id-ID', {
-  day: 'numeric', month: 'short', year: 'numeric'
-});
+const {
+  title,
+  excerpt,
+  category,
+  date,
+  slug,
+  content,
+  image,
+  sizes,
+  readingTime: provided,
+} = Astro.props;
+const readingTime = content?.trim()
+  ? calculateReadingTime(content)
+  : provided && provided > 1
+    ? provided
+    : undefined;
+const parsedDate = new Date(date);
+const formattedDate = !Number.isNaN(parsedDate.getTime())
+  ? parsedDate.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })
+  : "";
 ---
-
-<article class={`post-card ${image ? 'post-card--with-image' : 'post-card--no-image'}`} style="
-  background: var(--paper);
-  border: 3px solid var(--ink);
-  box-shadow: 5px 5px 0 var(--ink);
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  transition: transform 0.15s, box-shadow 0.15s;
-  position: relative;
-"
-onmouseover="this.style.transform='translate(-2px,-2px)';this.style.boxShadow='7px 7px 0 var(--ink)'"
-onmouseout="this.style.transform='';this.style.boxShadow='5px 5px 0 var(--ink)'"
->
-  {image && (
-    <div class="post-card-image" style="overflow: hidden; border-bottom: 3px solid var(--ink); position: relative;">
-      <OptimizedImage
-        image={image}
-        alt={title}
-        class="w-full object-cover"
-        style="filter: saturate(0.65) contrast(1.08); display: block; aspect-ratio: 16/9;"
-        aspectRatio="aspect-video"
-        sizes={sizes}
-        mobileMaxSrcSetWidth={240}
-        maxSrcSetWidth={400}
-        mobileTargetWidths={[160, 240]}
-        targetWidths={[240, 320, 400]}
-        mobileSizes="96px"
-        quality={70}
-      />
-      <!-- Category stamp -->
-      <div class="post-card-stamp" style="
-        position: absolute; top: 0.75rem; left: 0.75rem;
-        background: var(--ink);
-        border: 1px solid var(--green-terminal);
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 0.55rem;
-        letter-spacing: 0.18em;
-        color: var(--green-terminal);
-        text-transform: uppercase;
-        padding: 0.25rem 0.6rem;
-      ">{category}</div>
-    </div>
-  )}
-
-  <div class="post-card-body" style="padding: 1.5rem; display: flex; flex-direction: column; flex: 1; gap: 0.6rem;">
-
-    <!-- Meta row -->
-    <div class="post-card-meta" style="
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.58rem;
-      letter-spacing: 0.12em;
-      color: var(--warm-grey);
-      text-transform: uppercase;
-      display: flex; align-items: center; gap: 0.75rem;
-    ">
-      <time datetime={date}>{formattedDate}</time>
-      <span style="color: var(--cream-dark);">·</span>
-      <span>{readingTime} MIN READ</span>
-      {!image && (
-        <>
-          <span style="color: var(--cream-dark);">·</span>
-          <span style="color: var(--green-terminal);">{category}</span>
-        </>
-      )}
-    </div>
-
-    <!-- Title -->
-    <a href={`/blog/${slug}`} class="post-card-title-link" style="text-decoration: none;">
-      <h3 style="
-        font-family: 'Barlow Condensed', sans-serif;
-        font-size: 1.4rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        color: var(--ink);
-        line-height: 1.1;
-        transition: color 0.15s;
-        margin: 0;
-      "
-      onmouseover="this.style.color='var(--green-dark)'"
-      onmouseout="this.style.color='var(--ink)'"
-      >{title}</h3>
-    </a>
-
-    <!-- Excerpt -->
-    <p class="post-card-excerpt" style="
-      font-size: 0.82rem;
-      color: var(--warm-grey-dark);
-      line-height: 1.65;
-      flex: 1;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      margin: 0;
-    ">{excerpt}</p>
-
-    <!-- Footer -->
-    <div class="post-card-footer" style="
-      padding-top: 0.75rem;
-      border-top: 1px dashed var(--cream-dark);
-      display: flex;
-      justify-content: flex-end;
-    ">
-      <a href={`/blog/${slug}`} class="post-card-cta" style="
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 0.6rem;
-        letter-spacing: 0.15em;
-        color: var(--green-terminal);
-        text-transform: uppercase;
-        text-decoration: none;
-        border: 1px solid var(--green-terminal);
-        padding: 0.3rem 0.65rem;
-        transition: background 0.15s;
-      "
-      onmouseover="this.style.background='var(--green-dark)'"
-      onmouseout="this.style.background=''"
-      >BACA →</a>
-    </div>
-  </div>
+<article class="post-card">
+ <a href={`/blog/${slug}`} class="post-card-image" tabindex="-1" aria-hidden="true">{image?<OptimizedImage image={image} alt="" class="w-full h-full object-cover" aspectRatio="aspect-video" sizes={sizes||'(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'} targetWidths={[400,640,800]} mobileTargetWidths={[400,640]} mobileMaxSrcSetWidth={640} quality={78}/>:<div class="image-placeholder">
+<Icon name="journal" size={40}/>
+</div>}</a>
+ <div class="post-card-body">
+<div class="card-meta">
+<span class="category-label">{category||'Wawasan'}</span>{formattedDate&&<time datetime={date}>{formattedDate}</time>}</div>
+ <h3>
+<a href={`/blog/${slug}`}>{title}</a>
+</h3>
+ {excerpt&&<p class="post-card-excerpt">{excerpt}</p>}
+ <div class="post-card-footer">{readingTime?<span class="reading-time">
+<Icon name="clock" size={14}/>{readingTime} menit baca</span>:<span class="reading-time">Jurnal Arkara</span>}<a href={`/blog/${slug}`} class="text-link" aria-label={`Baca: ${title}`}>Baca artikel <Icon name="arrow" size={16}/>
+</a>
+</div>
+</div>
 </article>
-
-<style>
-  @media (max-width: 768px) {
-    .post-card {
-      display: grid !important;
-      grid-template-columns: 5.4rem minmax(0, 1fr) !important;
-      background: #101617 !important;
-      border: 1px solid rgba(255,255,255,0.12) !important;
-      border-radius: 8px !important;
-      box-shadow: none !important;
-      overflow: hidden !important;
-      transform: none !important;
-    }
-
-    .post-card--no-image {
-      grid-template-columns: 1fr !important;
-    }
-
-    .post-card-image {
-      height: 100% !important;
-      border-right: 1px solid rgba(255,255,255,0.10) !important;
-      border-bottom: 0 !important;
-    }
-
-    .post-card-image :global(.relative) {
-      height: 100% !important;
-      aspect-ratio: auto !important;
-    }
-
-    .post-card-image :global(img) {
-      height: 100% !important;
-    }
-
-    .post-card-stamp {
-      display: none !important;
-    }
-
-    .post-card-body {
-      min-width: 0 !important;
-      padding: 0.72rem !important;
-      gap: 0.38rem !important;
-    }
-
-    .post-card-meta {
-      flex-wrap: wrap !important;
-      gap: 0.45rem !important;
-      color: #8fa3aa !important;
-      font-size: 0.56rem !important;
-      letter-spacing: 0.08em !important;
-    }
-
-    .post-card h3 {
-      font-family: 'Barlow', system-ui, sans-serif !important;
-      color: #f8fafc !important;
-      font-size: 0.88rem !important;
-      font-weight: 850 !important;
-      line-height: 1.22 !important;
-      letter-spacing: 0 !important;
-      text-transform: none !important;
-      display: -webkit-box !important;
-      overflow: hidden !important;
-      -webkit-box-orient: vertical !important;
-      -webkit-line-clamp: 2 !important;
-    }
-
-    .post-card-excerpt {
-      color: #b7c9cf !important;
-      font-size: 0.76rem !important;
-      line-height: 1.38 !important;
-      -webkit-line-clamp: 1 !important;
-    }
-
-    .post-card-footer {
-      display: none !important;
-    }
-
-    .post-card-cta {
-      border: 0 !important;
-      padding: 0 !important;
-      color: #63d2b5 !important;
-      font-size: 0.66rem !important;
-      letter-spacing: 0.12em !important;
-    }
-  }
-</style>

@@ -1,0 +1,49 @@
+---
+import { DEFAULT_MASCOT, getHeroMascot } from '../../lib/hero-media';
+
+interface Props { image?: unknown }
+const mascot = getHeroMascot(Astro.props.image);
+---
+<img
+  class="hero-mascot"
+  src={mascot.src}
+  alt={mascot.alt}
+  width={mascot.width}
+  height={mascot.height}
+  loading="eager"
+  fetchpriority="high"
+  decoding="async"
+  data-mascot-fallback={mascot.src !== DEFAULT_MASCOT.src ? DEFAULT_MASCOT.src : undefined}
+  data-mascot-fallback-alt={mascot.src !== DEFAULT_MASCOT.src ? DEFAULT_MASCOT.alt : undefined}
+/>
+
+<style>
+  /* CMS uploads may have a different aspect ratio from the bundled portrait. */
+  .hero-mascot { max-width: 100%; object-fit: contain; }
+</style>
+
+<script>
+  // Error recovery only: the mascot remains a static, non-interactive image.
+  function installMascotFallbacks() {
+    document.querySelectorAll<HTMLImageElement>('img[data-mascot-fallback]').forEach((image) => {
+      if (image.dataset.fallbackReady) return;
+      image.dataset.fallbackReady = 'true';
+      const useFallback = () => {
+        const fallback = image.dataset.mascotFallback;
+        if (!fallback) return;
+        image.removeEventListener('error', useFallback);
+        image.removeAttribute('srcset');
+        image.width = 638;
+        image.height = 850;
+        image.alt = image.dataset.mascotFallbackAlt || image.alt;
+        delete image.dataset.mascotFallback;
+        delete image.dataset.mascotFallbackAlt;
+        image.src = fallback;
+      };
+      image.addEventListener('error', useFallback, { once: true });
+      if (image.complete && image.naturalWidth === 0) useFallback();
+    });
+  }
+  installMascotFallbacks();
+  document.addEventListener('astro:page-load', installMascotFallbacks);
+</script>

@@ -1,76 +1,40 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getAssistantApiBaseUrl } from "../lib/assistant/env";
-
 const apiBaseUrl = getAssistantApiBaseUrl();
 ---
-
-<BaseLayout
-  cachePolicy="private"
-  title="Assistant"
-  description="Arkara Survival AI Assistant untuk percakapan mendalam dan penilaian skenario."
-  canonicalHref="/assistant"
->
-  <section style="
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 3rem 2rem 1.5rem;
-    position: relative;
-    z-index: 2;
-  ">
-    <div style="
-      background: var(--ink);
-      border: 3px solid var(--green-terminal);
-      padding: 2.5rem;
-      box-shadow: 8px 8px 0 var(--green-terminal);
-      color: var(--cream);
-    ">
-      <div style="
-        font-family: 'Share Tech Mono', monospace;
-        font-size: 0.62rem;
-        letter-spacing: 0.22em;
-        color: var(--green-terminal);
-        text-transform: uppercase;
-        margin-bottom: 1rem;
-      ">FIELD DESK / CANONICAL ROUTE</div>
-      <h1 style="
-        font-size: clamp(2.2rem, 5vw, 4rem);
-        color: var(--cream);
-        margin-bottom: 1rem;
-      ">Arkara Survival AI Assistant</h1>
-      <p style="max-width: 60ch; color: var(--warm-grey); line-height: 1.75; margin-bottom: 0;">
-        Gunakan halaman ini untuk percakapan yang lebih fokus, akses Scenario Analyzer, dan tindak
-        lanjut dari artikel atau panduan yang sedang Anda baca.
-      </p>
-    </div>
-  </section>
-
-  <section style="
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 2rem 5rem;
-    position: relative;
-    z-index: 2;
-  ">
-    <div id="assistant-root" style="
-      background: var(--paper);
-      border: 3px solid var(--ink);
-      box-shadow: 8px 8px 0 var(--ink);
-      overflow: hidden;
-    " data-api-base-url={apiBaseUrl}></div>
-  </section>
-
-  <script>
-    import { mountAssistantPage } from "../lib/assistant/widget";
-
-    const root = document.getElementById("assistant-root");
-    if (root) {
-      mountAssistantPage(root, {
-        apiBaseUrl: root.getAttribute("data-api-base-url") ?? "",
-        assistantPageUrl: "/assistant",
-        siteName: "Arkara",
-        locale: "id-ID",
-      });
-    }
-  </script>
+<BaseLayout cachePolicy="private" title="Asisten Kesiapsiagaan" description="Jelajahi pertanyaan dan susun prioritas kesiapsiagaan bersama asisten Arkara." canonicalHref="/assistant">
+ <header class="listing-hero">
+<div class="site-container">
+<div class="eyebrow">TEMAN MENYUSUN PERSIAPAN</div>
+<h1>Mulai dari pertanyaan Anda.</h1>
+<p>Diskusikan kebutuhan keluarga, jelajahi skenario, dan susun langkah yang masuk akal bersama asisten Arkara.</p>
+</div>
+</header>
+ <section class="site-container assistant-page">
+<div id="assistant-root" data-api-base-url={apiBaseUrl}>
+</div>
+</section>
+ <script>
+import { mountAssistantPage } from "../lib/assistant/widget";
+const root = document.getElementById("assistant-root");
+if (root)
+  mountAssistantPage(root, {
+    apiBaseUrl: root.getAttribute("data-api-base-url") ?? "",
+    assistantPageUrl: "/assistant",
+    siteName: "Arkara",
+    locale: "id-ID",
+  });
+</script>
 </BaseLayout>
+<style>
+.assistant-page {
+  padding-block: 35px 70px;
+}
+#assistant-root {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+</style>

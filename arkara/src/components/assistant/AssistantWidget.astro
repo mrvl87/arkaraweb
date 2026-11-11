@@ -1,79 +1,42 @@
-﻿---
-import type { AssistantMode } from "../../lib/assistant/contracts";
-
-const {
-  initialMode
-}: {
-  initialMode?: AssistantMode;
-} = Astro.props;
-
-const assistantHref = initialMode
-  ? `/assistant?mode=${encodeURIComponent(initialMode)}`
-  : '/assistant';
 ---
-
+import type { AssistantMode } from "../../lib/assistant/contracts";
+import Icon from "../ui/Icon.astro";
+const { initialMode }: { initialMode?: AssistantMode } = Astro.props;
+const href = initialMode
+  ? `/assistant?mode=${encodeURIComponent(initialMode)}`
+  : "/assistant";
+---
 <div class="assistant-lazy-root" data-assistant-lazy-root>
-  <a class="assistant-lazy-trigger" href={assistantHref} aria-label="Buka Arkara AI Assistant">
-    <span class="assistant-lazy-trigger__logo" aria-hidden="true">A</span>
-  </a>
+<a class="assistant-lazy-trigger" href={href} aria-label="Buka asisten kesiapsiagaan Arkara">
+<Icon name="komunitas" size={24}/>
+</a>
 </div>
-
 <style>
+.assistant-lazy-root {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 110;
+}
+.assistant-lazy-trigger {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  background: var(--forest);
+  border: 2px solid var(--surface-raised);
+  border-radius: 50%;
+  color: var(--surface-raised);
+  box-shadow: 0 4px 16px #1f4d2e26;
+}
+@media (max-width: 600px) {
   .assistant-lazy-root {
-    position: fixed !important;
-    right: 1rem !important;
-    bottom: 1.1rem !important;
-    z-index: 140 !important;
-    width: 3.25rem !important;
-    height: 3.25rem !important;
-    pointer-events: none;
+    right: 16px;
+    bottom: calc(85px + env(safe-area-inset-bottom));
   }
-
   .assistant-lazy-trigger {
-    position: relative !important;
-    z-index: 1 !important;
-    display: grid !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    padding: 0 !important;
-    place-items: center !important;
-    border: 1px solid rgba(110, 231, 183, 0.46) !important;
-    border-radius: 999px !important;
-    background:
-      radial-gradient(circle at 32% 22%, rgba(110, 231, 183, 0.22), transparent 38%),
-      #0d1516 !important;
-    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.32) !important;
-    color: var(--cream) !important;
-    cursor: pointer;
-    overflow: hidden !important;
-    pointer-events: auto;
-    text-align: center !important;
-    text-decoration: none !important;
+    width: 46px;
+    height: 46px;
   }
-
-  .assistant-lazy-trigger__logo {
-    display: grid !important;
-    width: 2.35rem !important;
-    height: 2.35rem !important;
-    place-items: center !important;
-    border-radius: inherit !important;
-    background: rgba(110, 231, 183, 0.09) !important;
-    color: #a7f3d0 !important;
-    font-family: Georgia, 'Times New Roman', serif !important;
-    font-size: 1.42rem !important;
-    font-weight: 800 !important;
-    line-height: 1 !important;
-  }
-
-  @media (max-width: 640px) {
-    .assistant-lazy-root {
-      right: 0.95rem !important;
-      bottom: calc(5.35rem + env(safe-area-inset-bottom)) !important;
-      width: 3.05rem !important;
-      height: 3.05rem !important;
-    }
-  }
+}
 </style>

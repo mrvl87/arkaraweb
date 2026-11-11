@@ -1,563 +1,81 @@
 ---
-/**
- * panduan/index.astro — Retro Survival Manual 2.0
- * Data fetching: unchanged (getPublishedPanduan)
- * Changes:
- *   - Old Card component → flat ink-border rows
- *   - Added module-number labels (BAB REF)
- *   - Header: matches retro system
- */
-import { getPublishedPanduan } from '../../lib/content';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-
-const selectedCategory = Astro.url.searchParams.get('category') || undefined;
-const allGuides = await getPublishedPanduan({ category: selectedCategory });
-
-const categories = ['air', 'energi', 'pangan', 'medis', 'keamanan', 'komunitas'];
-const categoryLabels: Record<string, string> = {
-  air: 'Air', energi: 'Energi', pangan: 'Pangan',
-  medis: 'Medis', keamanan: 'Keamanan', komunitas: 'Komunitas',
-};
-const categoryIconKinds: Record<string, string> = {
-  air: 'water',
-  energi: 'energy',
-  pangan: 'food',
-  medis: 'medical',
-  keamanan: 'security',
-  komunitas: 'community',
-};
+import { getPublishedPanduan } from "../../lib/content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Icon from "../../components/ui/Icon.astro";
+const categories = [
+  {
+    slug: "air",
+    label: "Air bersih",
+    description: "Simpan, hemat, dan olah air.",
+  },
+  {
+    slug: "energi",
+    label: "Energi",
+    description: "Cadangan daya dan bahan bakar.",
+  },
+  {
+    slug: "pangan",
+    label: "Pangan",
+    description: "Persediaan dan kemandirian pangan.",
+  },
+  {
+    slug: "medis",
+    label: "Medis",
+    description: "Kesiapan pertolongan pertama.",
+  },
+  {
+    slug: "keamanan",
+    label: "Keamanan",
+    description: "Perlindungan diri dan keluarga.",
+  },
+  {
+    slug: "komunitas",
+    label: "Komunitas",
+    description: "Bersiap dan bertahan bersama.",
+  },
+];
+const requestedCategory = Astro.url.searchParams.get("category");
+const selected = categories.find((c) => c.slug === requestedCategory);
+const guides = await getPublishedPanduan({ category: selected?.slug });
 ---
-
-<BaseLayout title="Panduan Teknis">
-
-  <!-- Header -->
-  <header class="listing-page-hero guide-page-hero" style="
-    background: var(--ink);
-    border-bottom: 3px solid var(--green-terminal);
-    padding: 3.5rem 2rem 4rem;
-    position: relative; overflow: hidden;
-  ">
-    <div style="
-      position:absolute;inset:0;
-      background-image:
-        linear-gradient(rgba(143,175,143,0.04) 1px,transparent 1px),
-        linear-gradient(90deg,rgba(143,175,143,0.04) 1px,transparent 1px);
-      background-size:40px 40px;pointer-events:none;
-    " aria-hidden="true"></div>
-
-    <div class="listing-page-shell" style="max-width:900px;margin:0 auto;position:relative;z-index:1;">
-      <div class="listing-kicker" style="
-        font-family:'Share Tech Mono',monospace;
-        font-size:0.6rem;letter-spacing:0.25em;
-        color:var(--green-terminal);text-transform:uppercase;
-        display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;
-      ">
-        <span style="display:inline-block;width:20px;height:1px;background:var(--green-terminal);"></span>
-        BUKU PEGANGAN KRISIS - AVAILABLE SOON
-      </div>
-      <h1 class="guide-page-title" style="
-        font-family:'Barlow Condensed',sans-serif;
-        font-size:clamp(2.5rem,6vw,5rem);
-        font-weight:800;text-transform:uppercase;
-        color:var(--cream);line-height:0.9;margin-bottom:1rem;
-      ">PANDUAN<br>TEKNIS</h1>
-      <p class="guide-page-intro" style="
-        font-size:0.85rem;color:var(--warm-grey);
-        max-width:440px;line-height:1.65;
-        border-left:3px solid var(--green-terminal);padding-left:1rem;
-      ">
-        Instruksi teknis praktis untuk menuntun anda melewati krisis
-      </p>
-
-      <!-- Category filters — flat tab style -->
-      <div class="guide-filter-bar" style="display:flex;gap:0;flex-wrap:wrap;margin-top:2.5rem;">
-        <a href="/panduan" class={`guide-filter-link ${!selectedCategory ? 'is-active' : ''}`} style={`
-          font-family:'Share Tech Mono',monospace;
-          font-size:0.62rem;letter-spacing:0.12em;
-          text-transform:uppercase;padding:0.5rem 1rem;
-          text-decoration:none;
-          border:2px solid ${!selectedCategory ? 'var(--green-terminal)' : 'rgba(143,175,143,0.2)'};
-          background:${!selectedCategory ? 'var(--green-terminal)' : 'transparent'};
-          color:${!selectedCategory ? 'var(--ink)' : 'var(--warm-grey)'};
-          transition:all 0.15s;
-          margin-right:2px;margin-bottom:4px;
-          font-weight:${!selectedCategory ? '700' : '400'};
-        `}>
-          <span class="guide-filter-icon guide-filter-icon--guide" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path class="icon-soft-fill" d="M6 4.5h8.5A3.5 3.5 0 0 1 18 8v11.5H8.5A2.5 2.5 0 0 0 6 22V4.5Z" />
-              <path class="icon-primary-stroke" d="M6 4.5A2.5 2.5 0 0 1 8.5 2H18v17.5" />
-              <path class="icon-accent-stroke" d="M9 8h6M9 11h5" />
-            </svg>
-          </span>
-          <span>SEMUA</span>
-        </a>
-
-        {categories.map(cat => (
-          <a href={`/panduan?category=${cat}`} class={`guide-filter-link ${selectedCategory === cat ? 'is-active' : ''}`} style={`
-            font-family:'Share Tech Mono',monospace;
-            font-size:0.62rem;letter-spacing:0.12em;
-            text-transform:uppercase;padding:0.5rem 1rem;
-            text-decoration:none;
-            border:2px solid ${selectedCategory === cat ? 'var(--green-terminal)' : 'rgba(143,175,143,0.2)'};
-            background:${selectedCategory === cat ? 'var(--green-terminal)' : 'transparent'};
-            color:${selectedCategory === cat ? 'var(--ink)' : 'var(--warm-grey)'};
-            transition:all 0.15s;
-            margin-right:2px;margin-bottom:4px;
-            font-weight:${selectedCategory === cat ? '700' : '400'};
-          `}>
-            <span class={`guide-filter-icon guide-filter-icon--${categoryIconKinds[cat]}`} aria-hidden="true">
-              {categoryIconKinds[cat] === 'energy' && (
-                <svg viewBox="0 0 24 24">
-                  <path class="icon-soft-fill" d="M12.7 2.2 4.9 13.1h5.8L9.7 22l9.5-12.5h-6.1l-.4-7.3Z" />
-                  <path class="icon-primary-fill" d="M13.4 2 6.2 12.2h5.4L10.5 22l7.7-11.1h-5.4L13.4 2Z" />
-                  <path class="icon-accent-stroke" d="M9 12.2h2.6L11 17" />
-                </svg>
-              )}
-              {categoryIconKinds[cat] === 'water' && (
-                <svg viewBox="0 0 24 24">
-                  <path class="icon-soft-fill" d="M12 2.5c-3.7 4.2-5.5 7.4-5.5 10a5.5 5.5 0 0 0 11 0c0-2.6-1.8-5.8-5.5-10Z" />
-                  <path class="icon-primary-fill" d="M12 4.3c-2.7 3.3-4 5.8-4 7.9a4 4 0 0 0 8 0c0-2.1-1.3-4.6-4-7.9Z" />
-                  <path class="icon-accent-stroke" d="M9.2 12.4c0 1.5 1 2.6 2.8 2.8" />
-                </svg>
-              )}
-              {categoryIconKinds[cat] === 'food' && (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path class="icon-soft-fill" d="M7 17c-.5-4.7 2.3-8.4 7.5-10.7 1.1-.5 2.4.4 2.2 1.6C15.8 13 12.1 16.2 7 17Z" />
-                  <path class="icon-primary-stroke" d="M6 20c7.4-.8 11.4-4.9 12-12" />
-                  <path class="icon-accent-stroke" d="M9 13c1.8.1 3.4.8 4.8 2.1" />
-                </svg>
-              )}
-              {categoryIconKinds[cat] === 'medical' && (
-                <svg viewBox="0 0 24 24">
-                  <path class="icon-soft-fill" d="M9.2 2.8h5.6v6.4h6.4v5.6h-6.4v6.4H9.2v-6.4H2.8V9.2h6.4V2.8Z" />
-                  <path class="icon-primary-fill" d="M10.3 4.2h3.4v6.1h6.1v3.4h-6.1v6.1h-3.4v-6.1H4.2v-3.4h6.1V4.2Z" />
-                  <path class="icon-accent-stroke" d="M12 7.2v9.6M7.2 12h9.6" />
-                </svg>
-              )}
-              {categoryIconKinds[cat] === 'security' && (
-                <svg viewBox="0 0 24 24">
-                  <path class="icon-soft-fill" d="M12 2.8 5 5.6v6.2c0 4.3 2.7 7.7 7 9.4 4.3-1.7 7-5.1 7-9.4V5.6l-7-2.8Z" />
-                  <path class="icon-primary-stroke" d="M12 4.7 7.1 6.6v5.1c0 3.1 1.8 5.6 4.9 7 3.1-1.4 4.9-3.9 4.9-7V6.6L12 4.7Z" />
-                  <path class="icon-accent-stroke" d="m9.6 12 1.7 1.7 3.5-4" />
-                </svg>
-              )}
-              {categoryIconKinds[cat] === 'community' && (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path class="icon-soft-fill" d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-                  <path class="icon-soft-fill icon-soft-fill--secondary" d="M17 10a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-                  <path class="icon-primary-stroke" d="M3.5 20a5.5 5.5 0 0 1 11 0" />
-                  <path class="icon-accent-stroke" d="M14.7 14.4A4.7 4.7 0 0 1 20.5 19" />
-                </svg>
-              )}
-            </span>
-            <span>{categoryLabels[cat]}</span>
-          </a>
-        ))}
-      </div>
-    </div>
-  </header>
-
-  <!-- Content -->
-  <section class="listing-page-section guide-page-section" style="max-width:900px;margin:0 auto;padding:3rem 2rem 5rem;">
-
-    <div class="listing-section-label" style="
-      font-family:'Share Tech Mono',monospace;
-      font-size:0.6rem;letter-spacing:0.25em;
-      color:var(--warm-grey);text-transform:uppercase;
-      display:flex;align-items:center;gap:1rem;
-      margin-bottom:2rem;
-    ">
-      {selectedCategory ? categoryLabels[selectedCategory] : 'DAFTAR PANDUAN'}
-      <span style="flex:1;height:1px;background:var(--cream-dark);max-width:80px;"></span>
-    </div>
-
-    {allGuides.length > 0 ? (
-      <div class="guide-list" style="display:flex;flex-direction:column;gap:0;">
-        {allGuides.map((guide, index) => (
-          <a href={`/panduan/${guide.slug}`} class="guide-list-card" style={`
-            display:block;
-            background:var(--paper);
-            border:3px solid var(--ink);
-            border-bottom:${index === allGuides.length - 1 ? '3px solid var(--ink)' : '0'};
-            padding:1.5rem 2rem;
-            text-decoration:none;
-            transition:background 0.15s, transform 0.15s;
-            position:relative;
-          `}
-          onmouseover="this.style.background='var(--paper-dark)';this.style.transform='translateX(4px)'"
-          onmouseout="this.style.background='var(--paper)';this.style.transform=''"
-          >
-            <div class="guide-list-row" style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
-              <div class="guide-list-main" style="display:flex;align-items:baseline;gap:1.5rem;flex:1;">
-                <!-- BAB ref badge -->
-                {guide.bab_ref && (
-                  <span class="guide-bab-badge" style="
-                    font-family:'Share Tech Mono',monospace;
-                    font-size:0.55rem;letter-spacing:0.15em;
-                    text-transform:uppercase;
-                    color:var(--green-terminal);
-                    border:1px solid var(--green-terminal);
-                    padding:0.15rem 0.5rem;
-                    white-space:nowrap;
-                    flex-shrink:0;
-                  ">{guide.bab_ref}</span>
-                )}
-                <h2 class="guide-title" style="
-                  font-family:'Barlow Condensed',sans-serif;
-                  font-size:1.25rem;font-weight:700;
-                  text-transform:uppercase;
-                  color:var(--ink);
-                  line-height:1.1;margin:0;
-                ">{guide.title}</h2>
-                {guide.category && (
-                  <span class="guide-category-badge" style="
-                    font-family:'Share Tech Mono',monospace;
-                    font-size:0.55rem;letter-spacing:0.15em;
-                    text-transform:uppercase;
-                    color:var(--warm-grey);
-                    background:var(--paper-dark);
-                    padding:0.15rem 0.4rem;
-                    border-radius:2px;
-                  ">{categoryLabels[guide.category] || guide.category}</span>
-                )}
-              </div>
-              <span class="guide-cta" style="
-                font-family:'Share Tech Mono',monospace;
-                font-size:0.6rem;letter-spacing:0.15em;
-                color:var(--green-terminal);
-                text-transform:uppercase;
-                white-space:nowrap;
-              ">LIHAT PANDUAN →</span>
-            </div>
-          </a>
-        ))}
-      </div>
-    ) : (
-      <div class="guide-empty-state" style="
-        background:var(--paper);border:3px solid var(--ink);
-        box-shadow:5px 5px 0 var(--ink);
-        padding:4rem 2rem;text-align:center;
-      ">
-        <div style="font-size:3rem;margin-bottom:1rem;filter:saturate(0);">⚒️</div>
-        <h2 style="
-          font-family:'Barlow Condensed',sans-serif;
-          font-size:1.8rem;font-weight:800;text-transform:uppercase;
-          color:var(--ink);margin-bottom:0.5rem;
-        ">BELUM ADA PANDUAN</h2>
-        <p style="font-size:0.85rem;color:var(--warm-grey);">
-          {selectedCategory ? `Belum ada panduan untuk kategori ${categoryLabels[selectedCategory]}.` : 'Panduan akan segera tersedia.'}
-        </p>
-      </div>
-    )}
-  </section>
+<BaseLayout title={selected?`Panduan ${selected.label}`:'Panduan Praktis'} description="Panduan kesiapsiagaan praktis untuk air, energi, pangan, medis, keamanan, dan komunitas.">
+ <header class="listing-hero">
+<div class="site-container">
+<div class="eyebrow">BUKU PEGANGAN KEHIDUPAN TANGGUH</div>
+<h1>Pengetahuan jadi <span class="text-forest">tindakan.</span>
+</h1>
+<p>Langkah yang bisa dipraktikkan. Persiapan yang masuk akal. Temukan panduan untuk kebutuhan keluarga Anda.</p>
+</div>
+</header>
+ <section class="site-container section-space guide-directory" aria-label="Direktori panduan">
+ <nav class="category-filters" aria-label="Filter kategori panduan">
+<a href="/panduan" class:list={['category-filter',{active:!selected}]} aria-current={!selected?'page':undefined}>
+<Icon name="book" size={18}/>Semua panduan</a>{categories.map(c=>
+<a href={`/panduan?category=${c.slug}`} class:list={['category-filter',{active:selected?.slug===c.slug}]} aria-current={selected?.slug===c.slug?'page':undefined}>
+<Icon name={c.slug} size={18}/>{c.label}</a>)}</nav>
+ <div class="section-heading">
+<div>
+<span class="eyebrow">SELANGKAH LEBIH SIAP</span>
+<h2>{selected?selected.label:'Semua panduan'}</h2>
+</div>
+<span class="section-count">{guides.length} panduan</span>
+</div>
+ {guides.length>0?<div class="guide-grid">{guides.map((guide,index)=>{const category=categories.find(c=>c.slug===guide.category);return <a href={`/panduan/${guide.slug}`} class="guide-card">
+<div class="guide-card-top">
+<span class="topic-icon">
+<Icon name={guide.category||'book'} size={25}/>
+</span>
+<span class="guide-number">{String(index+1).padStart(2,'0')}</span>
+</div>
+<span class="category-label">{category?.label||'Panduan praktis'}</span>
+<h2>{guide.title}</h2>
+<span class="guide-card-action">Pelajari panduan <Icon name="arrow" size={18}/>
+</span>
+</a>;})}</div>:<div class="empty-state">
+<Icon name={selected?.slug||'book'} size={40}/>
+<h2>Panduan sedang disiapkan.</h2>
+<p>Lihat topik lain untuk memulai persiapan Anda.</p>
+<a href="/panduan" class="button button-primary">Semua panduan</a>
+</div>}
+ </section>
 </BaseLayout>
-
-<style>
-  .guide-filter-icon {
-    display: none;
-  }
-
-  @media (max-width: 768px) {
-    :global(html),
-    :global(body),
-    :global(main) {
-      background: #070b0c !important;
-    }
-
-    .listing-page-hero {
-      background: #070b0c !important;
-      border-bottom: 1px solid rgba(255,255,255,0.10) !important;
-      padding: 1.25rem 1rem 1.05rem !important;
-    }
-
-    .listing-page-hero > div[aria-hidden="true"] {
-      opacity: 0.55 !important;
-      background-size: 28px 28px !important;
-    }
-
-    .listing-page-shell {
-      max-width: none !important;
-    }
-
-    .listing-kicker {
-      margin-bottom: 0.7rem !important;
-      color: #63d2b5 !important;
-      font-size: 0.58rem !important;
-      letter-spacing: 0.18em !important;
-    }
-
-    .listing-kicker span {
-      width: 16px !important;
-    }
-
-    .guide-page-title {
-      color: #f8fafc !important;
-      font-family: 'Barlow', system-ui, sans-serif !important;
-      font-size: clamp(2rem, 12vw, 3.15rem) !important;
-      line-height: 1 !important;
-      letter-spacing: 0 !important;
-      margin-bottom: 0.8rem !important;
-      text-transform: none !important;
-    }
-
-    .guide-page-intro {
-      max-width: none !important;
-      border-left: 0 !important;
-      padding-left: 0 !important;
-      color: #b7c9cf !important;
-      font-size: 0.9rem !important;
-      line-height: 1.55 !important;
-    }
-
-    .guide-filter-bar {
-      display: grid !important;
-      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-      gap: 0.55rem !important;
-      margin-top: 1.25rem !important;
-      width: 100% !important;
-    }
-
-    .guide-filter-link {
-      display: flex !important;
-      align-items: center !important;
-      min-width: 0 !important;
-      min-height: 46px !important;
-      gap: 0.55rem !important;
-      margin: 0 !important;
-      padding: 0.52rem 0.62rem !important;
-      border: 1px solid rgba(255,255,255,0.12) !important;
-      border-radius: 8px !important;
-      background: #101617 !important;
-      color: #dbe7ea !important;
-      font-size: 0.64rem !important;
-      letter-spacing: 0.06em !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
-    }
-
-    .guide-filter-link span:last-child {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .guide-filter-link.is-active {
-      border-color: rgba(99,210,181,0.68) !important;
-      background: rgba(18,83,69,0.62) !important;
-      color: #f8fafc !important;
-      font-weight: 800 !important;
-    }
-
-    .guide-filter-icon {
-      --icon-main: #6ee7b7;
-      --icon-accent: #d1fae5;
-      --icon-fill: rgba(110,231,183,0.18);
-      --icon-ring: rgba(110,231,183,0.28);
-      --icon-glow: rgba(110,231,183,0.22);
-      display: grid;
-      width: 2rem;
-      height: 2rem;
-      flex: 0 0 2rem;
-      place-items: center;
-      border-radius: 999px;
-      border: 1px solid var(--icon-ring);
-      background:
-        radial-gradient(circle at 34% 22%, var(--icon-glow), transparent 34%),
-        radial-gradient(circle at 70% 78%, rgba(0,0,0,0.22), transparent 42%),
-        rgba(20,83,45,0.52);
-      color: var(--icon-main);
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,0.04),
-        inset 0 -10px 18px rgba(0,0,0,0.18);
-    }
-
-    .guide-filter-icon svg {
-      width: 54%;
-      height: 54%;
-      overflow: visible;
-    }
-
-    .guide-filter-icon--guide {
-      --icon-main: #6ee7b7;
-      --icon-accent: #e0f2fe;
-      --icon-fill: rgba(45,212,191,0.14);
-      --icon-ring: rgba(110,231,183,0.34);
-      --icon-glow: rgba(125,211,252,0.18);
-    }
-
-    .guide-filter-icon--energy {
-      --icon-main: #fde047;
-      --icon-accent: #86efac;
-      --icon-fill: rgba(250,204,21,0.18);
-      --icon-ring: rgba(250,204,21,0.34);
-      --icon-glow: rgba(250,204,21,0.26);
-    }
-
-    .guide-filter-icon--water {
-      --icon-main: #67e8f9;
-      --icon-accent: #99f6e4;
-      --icon-fill: rgba(34,211,238,0.18);
-      --icon-ring: rgba(34,211,238,0.32);
-      --icon-glow: rgba(103,232,249,0.24);
-    }
-
-    .guide-filter-icon--food {
-      --icon-main: #bef264;
-      --icon-accent: #5eead4;
-      --icon-fill: rgba(132,204,22,0.18);
-      --icon-ring: rgba(190,242,100,0.30);
-      --icon-glow: rgba(190,242,100,0.22);
-    }
-
-    .guide-filter-icon--medical {
-      --icon-main: #fb7185;
-      --icon-accent: #fff7ed;
-      --icon-fill: rgba(251,113,133,0.16);
-      --icon-ring: rgba(251,113,133,0.34);
-      --icon-glow: rgba(251,113,133,0.23);
-    }
-
-    .guide-filter-icon--security {
-      --icon-main: #fbbf24;
-      --icon-accent: #67e8f9;
-      --icon-fill: rgba(251,191,36,0.16);
-      --icon-ring: rgba(251,191,36,0.32);
-      --icon-glow: rgba(103,232,249,0.18);
-    }
-
-    .guide-filter-icon--community {
-      --icon-main: #c4b5fd;
-      --icon-accent: #67e8f9;
-      --icon-fill: rgba(196,181,253,0.15);
-      --icon-ring: rgba(196,181,253,0.32);
-      --icon-glow: rgba(103,232,249,0.18);
-    }
-
-    .icon-primary-fill {
-      fill: var(--icon-main);
-    }
-
-    .icon-primary-stroke {
-      fill: none;
-      stroke: var(--icon-main);
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .icon-accent-stroke {
-      fill: none;
-      stroke: var(--icon-accent);
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .icon-soft-fill {
-      fill: var(--icon-fill);
-      stroke: var(--icon-main);
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .icon-soft-fill--secondary {
-      stroke: var(--icon-accent);
-    }
-
-    .listing-page-section {
-      max-width: none !important;
-      padding: 1rem 1rem calc(6rem + env(safe-area-inset-bottom)) !important;
-      background: #070b0c !important;
-    }
-
-    .listing-section-label {
-      margin-bottom: 0.85rem !important;
-      color: #8fa3aa !important;
-      font-size: 0.6rem !important;
-      letter-spacing: 0.16em !important;
-    }
-
-    .listing-section-label span {
-      background: rgba(255,255,255,0.14) !important;
-    }
-
-    .guide-list {
-      gap: 0.8rem !important;
-    }
-
-    .guide-list-card {
-      background: #101617 !important;
-      border: 1px solid rgba(255,255,255,0.12) !important;
-      border-radius: 8px !important;
-      box-shadow: none !important;
-      padding: 0.95rem !important;
-      transform: none !important;
-    }
-
-    .guide-list-row,
-    .guide-list-main {
-      display: grid !important;
-      align-items: start !important;
-      gap: 0.58rem !important;
-      width: 100% !important;
-    }
-
-    .guide-bab-badge {
-      width: fit-content !important;
-      border-color: rgba(99,210,181,0.50) !important;
-      border-radius: 999px !important;
-      color: #63d2b5 !important;
-      background: rgba(99,210,181,0.08) !important;
-      font-size: 0.58rem !important;
-      letter-spacing: 0.12em !important;
-      padding: 0.18rem 0.52rem !important;
-    }
-
-    .guide-title {
-      font-family: 'Barlow', system-ui, sans-serif !important;
-      color: #f8fafc !important;
-      font-size: 1.04rem !important;
-      font-weight: 800 !important;
-      line-height: 1.24 !important;
-      letter-spacing: 0 !important;
-      text-transform: none !important;
-    }
-
-    .guide-category-badge {
-      width: fit-content !important;
-      border-radius: 999px !important;
-      background: rgba(255,255,255,0.07) !important;
-      color: #b7c9cf !important;
-      font-size: 0.58rem !important;
-      letter-spacing: 0.1em !important;
-      padding: 0.2rem 0.55rem !important;
-    }
-
-    .guide-cta {
-      width: fit-content !important;
-      color: #63d2b5 !important;
-      font-size: 0.62rem !important;
-      letter-spacing: 0.12em !important;
-      margin-top: 0.1rem !important;
-    }
-
-    .guide-empty-state {
-      border: 1px solid rgba(255,255,255,0.12) !important;
-      border-radius: 8px !important;
-      background: #101617 !important;
-      box-shadow: none !important;
-      padding: 2rem 1rem !important;
-    }
-
-    .guide-empty-state h2 {
-      color: #f8fafc !important;
-      font-family: 'Barlow', system-ui, sans-serif !important;
-      letter-spacing: 0 !important;
-      text-transform: none !important;
-    }
-
-    .guide-empty-state p {
-      color: #b7c9cf !important;
-    }
-  }
-</style>

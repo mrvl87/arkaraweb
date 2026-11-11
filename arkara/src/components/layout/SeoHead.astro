@@ -91,15 +91,14 @@ const structuredDataJson = structuredDataItems.map((item) => JSON.stringify(item
 <meta property="twitter:description" content={description} />
 {socialImageUrl && <meta property="twitter:image" content={socialImageUrl} />}
 {imageAlt && <meta property="twitter:image:alt" content={imageAlt} />}
-{structuredDataJson.map((json) => <script type="application/ld+json" set:html={json}></script>)}
+{structuredDataJson.map((json) => <script is:inline type="application/ld+json" set:html={json}></script>)}
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Share+Tech+Mono&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-<noscript><link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Share+Tech+Mono&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet" /></noscript>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 {enableGoogleAnalytics && (
   <>
-    <script async src={`https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`}></script>
+    <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`}></script>
     <script is:inline set:html={googleAnalyticsScript}></script>
   </>
 )}

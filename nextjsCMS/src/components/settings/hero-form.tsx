@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { Save, Loader2, Star, Type, AlignLeft, MessageSquare, Quote, User } from 'lucide-react'
 import { updateHeroSection } from '@/app/cms/settings/actions'
 import { MediaPicker } from '@/components/media/media-picker'
+import { resolveMediaUrl } from '@/lib/media-url'
 
 interface HeroFormProps {
   data: any
@@ -30,6 +31,9 @@ export function HeroForm({ data }: HeroFormProps) {
   })
 
   const [mascotImage, setMascotImage] = useState<any>(data?.mascot_image || null)
+  const mascotPreviewUrl = resolveMediaUrl(typeof mascotImage === 'string'
+    ? mascotImage
+    : mascotImage?.file_path || mascotImage?.url || '')
 
   const onSubmit = async (formData: any) => {
     setIsSubmitting(true)
@@ -37,7 +41,7 @@ export function HeroForm({ data }: HeroFormProps) {
     try {
       await updateHeroSection({ 
         ...formData, 
-        id: data.id,
+        id: data?.id,
         mascot_image: mascotImage 
       })
       setMessage({ type: 'success', text: 'Hero Section berhasil diperbarui!' })
@@ -149,7 +153,17 @@ export function HeroForm({ data }: HeroFormProps) {
               <MediaPicker 
                 value={mascotImage}
                 onSelect={setMascotImage}
+                imageOnly
+                label={mascotImage ? 'Ganti gambar maskot' : 'Pilih gambar maskot'}
               />
+              {mascotPreviewUrl && (
+                <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                  <img src={mascotPreviewUrl} alt={mascotImage?.alt_text || 'Pratinjau maskot beranda'} className="mx-auto h-48 w-full object-contain" />
+                  <button type="button" onClick={() => setMascotImage(null)} className="mt-2 min-h-10 text-sm font-semibold text-gray-600 hover:text-gray-900">
+                    Gunakan maskot bawaan
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">
